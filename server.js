@@ -1767,6 +1767,101 @@ app.post("/api/compare-periods", async (req, res) => {
   }
 });
 
+// ============================================================================
+// MONTHLY REPORTING ENDPOINTS
+// ============================================================================
+
+// Monthly P&L Report endpoint
+app.post("/api/monthly-pl-report", async (req, res) => {
+  try {
+    const { organizationName, tenantId, year, includeComparison } = req.body;
+
+    if (!organizationName && !tenantId) {
+      return res
+        .status(400)
+        .json({ error: "Organization name or tenant ID required" });
+    }
+
+    // Find tenant ID if organization name provided
+    let actualTenantId = tenantId;
+    if (organizationName && !tenantId) {
+      const connections = await tokenStorage.getAllXeroConnections();
+      const connection = connections.find((c) =>
+        c.tenantName.toLowerCase().includes(organizationName.toLowerCase())
+      );
+      if (connection) {
+        actualTenantId = connection.tenantId;
+      } else {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+    }
+
+    // Get token from database
+    const tokenData = await tokenStorage.getXeroToken(actualTenantId);
+    if (!tokenData) {
+      return res
+        .status(404)
+        .json({ error: "Tenant not found or token expired" });
+    }
+
+    await xero.setTokenSet(tokenData);
+
+    const reportYear = year || new Date().getFullYear();
+    console.log(`Getting monthly P&L for ${tokenData.tenantName}, year ${reportYear}`);
+    
+    // Call Xero API for monthly P&L data
+    const response = await xero.accountingApi.getReportProfitAndLoss(
+      actualTenantId,
+      `${reportYear}-01-01`,
+      `${reportYear}-12-31`,
+      12, // periods (monthly)
+      'MONTH' // timeframe
+    );
+
+    const plData = response.body.reports?.[0];
+    
+    if (!plData) {
+      return res.status(404).json({ error: "No P&L data available for this year" });
+    }
+
+    // For now, return basic structure to test the endpoint
+    const monthlyData = {
+      organization: tokenData.tenantName,
+      organizationId: actualTenantId,
+      year: reportYear,
+      months: [], // TODO: Process actual monthly breakdown
+      cytd: {
+        totalRevenue: 0,
+        totalExpenses: 0,
+        netProfit: 0,
+        profitMargin: 0,
+        monthsIncluded: new Date().getMonth() + 1
+      },
+      includeComparison: includeComparison || false,
+      dataSource: 'xero_monthly_pl',
+      generatedAt: new Date().toISOString()
+    };
+
+    console.log(`✅ Monthly P&L structure created for ${tokenData.tenantName}`);
+
+    res.json({
+      success: true,
+      data: monthlyData,
+      message: `Monthly P&L report structure created for ${reportYear}`
+    });
+
+  } catch (error) {
+    console.error("Monthly P&L API error:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Failed to generate monthly P&L report",
+      details: error.message 
+    });
+  }
+});
+
+
+
 // Start auto-refresh when server starts
 // Add this to your startServer() function, after initializeDatabase()
 async function initializeAutoRefresh() {
