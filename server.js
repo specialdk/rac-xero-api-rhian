@@ -1771,7 +1771,7 @@ app.post("/api/compare-periods", async (req, res) => {
 // MONTHLY REPORTING ENDPOINTS
 // ============================================================================
 
-// Monthly P&L Report endpoint - SIMPLIFIED VERSION
+// Monthly P&L Report endpoint - REAL MONTHLY DATA
 app.post("/api/monthly-pl-report", async (req, res) => {
   try {
     const { organizationName, tenantId, year } = req.body;
@@ -1782,7 +1782,7 @@ app.post("/api/monthly-pl-report", async (req, res) => {
         .json({ error: "Organization name or tenant ID required" });
     }
 
-    // Find tenant ID
+    // Find tenant ID (same as before)
     let actualTenantId = tenantId;
     if (organizationName && !tenantId) {
       const connections = await tokenStorage.getAllXeroConnections();
@@ -1796,7 +1796,6 @@ app.post("/api/monthly-pl-report", async (req, res) => {
       }
     }
 
-    // Get token
     const tokenData = await tokenStorage.getXeroToken(actualTenantId);
     if (!tokenData) {
       return res
@@ -1807,66 +1806,12 @@ app.post("/api/monthly-pl-report", async (req, res) => {
     await xero.setTokenSet(tokenData);
     const reportYear = year || new Date().getFullYear();
 
-    // Get simple annual P&L (we know this works)
     console.log(
-      `Getting annual P&L for ${tokenData.tenantName}, year ${reportYear}`
-    );
-    const response = await xero.accountingApi.getReportProfitAndLoss(
-      actualTenantId,
-      `${reportYear}-01-01`,
-      `${reportYear}-12-31`
+      `Getting REAL monthly P&L for ${tokenData.tenantName}, year ${reportYear}`
     );
 
-    const plData = response.body.reports?.[0];
-
-    if (!plData || !plData.rows) {
-      return res
-        .status(404)
-        .json({ error: "No P&L data available for this year" });
-    }
-
-    // Process annual totals first
-    let totalRevenue = 0;
-    let totalExpenses = 0;
-    const revenueAccounts = [];
-    const expenseAccounts = [];
-
-    plData.rows.forEach((section) => {
-      if (section.rowType === "Section" && section.rows && section.title) {
-        const sectionTitle = section.title.toLowerCase();
-
-        section.rows.forEach((row) => {
-          if (row.rowType === "Row" && row.cells && row.cells.length >= 2) {
-            const accountName = row.cells[0]?.value || "";
-            const amount = parseFloat(row.cells[1]?.value || 0);
-
-            if (!accountName.toLowerCase().includes("total") && amount !== 0) {
-              if (
-                sectionTitle.includes("income") ||
-                sectionTitle.includes("revenue")
-              ) {
-                revenueAccounts.push({
-                  account: accountName,
-                  amount: Math.abs(amount),
-                });
-                totalRevenue += Math.abs(amount);
-              } else if (
-                sectionTitle.includes("expense") ||
-                sectionTitle.includes("cost")
-              ) {
-                expenseAccounts.push({
-                  account: accountName,
-                  amount: Math.abs(amount),
-                });
-                totalExpenses += Math.abs(amount);
-              }
-            }
-          }
-        });
-      }
-    });
-
-    // Create monthly breakdown by distributing annual totals
+    // Try to get actual monthly data by making 12 separate API calls
+    const months = [];
     const monthNames = [
       "January",
       "February",
@@ -1882,36 +1827,133 @@ app.post("/api/monthly-pl-report", async (req, res) => {
       "December",
     ];
 
-    const months = [];
+    let totalRevenue = 0;
+    let totalExpenses = 0;
 
-    for (let i = 0; i < 12; i++) {
-      // Distribute annual amounts across months (simple approach for now)
-      const monthlyRevenue = totalRevenue / 12;
-      const monthlyExpenses = totalExpenses / 12;
+    for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
+      const monthNum = monthIndex + 1;
+      const fromDate = `${reportYear}-${monthNum
+        .toString()
+        .padStart(2, "0")}-01`;
 
-      months.push({
-        month: `${reportYear}-${(i + 1).toString().padStart(2, "0")}`,
-        monthName: monthNames[i],
-        revenue: {
-          total: monthlyRevenue,
-          breakdown: revenueAccounts.map((acc) => ({
-            account: acc.account,
-            amount: acc.amount / 12,
-          })),
-        },
-        expenses: {
-          total: monthlyExpenses,
-          breakdown: expenseAccounts.map((acc) => ({
-            account: acc.account,
-            amount: acc.amount / 12,
-          })),
-        },
-        netProfit: monthlyRevenue - monthlyExpenses,
-        profitMargin:
-          monthlyRevenue > 0
-            ? ((monthlyRevenue - monthlyExpenses) / monthlyRevenue) * 100
-            : 0,
-      });
+      // Calculate last day of month
+      const lastDay = new Date(reportYear, monthNum, 0).getDate();
+      const toDate = `${reportYear}-${monthNum
+        .toString()
+        .padStart(2, "0")}-${lastDay}`;
+
+      try {
+        console.log(
+          `Getting P&L for ${monthNames[monthIndex]} ${reportYear}: ${fromDate} to ${toDate}`
+        );
+
+        const monthResponse = await xero.accountingApi.getReportProfitAndLoss(
+          actualTenantId,
+          fromDate,
+          toDate
+        );
+
+        const monthPlData = monthResponse.body.reports?.[0];
+
+        let monthRevenue = 0;
+        let monthExpenses = 0;
+        const revenueBreakdown = [];
+        const expenseBreakdown = [];
+
+        if (monthPlData && monthPlData.rows) {
+          monthPlData.rows.forEach((section) => {
+            if (
+              section.rowType === "Section" &&
+              section.rows &&
+              section.title
+            ) {
+              const sectionTitle = section.title.toLowerCase();
+
+              section.rows.forEach((row) => {
+                if (
+                  row.rowType === "Row" &&
+                  row.cells &&
+                  row.cells.length >= 2
+                ) {
+                  const accountName = row.cells[0]?.value || "";
+                  const amount = parseFloat(row.cells[1]?.value || 0);
+
+                  if (
+                    !accountName.toLowerCase().includes("total") &&
+                    amount !== 0
+                  ) {
+                    if (
+                      sectionTitle.includes("income") ||
+                      sectionTitle.includes("revenue")
+                    ) {
+                      const absAmount = Math.abs(amount);
+                      revenueBreakdown.push({
+                        account: accountName,
+                        amount: absAmount,
+                      });
+                      monthRevenue += absAmount;
+                    } else if (
+                      sectionTitle.includes("expense") ||
+                      sectionTitle.includes("cost")
+                    ) {
+                      const absAmount = Math.abs(amount);
+                      expenseBreakdown.push({
+                        account: accountName,
+                        amount: absAmount,
+                      });
+                      monthExpenses += absAmount;
+                    }
+                  }
+                }
+              });
+            }
+          });
+        }
+
+        const netProfit = monthRevenue - monthExpenses;
+
+        months.push({
+          month: `${reportYear}-${monthNum.toString().padStart(2, "0")}`,
+          monthName: monthNames[monthIndex],
+          revenue: {
+            total: monthRevenue,
+            breakdown: revenueBreakdown,
+          },
+          expenses: {
+            total: monthExpenses,
+            breakdown: expenseBreakdown,
+          },
+          netProfit: netProfit,
+          profitMargin: monthRevenue > 0 ? (netProfit / monthRevenue) * 100 : 0,
+          dataSource: "real_monthly_data",
+        });
+
+        totalRevenue += monthRevenue;
+        totalExpenses += monthExpenses;
+
+        console.log(
+          `${
+            monthNames[monthIndex]
+          }: Revenue $${monthRevenue.toLocaleString()}, Expenses $${monthExpenses.toLocaleString()}`
+        );
+      } catch (monthError) {
+        console.error(
+          `Error getting data for ${monthNames[monthIndex]}:`,
+          monthError.message
+        );
+
+        // Add empty month if API call fails
+        months.push({
+          month: `${reportYear}-${monthNum.toString().padStart(2, "0")}`,
+          monthName: monthNames[monthIndex],
+          revenue: { total: 0, breakdown: [] },
+          expenses: { total: 0, breakdown: [] },
+          netProfit: 0,
+          profitMargin: 0,
+          error: `No data available for ${monthNames[monthIndex]}`,
+          dataSource: "no_data",
+        });
+      }
     }
 
     const monthlyData = {
@@ -1927,20 +1969,22 @@ app.post("/api/monthly-pl-report", async (req, res) => {
           totalRevenue > 0
             ? ((totalRevenue - totalExpenses) / totalRevenue) * 100
             : 0,
-        monthsIncluded: 12,
+        monthsIncluded: months.filter(
+          (m) => m.dataSource === "real_monthly_data"
+        ).length,
       },
-      note: "Monthly figures are estimated by distributing annual totals",
+      dataAccuracy: "real_monthly_data",
       generatedAt: new Date().toISOString(),
     };
 
     console.log(
-      `Monthly P&L processed: Revenue ${totalRevenue}, Expenses ${totalExpenses}`
+      `REAL monthly P&L completed: ${monthlyData.cytd.monthsIncluded} months with data`
     );
 
     res.json({
       success: true,
       data: monthlyData,
-      message: `Monthly P&L report generated for ${reportYear} (estimated from annual data)`,
+      message: `Real monthly P&L report generated for ${reportYear}`,
     });
   } catch (error) {
     console.error("Monthly P&L error:", error);
