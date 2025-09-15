@@ -906,6 +906,9 @@
               <button onclick="setView('year-over-year', this)">
                 YoY Analysis
               </button>
+              <button onclick="setView('monthly-analysis', this)">
+                Monthly Analysis
+              </button>
               <button onclick="setView('alerts', this)">Alerts</button>
             </div>
 
@@ -938,6 +941,11 @@
       let isOAuthInProgress = false;
       let activeCompanyFilters = [];
       let currentView = "overview";
+      // Global variables for monthly analysis
+      let monthlyData = null;
+      let monthlyViewMode = "fy"; // 'fy' or 'monthly'
+      let selectedMonth = "";
+      let selectedYear = new Date().getFullYear();
 
       // ====== CONNECTION MANAGER FUNCTIONS ======
 
@@ -1577,6 +1585,8 @@
             await loadProfitLossData();
           } else if (currentView === "year-over-year") {
             await loadYearOverYearData(); // <- Add this line
+          } else if (currentView === "monthly-analysis") {
+            await loadMonthlyAnalysisData();
           } else if (currentView === "alerts") {
             await loadAlertsData();
           }
@@ -2610,11 +2620,517 @@
           : "Analyzing year-over-year trends...";
       }
 
-      // 8. Update your setView function to handle YoY
-      // Find your existing setView function and add this case:
-      // else if (currentView === "year-over-year") {
-      //   await loadYearOverYearData();
-      // }
+      // Monthly Analysis Functions
+      async function loadMonthlyAnalysisData() {
+        if (activeCompanyFilters.length === 0) {
+          const dashboardElement = document.getElementById("dashboardData");
+          dashboardElement.innerHTML = `
+      <div style="text-align: center; padding: 40px; color: #666;">
+        <h3>No Companies Selected</h3>
+        <p>Please select companies using the filters above to view monthly analysis.</p>
+      </div>
+    `;
+          return;
+        }
+
+        const dashboardElement = document.getElementById("dashboardData");
+        const selectedCompanyNames = getSelectedCompanyNames();
+
+        dashboardElement.innerHTML = `
+    <div class="loading">
+      <div class="loading-spinner"></div>
+      Loading monthly analysis for ${activeCompanyFilters.length} companies:<br>
+      <small>${selectedCompanyNames.join(", ")}</small>
+    </div>
+  `;
+
+        try {
+          // Load monthly data for each selected company
+          const monthlyDataResults = [];
+
+          for (const tenantId of activeCompanyFilters) {
+            const connectedCompany = connectedCompanies.find(
+              (c) => c.tenantId === tenantId
+            );
+            if (!connectedCompany) continue;
+
+            const orgName = getOrganizationName(connectedCompany.tenantName);
+
+            const response = await fetch("/api/monthly-pl-report", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                organizationName: orgName,
+                year: selectedYear,
+              }),
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              monthlyDataResults.push({
+                companyName: connectedCompany.tenantName.replace(
+                  "Rirratjingu ",
+                  ""
+                ),
+                ...data.data,
+              });
+            }
+          }
+
+          if (monthlyDataResults.length === 0) {
+            throw new Error("No monthly data available for selected companies");
+          }
+
+          // Render monthly analysis dashboard
+          renderMonthlyAnalysisDashboard(monthlyDataResults);
+        } catch (error) {
+          console.error("Error loading monthly analysis:", error);
+          dashboardElement.innerHTML = `
+      <div style="text-align: center; padding: 40px; color: #e74c3c;">
+        <h3>Error Loading Monthly Analysis</h3>
+        <p>Failed to load monthly data: ${error.message}</p>
+        <button onclick="loadDashboardData()" style="margin-top: 10px; padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          Retry
+        </button>
+      </div>
+    `;
+        }
+      }
+
+      function renderMonthlyAnalysisDashboard(monthlyDataResults) {
+        const dashboardElement = document.getElementById("dashboardData");
+
+        // Calculate consolidated totals
+        const consolidatedData =
+          calculateConsolidatedMonthlyData(monthlyDataResults);
+
+        dashboardElement.innerHTML = `
+    <!-- MONTHLY ANALYSIS HEADER -->
+    <div style="background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h2 style="color: #2c3e50; margin: 0;">Monthly Financial Analysis</h2>
+        <div style="display: flex; gap: 15px; align-items: center;">
+          <div>
+            <label style="font-weight: 600; margin-right: 8px;">View:</label>
+            <select id="monthlyViewMode" onchange="handleMonthlyViewChange()" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px;">
+              <option value="fy">Financial Year</option>
+              <option value="monthly">Monthly Detail</option>
+            </select>
+          </div>
+          <div id="monthSelector" style="display: none;">
+            <label style="font-weight: 600; margin-right: 8px;">Month:</label>
+            <select id="monthSelect" onchange="handleMonthSelection()" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px;">
+              <option value="">Choose Month...</option>
+              <option value="01">January</option>
+              <option value="02">February</option>
+              <option value="03">March</option>
+              <option value="04">April</option>
+              <option value="05">May</option>
+              <option value="06">June</option>
+              <option value="07">July</option>
+              <option value="08">August</option>
+              <option value="09">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-weight: 600; margin-right: 8px;">Year:</label>
+            <select id="yearSelect" onchange="handleYearChange()" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px;">
+              <option value="2024">2024</option>
+              <option value="2023">2023</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      <!-- KEY METRICS ROW -->
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+        <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+          <div style="font-size: 1.8em; font-weight: bold; color: #27ae60;" id="monthlyTotalRevenue">
+            $${consolidatedData.totalRevenue.toLocaleString()}
+          </div>
+          <div style="color: #666; font-size: 0.9em;">Total Revenue</div>
+          <div style="color: #3498db; font-size: 0.8em;" id="monthlyRevenueChange">YTD ${
+            consolidatedData.year
+          }</div>
+        </div>
+        <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+          <div style="font-size: 1.8em; font-weight: bold; color: #e74c3c;" id="monthlyTotalExpenses">
+            $${consolidatedData.totalExpenses.toLocaleString()}
+          </div>
+          <div style="color: #666; font-size: 0.9em;">Total Expenses</div>
+          <div style="color: #3498db; font-size: 0.8em;" id="monthlyExpenseChange">YTD ${
+            consolidatedData.year
+          }</div>
+        </div>
+        <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+          <div style="font-size: 1.8em; font-weight: bold; color: ${
+            consolidatedData.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+          };" id="monthlyNetProfit">
+            $${consolidatedData.netProfit.toLocaleString()}
+          </div>
+          <div style="color: #666; font-size: 0.9em;">Net Profit</div>
+          <div style="color: #3498db; font-size: 0.8em;" id="monthlyProfitChange">${
+            consolidatedData.netProfit >= 0 ? "Profitable" : "Loss"
+          }</div>
+        </div>
+        <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+          <div style="font-size: 1.8em; font-weight: bold; color: #3498db;" id="monthlyProfitMargin">
+            ${consolidatedData.profitMargin.toFixed(1)}%
+          </div>
+          <div style="color: #666; font-size: 0.9em;">Profit Margin</div>
+          <div style="color: #3498db; font-size: 0.8em;" id="monthlyMarginChange">${
+            consolidatedData.monthsIncluded
+          } months</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- MONTHLY TREND CHART -->
+    <div style="background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <h3 style="color: #2c3e50; margin-bottom: 15px;">Monthly Performance Trend</h3>
+      <div style="height: 400px; position: relative;">
+        <canvas id="monthlyTrendChart" style="width: 100%; height: 100%;"></canvas>
+      </div>
+    </div>
+    
+    <!-- YoY COMPARISON -->
+    <div style="background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <h3 style="color: #2c3e50; margin-bottom: 15px;">Year-over-Year Comparison</h3>
+      <div id="yoyComparisonContent">
+        <div style="text-align: center; padding: 20px; color: #666;">
+          <p>YoY comparison will be available when 2023 data is loaded</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- COMPANY BREAKDOWN -->
+    ${
+      monthlyDataResults.length > 1
+        ? `
+    <div style="background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <h3 style="color: #2c3e50; margin-bottom: 15px;">Company Performance Breakdown</h3>
+      ${monthlyDataResults
+        .map(
+          (company) => `
+        <div style="border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px; margin: 10px 0; background: #fafafa;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <strong style="font-size: 16px;">${company.companyName}</strong>
+            <span style="color: ${
+              company.cytd.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+            }; font-weight: 600;">
+              Net: $${company.cytd.netProfit.toLocaleString()}
+            </span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; font-size: 13px;">
+            <div>
+              <div style="color: #666; margin-bottom: 3px;">Revenue</div>
+              <div style="font-weight: 600;">$${company.cytd.totalRevenue.toLocaleString()}</div>
+            </div>
+            <div>
+              <div style="color: #666; margin-bottom: 3px;">Expenses</div>
+              <div style="font-weight: 600;">$${company.cytd.totalExpenses.toLocaleString()}</div>
+            </div>
+            <div>
+              <div style="color: #666; margin-bottom: 3px;">Profit Margin</div>
+              <div style="font-weight: 600;">${company.cytd.profitMargin.toFixed(
+                1
+              )}%</div>
+            </div>
+            <div>
+              <div style="color: #666; margin-bottom: 3px;">Months Data</div>
+              <div style="font-weight: 600;">${
+                company.cytd.monthsIncluded
+              }/12</div>
+            </div>
+          </div>
+        </div>
+      `
+        )
+        .join("")}
+    </div>
+    `
+        : ""
+    }
+    
+    <!-- MONTHLY DATA TABLE -->
+    <div style="background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <h3 style="color: #2c3e50; margin-bottom: 15px;">Monthly Financial Summary</h3>
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="background: #f8f9fa;">
+              <th style="padding: 12px; text-align: left; border-bottom: 1px solid #dee2e6;">Month</th>
+              <th style="padding: 12px; text-align: right; border-bottom: 1px solid #dee2e6;">Revenue</th>
+              <th style="padding: 12px; text-align: right; border-bottom: 1px solid #dee2e6;">Expenses</th>
+              <th style="padding: 12px; text-align: right; border-bottom: 1px solid #dee2e6;">Net Profit</th>
+              <th style="padding: 12px; text-align: right; border-bottom: 1px solid #dee2e6;">Margin %</th>
+              <th style="padding: 12px; text-align: center; border-bottom: 1px solid #dee2e6;">YoY Growth</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${consolidatedData.months
+              .map(
+                (month, index) => `
+              <tr style="cursor: pointer;" onclick="showMonthDetail('${
+                month.month
+              }', '${
+                  month.monthName
+                }')" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='white'">
+                <td style="padding: 12px; border-bottom: 1px solid #f0f0f0;">${
+                  month.monthName
+                }</td>
+                <td style="padding: 12px; text-align: right; border-bottom: 1px solid #f0f0f0;">$${month.revenue.toLocaleString()}</td>
+                <td style="padding: 12px; text-align: right; border-bottom: 1px solid #f0f0f0;">$${month.expenses.toLocaleString()}</td>
+                <td style="padding: 12px; text-align: right; border-bottom: 1px solid #f0f0f0; color: ${
+                  month.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+                }; font-weight: 600;">
+                  $${month.netProfit.toLocaleString()}
+                </td>
+                <td style="padding: 12px; text-align: right; border-bottom: 1px solid #f0f0f0;">${month.profitMargin.toFixed(
+                  1
+                )}%</td>
+                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #f0f0f0; color: #666;">TBD</td>
+              </tr>
+            `
+              )
+              .join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+        // Initialize chart after DOM is ready
+        setTimeout(() => {
+          createMonthlyTrendChart(consolidatedData);
+        }, 100);
+      }
+
+      function calculateConsolidatedMonthlyData(monthlyDataResults) {
+        if (monthlyDataResults.length === 0) return null;
+
+        // Initialize consolidated data structure
+        const consolidated = {
+          year: monthlyDataResults[0].year,
+          totalRevenue: 0,
+          totalExpenses: 0,
+          netProfit: 0,
+          profitMargin: 0,
+          monthsIncluded: 0,
+          months: [],
+        };
+
+        // Initialize months array
+        for (let i = 0; i < 12; i++) {
+          consolidated.months.push({
+            month: `${consolidated.year}-${(i + 1)
+              .toString()
+              .padStart(2, "0")}`,
+            monthName: [
+              "January",
+              "February",
+              "March",
+              "April",
+              "May",
+              "June",
+              "July",
+              "August",
+              "September",
+              "October",
+              "November",
+              "December",
+            ][i],
+            revenue: 0,
+            expenses: 0,
+            netProfit: 0,
+            profitMargin: 0,
+          });
+        }
+
+        // Aggregate data from all companies
+        monthlyDataResults.forEach((company) => {
+          consolidated.totalRevenue += company.cytd.totalRevenue;
+          consolidated.totalExpenses += company.cytd.totalExpenses;
+          consolidated.netProfit += company.cytd.netProfit;
+
+          // Aggregate monthly data
+          company.months.forEach((month, index) => {
+            if (index < consolidated.months.length) {
+              consolidated.months[index].revenue += month.revenue.total;
+              consolidated.months[index].expenses += month.expenses.total;
+              consolidated.months[index].netProfit += month.netProfit;
+            }
+          });
+        });
+
+        // Calculate consolidated profit margin
+        consolidated.profitMargin =
+          consolidated.totalRevenue > 0
+            ? (consolidated.netProfit / consolidated.totalRevenue) * 100
+            : 0;
+
+        // Calculate month profit margins
+        consolidated.months.forEach((month) => {
+          month.profitMargin =
+            month.revenue > 0 ? (month.netProfit / month.revenue) * 100 : 0;
+        });
+
+        // Count months with data
+        consolidated.monthsIncluded = consolidated.months.filter(
+          (m) => m.revenue > 0
+        ).length;
+
+        return consolidated;
+      }
+
+      function createMonthlyTrendChart(consolidatedData) {
+        const canvas = document.getElementById("monthlyTrendChart");
+        if (!canvas) return;
+
+        const ctx = canvas.getContext("2d");
+
+        // Destroy existing chart if it exists
+        if (window.monthlyChart) {
+          window.monthlyChart.destroy();
+        }
+
+        const labels = consolidatedData.months.map((m) =>
+          m.monthName.substring(0, 3)
+        );
+        const revenue = consolidatedData.months.map((m) => m.revenue);
+        const expenses = consolidatedData.months.map((m) => m.expenses);
+        const profit = consolidatedData.months.map((m) => m.netProfit);
+
+        window.monthlyChart = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: "Revenue",
+                data: revenue,
+                borderColor: "#3498db",
+                backgroundColor: "rgba(52, 152, 219, 0.1)",
+                fill: false,
+                tension: 0.4,
+                pointBackgroundColor: "#3498db",
+                pointBorderColor: "#2980b9",
+                pointBorderWidth: 2,
+                pointRadius: 4,
+              },
+              {
+                label: "Expenses",
+                data: expenses,
+                borderColor: "#e74c3c",
+                backgroundColor: "rgba(231, 76, 60, 0.1)",
+                fill: false,
+                tension: 0.4,
+                pointBackgroundColor: "#e74c3c",
+                pointBorderColor: "#c0392b",
+                pointBorderWidth: 2,
+                pointRadius: 4,
+              },
+              {
+                label: "Net Profit",
+                data: profit,
+                borderColor: "#27ae60",
+                backgroundColor: "rgba(39, 174, 96, 0.1)",
+                fill: false,
+                tension: 0.4,
+                pointBackgroundColor: "#27ae60",
+                pointBorderColor: "#229954",
+                pointBorderWidth: 2,
+                pointRadius: 4,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              title: {
+                display: false,
+              },
+              tooltip: {
+                callbacks: {
+                  label: function (context) {
+                    return (
+                      context.dataset.label +
+                      ": $" +
+                      context.parsed.y.toLocaleString()
+                    );
+                  },
+                },
+              },
+              legend: {
+                position: "top",
+              },
+            },
+            scales: {
+              y: {
+                beginAtZero: false,
+                ticks: {
+                  callback: function (value) {
+                    return "$" + (value / 1000000).toFixed(1) + "M";
+                  },
+                },
+              },
+            },
+            interaction: {
+              intersect: false,
+              mode: "index",
+            },
+          },
+        });
+      }
+
+      // Event handlers for monthly analysis
+      function handleMonthlyViewChange() {
+        const viewMode = document.getElementById("monthlyViewMode").value;
+        const monthSelector = document.getElementById("monthSelector");
+
+        if (viewMode === "monthly") {
+          monthSelector.style.display = "block";
+        } else {
+          monthSelector.style.display = "none";
+          document.getElementById("monthSelect").value = "";
+          // Show full year view
+        }
+      }
+
+      function handleMonthSelection() {
+        const selectedMonth = document.getElementById("monthSelect").value;
+        if (selectedMonth) {
+          // Show specific month detail
+          showMonthDetailView(selectedMonth);
+        }
+      }
+
+      function handleYearChange() {
+        const year = document.getElementById("yearSelect").value;
+        selectedYear = parseInt(year);
+        loadDashboardData(); // Reload with new year
+      }
+
+      function showMonthDetail(monthCode, monthName) {
+        // Switch to monthly view mode
+        document.getElementById("monthlyViewMode").value = "monthly";
+        document.getElementById("monthSelector").style.display = "block";
+        document.getElementById("monthSelect").value = monthCode.split("-")[1];
+
+        showMonthDetailView(monthCode.split("-")[1]);
+      }
+
+      function showMonthDetailView(monthNumber) {
+        // Update metrics to show single month
+        // This would filter the display to show only the selected month's data
+        console.log("Showing detail for month:", monthNumber);
+        // Implementation would update the metrics display to show single month
+      }
+
       // ====== HELPER FUNCTIONS FOR PARSING MCP RESPONSES ======
 
       function getOrganizationName(tenantName) {
