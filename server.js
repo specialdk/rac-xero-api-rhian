@@ -1771,10 +1771,9 @@ app.post("/api/compare-periods", async (req, res) => {
 // MONTHLY REPORTING ENDPOINTS
 // ============================================================================
 
-// Monthly P&L Report endpoint - DEBUGGING VERSION
+// Monthly P&L Report endpoint - ACTUAL DATA PROCESSING
 app.post("/api/monthly-pl-report", async (req, res) => {
   try {
-    console.log("🔍 MONTHLY P&L DEBUG START");
     const { organizationName, tenantId, year } = req.body;
 
     if (!organizationName && !tenantId) {
@@ -1792,9 +1791,7 @@ app.post("/api/monthly-pl-report", async (req, res) => {
       );
       if (connection) {
         actualTenantId = connection.tenantId;
-        console.log("✅ Found tenant:", connection.tenantName);
       } else {
-        console.log("❌ No connection found for:", organizationName);
         return res.status(404).json({ error: "Organization not found" });
       }
     }
@@ -1802,46 +1799,151 @@ app.post("/api/monthly-pl-report", async (req, res) => {
     // Get token
     const tokenData = await tokenStorage.getXeroToken(actualTenantId);
     if (!tokenData) {
-      console.log("❌ No token for tenant:", actualTenantId);
       return res
         .status(404)
         .json({ error: "Tenant not found or token expired" });
     }
 
     await xero.setTokenSet(tokenData);
-    console.log("✅ Token set for:", tokenData.tenantName);
-
     const reportYear = year || new Date().getFullYear();
 
-    // Simple P&L API call (without monthly periods first)
-    console.log("📞 Calling Xero P&L API for year:", reportYear);
+    // Get P&L with monthly periods
+    console.log(
+      `Getting monthly P&L for ${tokenData.tenantName}, year ${reportYear}`
+    );
     const response = await xero.accountingApi.getReportProfitAndLoss(
       actualTenantId,
       `${reportYear}-01-01`,
-      `${reportYear}-12-31`
+      `${reportYear}-12-31`,
+      12, // 12 monthly periods
+      "MONTH" // monthly timeframe
     );
 
-    console.log("✅ Xero API call successful");
     const plData = response.body.reports?.[0];
 
-    // Return debug info
+    if (!plData || !plData.rows) {
+      return res
+        .status(404)
+        .json({ error: "No P&L data available for this year" });
+    }
+
+    // Process monthly data
+    const monthlyData = {
+      organization: tokenData.tenantName,
+      organizationId: actualTenantId,
+      year: reportYear,
+      months: [],
+      cytd: {
+        totalRevenue: 0,
+        totalExpenses: 0,
+        netProfit: 0,
+        profitMargin: 0,
+        monthsIncluded: new Date().getMonth() + 1,
+      },
+      generatedAt: new Date().toISOString(),
+    };
+
+    // Initialize 12 months
+    const monthNames = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+
+    for (let i = 0; i < 12; i++) {
+      monthlyData.months.push({
+        month: `${reportYear}-${(i + 1).toString().padStart(2, "0")}`,
+        monthName: monthNames[i],
+        revenue: { total: 0, breakdown: [] },
+        expenses: { total: 0, breakdown: [] },
+        netProfit: 0,
+        profitMargin: 0,
+      });
+    }
+
+    // Process Xero report rows
+    plData.rows.forEach((section) => {
+      if (section.rowType === "Section" && section.rows && section.title) {
+        const sectionTitle = section.title.toLowerCase();
+
+        section.rows.forEach((row) => {
+          if (row.rowType === "Row" && row.cells && row.cells.length >= 13) {
+            const accountName = row.cells[0]?.value || "";
+
+            if (accountName.toLowerCase().includes("total")) return;
+
+            // Process each month (cells 1-12)
+            for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
+              const amount = parseFloat(row.cells[monthIndex + 1]?.value || 0);
+
+              if (amount !== 0) {
+                const monthData = monthlyData.months[monthIndex];
+
+                if (
+                  sectionTitle.includes("income") ||
+                  sectionTitle.includes("revenue")
+                ) {
+                  monthData.revenue.breakdown.push({
+                    account: accountName,
+                    amount: Math.abs(amount),
+                  });
+                  monthData.revenue.total += Math.abs(amount);
+                  monthlyData.cytd.totalRevenue += Math.abs(amount);
+                } else if (
+                  sectionTitle.includes("expense") ||
+                  sectionTitle.includes("cost")
+                ) {
+                  monthData.expenses.breakdown.push({
+                    account: accountName,
+                    amount: Math.abs(amount),
+                  });
+                  monthData.expenses.total += Math.abs(amount);
+                  monthlyData.cytd.totalExpenses += Math.abs(amount);
+                }
+              }
+            }
+          }
+        });
+      }
+    });
+
+    // Calculate net profit and margins for each month
+    monthlyData.months.forEach((month) => {
+      month.netProfit = month.revenue.total - month.expenses.total;
+      month.profitMargin =
+        month.revenue.total > 0
+          ? (month.netProfit / month.revenue.total) * 100
+          : 0;
+    });
+
+    // Calculate CYTD
+    monthlyData.cytd.netProfit =
+      monthlyData.cytd.totalRevenue - monthlyData.cytd.totalExpenses;
+    monthlyData.cytd.profitMargin =
+      monthlyData.cytd.totalRevenue > 0
+        ? (monthlyData.cytd.netProfit / monthlyData.cytd.totalRevenue) * 100
+        : 0;
+
+    console.log(
+      `✅ Monthly P&L processed: ${monthlyData.months.length} months, CYTD Revenue: ${monthlyData.cytd.totalRevenue}`
+    );
+
     res.json({
       success: true,
-      data: {
-        organization: tokenData.tenantName,
-        year: reportYear,
-        debug: {
-          hasPlData: !!plData,
-          rowCount: plData?.rows?.length || 0,
-          apiSuccess: true,
-        },
-        months: [], // Empty for now
-        generatedAt: new Date().toISOString(),
-      },
-      message: "Debug test successful",
+      data: monthlyData,
+      message: `Monthly P&L report generated for ${reportYear}`,
     });
   } catch (error) {
-    console.error("❌ MONTHLY P&L ERROR:", error.message);
+    console.error("Monthly P&L error:", error);
     res.status(500).json({
       success: false,
       error: "Failed to generate monthly P&L report",
