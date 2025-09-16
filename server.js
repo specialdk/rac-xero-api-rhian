@@ -3295,7 +3295,7 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
                 name: accountName,
                 amount: amount,
               });
-              plSummary.totalRevenue += Math.abs(amount);
+              plSummary.totalRevenue += amount;
             } else if (
               sectionTitle.includes("expense") ||
               sectionTitle.includes("cost")
@@ -3304,7 +3304,7 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
                 name: accountName,
                 amount: amount,
               });
-              plSummary.totalExpenses += Math.abs(amount);
+              plSummary.totalExpenses += amount;
             }
           }
         });
