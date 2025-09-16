@@ -1316,7 +1316,7 @@
         // Australian Financial Year logic (July 1 - June 30)
         const currentMonth = now.getMonth(); // 0-based
         const ausFinancialYear =
-        currentMonth >= 6 ? now.getFullYear() : now.getFullYear() - 1;
+          currentMonth >= 6 ? now.getFullYear() : now.getFullYear() - 1;
 
         let fromDate, toDate;
 
@@ -1335,8 +1335,12 @@
         }
 
         // Send to server to update global variables
-        console.log(`Sending dates: FROM=${fromDate.toISOString().split("T")[0]}, TO=${toDate.toISOString().split("T")[0]}, PERIOD=${period}`);
-        
+        console.log(
+          `Sending dates: FROM=${fromDate.toISOString().split("T")[0]}, TO=${
+            toDate.toISOString().split("T")[0]
+          }, PERIOD=${period}`
+        );
+
         fetch("/update-dates", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
