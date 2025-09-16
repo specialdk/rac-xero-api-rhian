@@ -2549,6 +2549,16 @@
   `;
       }
 
+      function debugDropdown() {
+        const select = document.getElementById("yearSelect");
+        console.log("All dropdown options:");
+        for (let i = 0; i < select.options.length; i++) {
+          console.log(
+            `Option ${i}: value="${select.options[i].value}" text="${select.options[i].text}"`
+          );
+        }
+      }
+
       // 7. Generate insights based on YoY data
       function generateYoYInsights(consolidatedYoY, yoyData) {
         const insights = [];
@@ -2748,6 +2758,7 @@
           </div>
         </div>
       </div>
+      
       
       <!-- KEY METRICS ROW -->
       <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
@@ -3044,6 +3055,8 @@
         const year = document.getElementById("yearSelect").value;
         selectedYear = parseInt(year);
         console.log("Year changed to:", selectedYear); // Add this
+        // Update the dropdown display to match the selected value
+        document.getElementById("yearSelect").value = year;
         loadDashboardData(); // This should reload with new year
       }
 
