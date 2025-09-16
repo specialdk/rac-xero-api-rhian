@@ -2957,7 +2957,7 @@ app.get("/api/trial-balance/:tenantId", async (req, res) => {
     let processedAccounts = 0;
 
     // Process each Balance Sheet section
-    balanceSheetRows.forEach((section, sectionIndex) => {
+    trialBalanceRows.forEach((section, sectionIndex) => {
       if (section.rowType === "Section" && section.rows && section.title) {
         const sectionTitle = section.title.toLowerCase();
         console.log(
@@ -3848,7 +3848,7 @@ app.get("/api/intercompany/:tenantId", async (req, res) => {
       reportDate
     );
 
-    const balanceSheetRows = tbResponse.body.reports?.[0]?.rows || [];
+    const trialBalanceRows = tbResponse.body.reports?.[0]?.rows || [];
 
     const intercompanyAccounts = [];
     const racEntityNames = [
@@ -3863,7 +3863,7 @@ app.get("/api/intercompany/:tenantId", async (req, res) => {
       "yirrkala",
     ];
 
-    balanceSheetRows.forEach((section) => {
+    trialBalanceRows.forEach((section) => {
       if (section.rowType === "Section" && section.rows) {
         section.rows.forEach((row) => {
           if (row.rowType === "Row" && row.cells && row.cells.length >= 2) {
