@@ -911,6 +911,14 @@
                 Monthly Analysis
               </button>
               <button onclick="setView('alerts', this)">Alerts</button>
+
+              <select id="periodSelect" onchange="updateGlobalDates()">
+                <option value="CURRENT_MONTH">Current Month</option>
+                <option value="PREVIOUS_MONTH">Previous Month</option>
+                <option value="CYTD" selected>CYTD</option>
+                <option value="PYTD">PYTD</option>
+                <option value="CUSTOM">Custom Dates</option>
+              </select>
             </div>
 
             <div id="dashboardData">
@@ -1299,6 +1307,43 @@
 
         //updateFilterSummary();
         //updateChatAnalysisStatus();
+      }
+
+      function updateGlobalDates() {
+        const period = document.getElementById("periodSelect").value;
+        const now = new Date();
+
+        // Australian Financial Year logic (July 1 - June 30)
+        const currentMonth = now.getMonth(); // 0-based
+        const ausFinancialYear =
+          currentMonth >= 6 ? now.getFullYear() : now.getFullYear() - 1;
+
+        let fromDate, toDate;
+
+        if (period === "CURRENT_MONTH") {
+          fromDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          toDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        } else if (period === "PREVIOUS_MONTH") {
+          fromDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          toDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        } else if (period === "CYTD") {
+          fromDate = new Date(ausFinancialYear, 6, 1); // July 1
+          toDate = now;
+        } else if (period === "PYTD") {
+          fromDate = new Date(ausFinancialYear - 1, 6, 1);
+          toDate = now;
+        }
+
+        // Send to server to update global variables
+        fetch("/update-dates", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fromDate: fromDate.toISOString().split("T")[0],
+            toDate: toDate.toISOString().split("T")[0],
+            period: period,
+          }),
+        });
       }
 
       // Add these functions after the setupCompanyFilters() function:

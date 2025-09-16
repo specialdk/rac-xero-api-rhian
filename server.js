@@ -1,7 +1,9 @@
 // RAC Financial Dashboard - Complete Server.js with Date Picker Support
 // Includes all functionality: Database Token Storage, Trial Balance with Date Support, Multi-entity Integration
-// RAC Financial Dashboard - Complete Server.js with Date Picker Support
-// Includes all functionality: Database Token Storage, Trial Balance with Date Support, Multi-entity Integration
+// Global Date Variables - Used by ALL MCP Tools
+let GLOBAL_FROM_DATE = null;
+let GLOBAL_TO_DATE = null;
+let SELECTED_PERIOD = "CYTD";
 
 import dotenv from "dotenv";
 import express from "express";
@@ -679,6 +681,19 @@ app.get("/api/consolidated", async (req, res) => {
     const connectedXeroEntities = xeroConnections.filter(
       (conn) => conn.connected
     );
+
+    app.post("/update-dates", (req, res) => {
+      const { fromDate, toDate, period } = req.body;
+
+      // Update the global variables
+      GLOBAL_FROM_DATE = fromDate;
+      GLOBAL_TO_DATE = toDate;
+      SELECTED_PERIOD = period;
+
+      console.log(`Updated global dates: ${fromDate} to ${toDate} (${period})`);
+
+      res.json({ success: true });
+    });
 
     // Aggregate Xero data
     for (const connection of connectedXeroEntities) {
@@ -2907,7 +2922,7 @@ app.get("/api/trial-balance/:tenantId", async (req, res) => {
     await xero.setTokenSet(tokenData);
 
     // Get date from query parameter or use today
-    const reportDate = req.query.date || new Date().toISOString().split("T")[0];
+    const reportDate = GLOBAL_TO_DATE || new Date().toISOString().split("T")[0];
     console.log(`📅 Report date: ${reportDate}`);
 
     // Get Balance Sheet report for specified date
@@ -3131,7 +3146,7 @@ app.get("/api/trial-balance/:tenantId", async (req, res) => {
 app.get("/api/consolidated-trial-balance", async (req, res) => {
   try {
     // Get date from query parameter or use today
-    const reportDate = req.query.date || new Date().toISOString().split("T")[0];
+    const reportDate = GLOBAL_TO_DATE || new Date().toISOString().split("T")[0];
     console.log(
       `🔄 Loading HIERARCHICAL consolidated trial balance for ${reportDate}...`
     );
@@ -3459,13 +3474,10 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
 
     await xero.setTokenSet(tokenData);
 
-    const reportDate = req.query.date || new Date().toISOString().split("T")[0];
-    const periodMonths = parseInt(req.query.periodMonths) || 12;
-
-    // Calculate from date (start of period)
-    const fromDate = new Date(reportDate);
-    fromDate.setMonth(fromDate.getMonth() - periodMonths);
-    const fromDateStr = fromDate.toISOString().split("T")[0];
+    // Use global dates instead of query parameters
+    const reportDate = GLOBAL_TO_DATE || new Date().toISOString().split("T")[0];
+    const fromDateStr =
+      GLOBAL_FROM_DATE || new Date(reportDate).toISOString().split("T")[0];
 
     console.log(
       `Getting P&L for ${tokenData.tenantName} from ${fromDateStr} to ${reportDate}`
@@ -3560,7 +3572,7 @@ app.get("/api/aged-receivables/:tenantId", async (req, res) => {
 
     await xero.setTokenSet(tokenData);
 
-    const reportDate = req.query.date || new Date().toISOString().split("T")[0];
+    const reportDate = GLOBAL_TO_DATE || new Date().toISOString().split("T")[0];
 
     console.log(
       `Getting aged receivables for ${tokenData.tenantName} as at ${reportDate}`
