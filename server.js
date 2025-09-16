@@ -3262,6 +3262,14 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
       reportDate
     );
 
+    console.log(
+      "Raw Xero P&L Response:",
+      JSON.stringify(response.body.reports[0], null, 2)
+    );
+    console.log(
+      "P&L API call successful:",
+      response.body.reports?.[0] ? "YES" : "NO"
+    );
     const plRows = response.body.reports?.[0]?.rows || [];
 
     const plSummary = {
@@ -3518,10 +3526,6 @@ app.get("/api/expense-analysis/:tenantId", async (req, res) => {
       reportDate
     );
 
-    console.log(
-      "Raw Xero P&L Response:",
-      JSON.stringify(response.body.reports[0], null, 2)
-    );
     console.log(
       "P&L API call successful:",
       response.body.reports?.[0] ? "YES" : "NO"
