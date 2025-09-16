@@ -3512,7 +3512,6 @@ app.get("/api/expense-analysis/:tenantId", async (req, res) => {
     const fromDateStr = fromDate.toISOString().split("T")[0];
 
     console.log(`Getting expense analysis for ${tokenData.tenantName}`);
-
     const response = await xero.accountingApi.getReportProfitAndLoss(
       req.params.tenantId,
       fromDateStr,
@@ -3522,6 +3521,10 @@ app.get("/api/expense-analysis/:tenantId", async (req, res) => {
     console.log(
       "Raw Xero P&L Response:",
       JSON.stringify(response.body.reports[0], null, 2)
+    );
+    console.log(
+      "P&L API call successful:",
+      response.body.reports?.[0] ? "YES" : "NO"
     );
     const plRows = response.body.reports?.[0]?.rows || [];
 
