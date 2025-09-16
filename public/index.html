@@ -3061,6 +3061,107 @@
         // Implementation would update the metrics display to show single month
       }
 
+      function createMonthlyTrendChart(consolidatedData) {
+        const canvas = document.getElementById("monthlyTrendChart");
+        if (!canvas) return;
+
+        const ctx = canvas.getContext("2d");
+
+        // Destroy existing chart if it exists
+        if (window.monthlyChart) {
+          window.monthlyChart.destroy();
+        }
+
+        const labels = consolidatedData.months.map((m) =>
+          m.monthName.substring(0, 3)
+        );
+        const revenue = consolidatedData.months.map((m) => m.revenue);
+        const expenses = consolidatedData.months.map((m) => m.expenses);
+        const profit = consolidatedData.months.map((m) => m.netProfit);
+
+        window.monthlyChart = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: "Revenue",
+                data: revenue,
+                borderColor: "#3498db",
+                backgroundColor: "rgba(52, 152, 219, 0.1)",
+                fill: false,
+                tension: 0.4,
+                pointBackgroundColor: "#3498db",
+                pointBorderColor: "#2980b9",
+                pointBorderWidth: 2,
+                pointRadius: 4,
+              },
+              {
+                label: "Expenses",
+                data: expenses,
+                borderColor: "#e74c3c",
+                backgroundColor: "rgba(231, 76, 60, 0.1)",
+                fill: false,
+                tension: 0.4,
+                pointBackgroundColor: "#e74c3c",
+                pointBorderColor: "#c0392b",
+                pointBorderWidth: 2,
+                pointRadius: 4,
+              },
+              {
+                label: "Net Profit",
+                data: profit,
+                borderColor: "#27ae60",
+                backgroundColor: "rgba(39, 174, 96, 0.1)",
+                fill: false,
+                tension: 0.4,
+                pointBackgroundColor: "#27ae60",
+                pointBorderColor: "#229954",
+                pointBorderWidth: 2,
+                pointRadius: 4,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              title: {
+                display: false,
+              },
+              tooltip: {
+                callbacks: {
+                  label: function (context) {
+                    return (
+                      context.dataset.label +
+                      ": $" +
+                      context.parsed.y.toLocaleString()
+                    );
+                  },
+                },
+              },
+              legend: {
+                position: "top",
+              },
+            },
+            scales: {
+              y: {
+                beginAtZero: false,
+                ticks: {
+                  callback: function (value) {
+                    return "$" + (value / 1000000).toFixed(1) + "M";
+                  },
+                },
+              },
+            },
+            interaction: {
+              intersect: false,
+              mode: "index",
+            },
+          },
+        });
+      }
+
       // ====== HELPER FUNCTIONS FOR PARSING MCP RESPONSES ======
 
       function getOrganizationName(tenantName) {
