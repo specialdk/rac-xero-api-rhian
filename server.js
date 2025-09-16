@@ -3244,18 +3244,26 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
     const periodMonths = parseInt(req.query.periodMonths) || 1; // Default to 1 month instead of 12
 
     // Calculate from date based on current month logic
-    let fromDate;
+    let fromDate, actualReportDate;
     if (periodMonths === 1) {
-      // For current month: use first day of current month
+      // For current month: use first day to LAST day of current month
       const currentDate = new Date(reportDate);
       fromDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      // For current month, always use the last day of the month for full month reporting
+      actualReportDate = new Date(
+        currentDate.getFullYear(),
+        currentDate.getMonth() + 1,
+        0
+      );
     } else {
       // For multi-month periods: subtract months from report date
       fromDate = new Date(reportDate);
       fromDate.setMonth(fromDate.getMonth() - periodMonths);
+      actualReportDate = new Date(reportDate);
     }
 
     const fromDateStr = fromDate.toISOString().split("T")[0];
+    const actualReportDateStr = actualReportDate.toISOString().split("T")[0];
 
     console.log(
       `Getting P&L for ${tokenData.tenantName} from ${fromDateStr} to ${reportDate} (${periodMonths} month period)`
@@ -3264,7 +3272,7 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
     const response = await xero.accountingApi.getReportProfitAndLoss(
       req.params.tenantId,
       fromDateStr,
-      reportDate
+      actualReportDateStr // Use this instead of reportDate
     );
 
     const plRows = response.body.reports?.[0]?.rows || [];
