@@ -648,6 +648,7 @@
         display: none !important;
       }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
   </head>
   <body>
     <!-- CONNECTION MANAGER SECTION -->
@@ -906,7 +907,18 @@
               <button onclick="setView('year-over-year', this)">
                 YoY Analysis
               </button>
+              <button onclick="setView('monthly-analysis', this)">
+                Monthly Analysis
+              </button>
               <button onclick="setView('alerts', this)">Alerts</button>
+
+              <select id="periodSelect" onchange="updateGlobalDates()">
+                <option value="CURRENT_MONTH">Current Month</option>
+                <option value="PREVIOUS_MONTH">Previous Month</option>
+                <option value="CYTD" selected>CYTD</option>
+                <option value="PYTD">PYTD</option>
+                <option value="CUSTOM">Custom Dates</option>
+              </select>
             </div>
 
             <div id="dashboardData">
@@ -938,6 +950,11 @@
       let isOAuthInProgress = false;
       let activeCompanyFilters = [];
       let currentView = "overview";
+      // Global variables for monthly analysis
+      let monthlyData = null;
+      let monthlyViewMode = "fy"; // 'fy' or 'monthly'
+      let selectedMonth = "";
+      let selectedYear = new Date().getFullYear();
 
       // ====== CONNECTION MANAGER FUNCTIONS ======
 
@@ -1292,6 +1309,49 @@
         //updateChatAnalysisStatus();
       }
 
+      function updateGlobalDates() {
+        const period = document.getElementById("periodSelect").value;
+        const now = new Date();
+
+        // Australian Financial Year logic (July 1 - June 30)
+        const currentMonth = now.getMonth(); // 0-based
+        const ausFinancialYear =
+          currentMonth >= 6 ? now.getFullYear() : now.getFullYear() - 1;
+
+        let fromDate, toDate;
+
+        if (period === "CURRENT_MONTH") {
+          fromDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          toDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        } else if (period === "PREVIOUS_MONTH") {
+          fromDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          toDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        } else if (period === "CYTD") {
+          fromDate = new Date(ausFinancialYear, 6, 1); // July 1
+          toDate = now;
+        } else if (period === "PYTD") {
+          fromDate = new Date(ausFinancialYear - 1, 6, 1);
+          toDate = now;
+        }
+
+        // Send to server to update global variables
+        console.log(
+          `Sending dates: FROM=${fromDate.toISOString().split("T")[0]}, TO=${
+            toDate.toISOString().split("T")[0]
+          }, PERIOD=${period}`
+        );
+
+        fetch("/update-dates", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fromDate: fromDate.toISOString().split("T")[0],
+            toDate: toDate.toISOString().split("T")[0],
+            period: period,
+          }),
+        });
+      }
+
       // Add these functions after the setupCompanyFilters() function:
 
       function handleCompanyFilterChange(tenantId) {
@@ -1473,6 +1533,7 @@
 
       function initializeChat() {
         const chatInput = document.getElementById("chatInput");
+        if (!chatInput) return; // Add this line to prevent the error
 
         chatInput.addEventListener("keydown", function (e) {
           if (e.key === "Enter" && !e.shiftKey) {
@@ -1577,6 +1638,8 @@
             await loadProfitLossData();
           } else if (currentView === "year-over-year") {
             await loadYearOverYearData(); // <- Add this line
+          } else if (currentView === "monthly-analysis") {
+            await loadMonthlyAnalysisData();
           } else if (currentView === "alerts") {
             await loadAlertsData();
           }
@@ -2537,6 +2600,16 @@
   `;
       }
 
+      function debugDropdown() {
+        const select = document.getElementById("yearSelect");
+        console.log("All dropdown options:");
+        for (let i = 0; i < select.options.length; i++) {
+          console.log(
+            `Option ${i}: value="${select.options[i].value}" text="${select.options[i].text}"`
+          );
+        }
+      }
+
       // 7. Generate insights based on YoY data
       function generateYoYInsights(consolidatedYoY, yoyData) {
         const insights = [];
@@ -2610,11 +2683,519 @@
           : "Analyzing year-over-year trends...";
       }
 
-      // 8. Update your setView function to handle YoY
-      // Find your existing setView function and add this case:
-      // else if (currentView === "year-over-year") {
-      //   await loadYearOverYearData();
-      // }
+      // Monthly Analysis Functions
+      async function loadMonthlyAnalysisData() {
+        if (activeCompanyFilters.length === 0) {
+          const dashboardElement = document.getElementById("dashboardData");
+          dashboardElement.innerHTML = `
+      <div style="text-align: center; padding: 40px; color: #666;">
+        <h3>No Companies Selected</h3>
+        <p>Please select companies using the filters above to view monthly analysis.</p>
+      </div>
+    `;
+          return;
+        }
+
+        const dashboardElement = document.getElementById("dashboardData");
+        const selectedCompanyNames = getSelectedCompanyNames();
+
+        dashboardElement.innerHTML = `
+    <div class="loading">
+      <div class="loading-spinner"></div>
+      Loading monthly analysis for ${activeCompanyFilters.length} companies:<br>
+      <small>${selectedCompanyNames.join(", ")}</small>
+    </div>
+  `;
+
+        try {
+          // Load monthly data for each selected company
+          const monthlyDataResults = [];
+
+          for (const tenantId of activeCompanyFilters) {
+            const connectedCompany = connectedCompanies.find(
+              (c) => c.tenantId === tenantId
+            );
+            if (!connectedCompany) continue;
+
+            const orgName = getOrganizationName(connectedCompany.tenantName);
+
+            const response = await fetch("/api/monthly-pl-report", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                organizationName: orgName,
+                year: selectedYear - 1, // Request previous calendar year for FY data
+              }),
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              monthlyDataResults.push({
+                companyName: connectedCompany.tenantName.replace(
+                  "Rirratjingu ",
+                  ""
+                ),
+                ...data.data,
+              });
+            }
+          }
+
+          if (monthlyDataResults.length === 0) {
+            throw new Error("No monthly data available for selected companies");
+          }
+
+          // Render monthly analysis dashboard
+          renderSimpleMonthlyAnalysis(monthlyDataResults);
+        } catch (error) {
+          console.error("Error loading monthly analysis:", error);
+          dashboardElement.innerHTML = `
+      <div style="text-align: center; padding: 40px; color: #e74c3c;">
+        <h3>Error Loading Monthly Analysis</h3>
+        <p>Failed to load monthly data: ${error.message}</p>
+        <button onclick="loadDashboardData()" style="margin-top: 10px; padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          Retry
+        </button>
+      </div>
+    `;
+        }
+      }
+
+      // Replace your complex renderMonthlyAnalysisDashboard function with this simple version
+      function renderSimpleMonthlyAnalysis(monthlyDataResults) {
+        const dashboardElement = document.getElementById("dashboardData");
+
+        // Process each company separately
+        let html = "";
+
+        monthlyDataResults.forEach((companyData) => {
+          // Calculate totals from monthly data for verification
+          let calculatedRevenue = 0;
+          let calculatedExpenses = 0;
+          let calculatedProfit = 0;
+
+          companyData.months.forEach((month) => {
+            calculatedRevenue += month.revenue.total;
+            calculatedExpenses += month.expenses.total;
+            calculatedProfit += month.netProfit;
+          });
+
+          html += `
+      <div style="background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h3 style="color: #2c3e50; margin-bottom: 15px;">${
+          companyData.organization
+        } - ${companyData.year}</h3>
+        
+        <!-- YTD Summary Box -->
+        <div style="background: #f8f9fa; padding: 15px; margin-bottom: 20px; border-radius: 6px;">
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: center;">
+            <div>
+              <div style="font-size: 1.4em; font-weight: bold; color: #27ae60;">$${companyData.cytd.totalRevenue.toLocaleString()}</div>
+              <div style="color: #666;">YTD Revenue</div>
+            </div>
+            <div>
+              <div style="font-size: 1.4em; font-weight: bold; color: #e74c3c;">$${companyData.cytd.totalExpenses.toLocaleString()}</div>
+              <div style="color: #666;">YTD Expenses</div>
+            </div>
+            <div>
+              <div style="font-size: 1.4em; font-weight: bold; color: ${
+                companyData.cytd.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+              };">$${companyData.cytd.netProfit.toLocaleString()}</div>
+              <div style="color: #666;">YTD Net Profit</div>
+            </div>
+          </div>
+          <div style="text-align: center; margin-top: 10px; color: #666;">
+            Profit Margin: ${companyData.cytd.profitMargin.toFixed(
+              1
+            )}% | Months with Data: ${companyData.cytd.monthsIncluded}
+          </div>
+        </div>
+        
+        <!-- Monthly Breakdown Table -->
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            <thead>
+              <tr style="background: #f8f9fa;">
+                <th style="padding: 10px; text-align: left; border: 1px solid #dee2e6; font-weight: 600;">Month</th>
+                <th style="padding: 10px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">Revenue</th>
+                <th style="padding: 10px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">Expenses</th>
+                <th style="padding: 10px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">Net Profit</th>
+                <th style="padding: 10px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">Margin %</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${companyData.months
+                .map(
+                  (month) => `
+                <tr style="border-bottom: 1px solid #f0f0f0;">
+                  <td style="padding: 8px 10px; border: 1px solid #f0f0f0;">${
+                    month.monthName
+                  }</td>
+                  <td style="padding: 8px 10px; text-align: right; border: 1px solid #f0f0f0;">$${month.revenue.total.toLocaleString()}</td>
+                  <td style="padding: 8px 10px; text-align: right; border: 1px solid #f0f0f0;">$${month.expenses.total.toLocaleString()}</td>
+                  <td style="padding: 8px 10px; text-align: right; border: 1px solid #f0f0f0; color: ${
+                    month.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+                  }; font-weight: 600;">
+                    $${month.netProfit.toLocaleString()}
+                  </td>
+                  <td style="padding: 8px 10px; text-align: right; border: 1px solid #f0f0f0;">
+                    ${
+                      month.revenue.total > 0
+                        ? (
+                            (month.netProfit / month.revenue.total) *
+                            100
+                          ).toFixed(1)
+                        : "0.0"
+                    }%
+                  </td>
+                </tr>
+              `
+                )
+                .join("")}
+              
+              <!-- TOTALS ROW FOR RECONCILIATION -->
+              <tr style="background: #e8f4f8; border-top: 2px solid #3498db; font-weight: bold;">
+                <td style="padding: 10px; border: 1px solid #3498db;">CALCULATED TOTALS</td>
+                <td style="padding: 10px; text-align: right; border: 1px solid #3498db; color: #27ae60;">
+                  $${calculatedRevenue.toLocaleString()}
+                </td>
+                <td style="padding: 10px; text-align: right; border: 1px solid #3498db; color: #e74c3c;">
+                  $${calculatedExpenses.toLocaleString()}
+                </td>
+                <td style="padding: 10px; text-align: right; border: 1px solid #3498db; color: ${
+                  calculatedProfit >= 0 ? "#27ae60" : "#e74c3c"
+                };">
+                  $${calculatedProfit.toLocaleString()}
+                </td>
+                <td style="padding: 10px; text-align: right; border: 1px solid #3498db;">
+                  ${
+                    calculatedRevenue > 0
+                      ? ((calculatedProfit / calculatedRevenue) * 100).toFixed(
+                          1
+                        )
+                      : "0.0"
+                  }%
+                </td>
+              </tr>
+              
+              <!-- RECONCILIATION CHECK -->
+              <tr style="background: ${
+                Math.abs(calculatedRevenue - companyData.cytd.totalRevenue) <
+                  1 &&
+                Math.abs(calculatedExpenses - companyData.cytd.totalExpenses) <
+                  1 &&
+                Math.abs(calculatedProfit - companyData.cytd.netProfit) < 1
+                  ? "#d4edda"
+                  : "#f8d7da"
+              };">
+                <td style="padding: 10px; font-weight: bold;">RECONCILIATION</td>
+                <td style="padding: 10px; text-align: right; font-size: 12px;">
+                  ${
+                    Math.abs(
+                      calculatedRevenue - companyData.cytd.totalRevenue
+                    ) < 1
+                      ? "✅ Match"
+                      : `❌ Diff: $${(
+                          calculatedRevenue - companyData.cytd.totalRevenue
+                        ).toLocaleString()}`
+                  }
+                </td>
+                <td style="padding: 10px; text-align: right; font-size: 12px;">
+                  ${
+                    Math.abs(
+                      calculatedExpenses - companyData.cytd.totalExpenses
+                    ) < 1
+                      ? "✅ Match"
+                      : `❌ Diff: $${(
+                          calculatedExpenses - companyData.cytd.totalExpenses
+                        ).toLocaleString()}`
+                  }
+                </td>
+                <td style="padding: 10px; text-align: right; font-size: 12px;">
+                  ${
+                    Math.abs(calculatedProfit - companyData.cytd.netProfit) < 1
+                      ? "✅ Match"
+                      : `❌ Diff: $${(
+                          calculatedProfit - companyData.cytd.netProfit
+                        ).toLocaleString()}`
+                  }
+                </td>
+                <td style="padding: 10px; text-align: right; font-size: 12px;">
+                  ${
+                    Math.abs(
+                      calculatedRevenue - companyData.cytd.totalRevenue
+                    ) < 1
+                      ? "✅"
+                      : "❌"
+                  }
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+        });
+
+        dashboardElement.innerHTML = html;
+      }
+
+      // Update your loadMonthlyAnalysisData function to call this simpler version:
+      // Replace the call to renderMonthlyAnalysisDashboard(monthlyDataResults);
+      // With: renderSimpleMonthlyAnalysis(monthlyDataResults);
+
+      function calculateConsolidatedMonthlyData(monthlyDataResults) {
+        if (monthlyDataResults.length === 0) return null;
+
+        // Initialize consolidated data structure
+        const consolidated = {
+          year: monthlyDataResults[0].year,
+          totalRevenue: 0,
+          totalExpenses: 0,
+          netProfit: 0,
+          profitMargin: 0,
+          monthsIncluded: 0,
+          months: [],
+        };
+
+        // Initialize Financial Year months (July to June)
+        const fyMonthNames = [
+          "July",
+          "August",
+          "September",
+          "October",
+          "November",
+          "December",
+          "January",
+          "February",
+          "March",
+          "April",
+          "May",
+          "June",
+        ];
+
+        for (let i = 0; i < 12; i++) {
+          // For FY 2025: July-Dec 2024, Jan-June 2025
+          const isFirstHalf = i < 6; // July-December
+          const calendarYear = isFirstHalf
+            ? consolidated.year - 1
+            : consolidated.year;
+          const calendarMonth = isFirstHalf ? i + 7 : i - 5; // Map FY index to calendar month
+
+          consolidated.months.push({
+            month: `${calendarYear}-${calendarMonth
+              .toString()
+              .padStart(2, "0")}`,
+            monthName: fyMonthNames[i],
+            fyIndex: i, // Track FY position
+            revenue: 0,
+            expenses: 0,
+            netProfit: 0,
+            profitMargin: 0,
+          });
+        }
+
+        // Aggregate data from all companies
+        monthlyDataResults.forEach((company) => {
+          consolidated.totalRevenue += company.cytd.totalRevenue;
+          consolidated.totalExpenses += company.cytd.totalExpenses;
+          consolidated.netProfit += company.cytd.netProfit;
+
+          // Map calendar year data to financial year structure
+          company.months.forEach((monthData) => {
+            // Extract calendar month from monthData (e.g., "2024-07" = July 2024)
+            const [dataYear, dataMonth] = monthData.month
+              .split("-")
+              .map(Number);
+
+            // Find corresponding FY index
+            let fyIndex = -1;
+            if (dataMonth >= 7) {
+              // July-December (first half of FY)
+              fyIndex = dataMonth - 7;
+            } else {
+              // January-June (second half of FY)
+              fyIndex = dataMonth + 5;
+            }
+
+            // Add to consolidated data if we have a valid FY index
+            if (fyIndex >= 0 && fyIndex < 12) {
+              consolidated.months[fyIndex].revenue += monthData.revenue.total;
+              consolidated.months[fyIndex].expenses += monthData.expenses.total;
+              consolidated.months[fyIndex].netProfit += monthData.netProfit;
+            }
+          });
+        });
+
+        // Calculate consolidated profit margin
+        consolidated.profitMargin =
+          consolidated.totalRevenue > 0
+            ? (consolidated.netProfit / consolidated.totalRevenue) * 100
+            : 0;
+
+        // Calculate month profit margins and count months with data
+        consolidated.months.forEach((month) => {
+          month.profitMargin =
+            month.revenue > 0 ? (month.netProfit / month.revenue) * 100 : 0;
+        });
+
+        // Count months with data
+        consolidated.monthsIncluded = consolidated.months.filter(
+          (m) => m.revenue > 0
+        ).length;
+
+        return consolidated;
+      }
+
+      // Event handlers for monthly analysis
+      function handleMonthlyViewChange() {
+        const viewMode = document.getElementById("monthlyViewMode").value;
+        const monthSelector = document.getElementById("monthSelector");
+
+        if (viewMode === "monthly") {
+          monthSelector.style.display = "block";
+        } else {
+          monthSelector.style.display = "none";
+          document.getElementById("monthSelect").value = "";
+          // Show full year view
+        }
+        // Add this line to refresh the display
+        loadDashboardData();
+      }
+
+      function handleMonthSelection() {
+        const selectedMonth = document.getElementById("monthSelect").value;
+        if (selectedMonth) {
+          // Show specific month detail
+          showMonthDetailView(selectedMonth);
+        }
+      }
+
+      function handleYearChange() {
+        const year = document.getElementById("yearSelect").value;
+        selectedYear = parseInt(year);
+        console.log("Year changed to:", selectedYear); // Add this
+        // Update the dropdown display to match the selected value
+        document.getElementById("yearSelect").value = year;
+        loadDashboardData(); // This should reload with new year
+      }
+
+      function showMonthDetail(monthCode, monthName) {
+        // Switch to monthly view mode
+        document.getElementById("monthlyViewMode").value = "monthly";
+        document.getElementById("monthSelector").style.display = "block";
+        document.getElementById("monthSelect").value = monthCode.split("-")[1];
+
+        showMonthDetailView(monthCode.split("-")[1]);
+      }
+
+      function showMonthDetailView(monthNumber) {
+        // Update metrics to show single month
+        // This would filter the display to show only the selected month's data
+        console.log("Showing detail for month:", monthNumber);
+        // Implementation would update the metrics display to show single month
+      }
+
+      function createMonthlyTrendChart(consolidatedData) {
+        const canvas = document.getElementById("monthlyTrendChart");
+        if (!canvas) return;
+
+        const ctx = canvas.getContext("2d");
+
+        // Destroy existing chart if it exists
+        if (window.monthlyChart) {
+          window.monthlyChart.destroy();
+        }
+
+        const labels = consolidatedData.months.map((m) =>
+          m.monthName.substring(0, 3)
+        );
+        const revenue = consolidatedData.months.map((m) => m.revenue);
+        const expenses = consolidatedData.months.map((m) => m.expenses);
+        const profit = consolidatedData.months.map((m) => m.netProfit);
+
+        window.monthlyChart = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: "Revenue",
+                data: revenue,
+                borderColor: "#3498db",
+                backgroundColor: "rgba(52, 152, 219, 0.1)",
+                fill: false,
+                tension: 0.4,
+                pointBackgroundColor: "#3498db",
+                pointBorderColor: "#2980b9",
+                pointBorderWidth: 2,
+                pointRadius: 4,
+              },
+              {
+                label: "Expenses",
+                data: expenses,
+                borderColor: "#e74c3c",
+                backgroundColor: "rgba(231, 76, 60, 0.1)",
+                fill: false,
+                tension: 0.4,
+                pointBackgroundColor: "#e74c3c",
+                pointBorderColor: "#c0392b",
+                pointBorderWidth: 2,
+                pointRadius: 4,
+              },
+              {
+                label: "Net Profit",
+                data: profit,
+                borderColor: "#27ae60",
+                backgroundColor: "rgba(39, 174, 96, 0.1)",
+                fill: false,
+                tension: 0.4,
+                pointBackgroundColor: "#27ae60",
+                pointBorderColor: "#229954",
+                pointBorderWidth: 2,
+                pointRadius: 4,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              title: {
+                display: false,
+              },
+              tooltip: {
+                callbacks: {
+                  label: function (context) {
+                    return (
+                      context.dataset.label +
+                      ": $" +
+                      context.parsed.y.toLocaleString()
+                    );
+                  },
+                },
+              },
+              legend: {
+                position: "top",
+              },
+            },
+            scales: {
+              y: {
+                beginAtZero: false,
+                ticks: {
+                  callback: function (value) {
+                    return "$" + (value / 1000000).toFixed(1) + "M";
+                  },
+                },
+              },
+            },
+            interaction: {
+              intersect: false,
+              mode: "index",
+            },
+          },
+        });
+      }
+
       // ====== HELPER FUNCTIONS FOR PARSING MCP RESPONSES ======
 
       function getOrganizationName(tenantName) {
