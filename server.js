@@ -2926,14 +2926,14 @@ app.get("/api/trial-balance/:tenantId", async (req, res) => {
     console.log(`📅 Report date: ${reportDate}`);
 
     // Get Balance Sheet report for specified date
-    const balanceSheetResponse = await xero.accountingApi.getReportBalanceSheet(
+    const trialBalanceResponse = await xero.accountingApi.getReportTrialBalance(
       req.params.tenantId,
       reportDate
     );
 
-    const balanceSheetRows = balanceSheetResponse.body.reports?.[0]?.rows || [];
+    const trialBalanceRows = trialBalanceResponse.body.reports?.[0]?.rows || [];
     console.log(
-      `📊 Processing ${balanceSheetRows.length} Balance Sheet sections for ${reportDate}`
+      `📊 Processing ${trialBalanceResponse.length} Balance Sheet sections for ${reportDate}`
     );
 
     // Initialize trial balance structure
