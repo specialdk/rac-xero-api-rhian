@@ -3519,7 +3519,10 @@ app.get("/api/expense-analysis/:tenantId", async (req, res) => {
       reportDate
     );
 
-    console.log("Raw Xero P&L Response:", JSON.stringify(response.body.reports[0], null, 2));
+    console.log(
+      "Raw Xero P&L Response:",
+      JSON.stringify(response.body.reports[0], null, 2)
+    );
     const plRows = response.body.reports?.[0]?.rows || [];
 
     const expenseAnalysis = {
