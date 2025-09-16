@@ -2694,7 +2694,7 @@
           }
 
           // Render monthly analysis dashboard
-          renderMonthlyAnalysisDashboard(monthlyDataResults);
+          renderSimpleMonthlyAnalysis(monthlyDataResults);
         } catch (error) {
           console.error("Error loading monthly analysis:", error);
           dashboardElement.innerHTML = `
@@ -2709,220 +2709,188 @@
         }
       }
 
-      function renderMonthlyAnalysisDashboard(monthlyDataResults) {
+      // Replace your complex renderMonthlyAnalysisDashboard function with this simple version
+      function renderSimpleMonthlyAnalysis(monthlyDataResults) {
         const dashboardElement = document.getElementById("dashboardData");
 
-        // Calculate consolidated totals
-        const consolidatedData =
-          calculateConsolidatedMonthlyData(monthlyDataResults);
+        // Process each company separately
+        let html = "";
 
-        dashboardElement.innerHTML = `
-    <!-- MONTHLY ANALYSIS HEADER -->
-    <div style="background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h2 style="color: #2c3e50; margin: 0;">Monthly Financial Analysis</h2>
-        <div style="display: flex; gap: 15px; align-items: center;">
-          <div>
-            <label style="font-weight: 600; margin-right: 8px;">View:</label>
-            <select id="monthlyViewMode" onchange="handleMonthlyViewChange()" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px;">
-              <option value="fy">Financial Year</option>
-              <option value="monthly">Monthly Detail</option>
-            </select>
-          </div>
-          <div id="monthSelector" style="display: none;">
-            <label style="font-weight: 600; margin-right: 8px;">Month:</label>
-            <select id="monthSelect" onchange="handleMonthSelection()" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px;">
-              <option value="">Choose Month...</option>
-              <option value="01">January</option>
-              <option value="02">February</option>
-              <option value="03">March</option>
-              <option value="04">April</option>
-              <option value="05">May</option>
-              <option value="06">June</option>
-              <option value="07">July</option>
-              <option value="08">August</option>
-              <option value="09">September</option>
-              <option value="10">October</option>
-              <option value="11">November</option>
-              <option value="12">December</option>
-            </select>
-          </div>
-          <div>
-            <label style="font-weight: 600; margin-right: 8px;">Year:</label>
-            <select id="yearSelect" onchange="handleYearChange()" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px;">
-               <option value="2026">2026</option>
-               <option value="2025">2025</option>
-               <option value="2024">2024</option>
-               <option value="2023">2023</option>
-            </select>
-          </div>
-        </div>
-      </div>
-      
-      
-      <!-- KEY METRICS ROW -->
-      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
-        <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 6px;">
-          <div style="font-size: 1.8em; font-weight: bold; color: #27ae60;" id="monthlyTotalRevenue">
-            $${consolidatedData.totalRevenue.toLocaleString()}
-          </div>
-          <div style="color: #666; font-size: 0.9em;">Total Revenue</div>
-          <div style="color: #3498db; font-size: 0.8em;" id="monthlyRevenueChange">YTD ${
-            consolidatedData.year
-          }</div>
-        </div>
-        <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 6px;">
-          <div style="font-size: 1.8em; font-weight: bold; color: #e74c3c;" id="monthlyTotalExpenses">
-            $${consolidatedData.totalExpenses.toLocaleString()}
-          </div>
-          <div style="color: #666; font-size: 0.9em;">Total Expenses</div>
-          <div style="color: #3498db; font-size: 0.8em;" id="monthlyExpenseChange">YTD ${
-            consolidatedData.year
-          }</div>
-        </div>
-        <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 6px;">
-          <div style="font-size: 1.8em; font-weight: bold; color: ${
-            consolidatedData.netProfit >= 0 ? "#27ae60" : "#e74c3c"
-          };" id="monthlyNetProfit">
-            $${consolidatedData.netProfit.toLocaleString()}
-          </div>
-          <div style="color: #666; font-size: 0.9em;">Net Profit</div>
-          <div style="color: #3498db; font-size: 0.8em;" id="monthlyProfitChange">${
-            consolidatedData.netProfit >= 0 ? "Profitable" : "Loss"
-          }</div>
-        </div>
-        <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 6px;">
-          <div style="font-size: 1.8em; font-weight: bold; color: #3498db;" id="monthlyProfitMargin">
-            ${consolidatedData.profitMargin.toFixed(1)}%
-          </div>
-          <div style="color: #666; font-size: 0.9em;">Profit Margin</div>
-          <div style="color: #3498db; font-size: 0.8em;" id="monthlyMarginChange">${
-            consolidatedData.monthsIncluded
-          } months</div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- MONTHLY TREND CHART -->
-    <div style="background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-      <h3 style="color: #2c3e50; margin-bottom: 15px;">Monthly Performance Trend</h3>
-      <div style="height: 400px; position: relative;">
-        <canvas id="monthlyTrendChart" style="width: 100%; height: 100%;"></canvas>
-      </div>
-    </div>
-    
-    <!-- YoY COMPARISON -->
-    <div style="background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-      <h3 style="color: #2c3e50; margin-bottom: 15px;">Year-over-Year Comparison</h3>
-      <div id="yoyComparisonContent">
-        <div style="text-align: center; padding: 20px; color: #666;">
-          <p>YoY comparison will be available when 2023 data is loaded</p>
-        </div>
-      </div>
-    </div>
-    
-    <!-- COMPANY BREAKDOWN -->
-    ${
-      monthlyDataResults.length > 1
-        ? `
-    <div style="background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-      <h3 style="color: #2c3e50; margin-bottom: 15px;">Company Performance Breakdown</h3>
-      ${monthlyDataResults
-        .map(
-          (company) => `
-        <div style="border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px; margin: 10px 0; background: #fafafa;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <strong style="font-size: 16px;">${company.companyName}</strong>
-            <span style="color: ${
-              company.cytd.netProfit >= 0 ? "#27ae60" : "#e74c3c"
-            }; font-weight: 600;">
-              Net: $${company.cytd.netProfit.toLocaleString()}
-            </span>
-          </div>
-          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; font-size: 13px;">
+        monthlyDataResults.forEach((companyData) => {
+          // Calculate totals from monthly data for verification
+          let calculatedRevenue = 0;
+          let calculatedExpenses = 0;
+          let calculatedProfit = 0;
+
+          companyData.months.forEach((month) => {
+            calculatedRevenue += month.revenue.total;
+            calculatedExpenses += month.expenses.total;
+            calculatedProfit += month.netProfit;
+          });
+
+          html += `
+      <div style="background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h3 style="color: #2c3e50; margin-bottom: 15px;">${
+          companyData.organization
+        } - ${companyData.year}</h3>
+        
+        <!-- YTD Summary Box -->
+        <div style="background: #f8f9fa; padding: 15px; margin-bottom: 20px; border-radius: 6px;">
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: center;">
             <div>
-              <div style="color: #666; margin-bottom: 3px;">Revenue</div>
-              <div style="font-weight: 600;">$${company.cytd.totalRevenue.toLocaleString()}</div>
+              <div style="font-size: 1.4em; font-weight: bold; color: #27ae60;">$${companyData.cytd.totalRevenue.toLocaleString()}</div>
+              <div style="color: #666;">YTD Revenue</div>
             </div>
             <div>
-              <div style="color: #666; margin-bottom: 3px;">Expenses</div>
-              <div style="font-weight: 600;">$${company.cytd.totalExpenses.toLocaleString()}</div>
+              <div style="font-size: 1.4em; font-weight: bold; color: #e74c3c;">$${companyData.cytd.totalExpenses.toLocaleString()}</div>
+              <div style="color: #666;">YTD Expenses</div>
             </div>
             <div>
-              <div style="color: #666; margin-bottom: 3px;">Profit Margin</div>
-              <div style="font-weight: 600;">${company.cytd.profitMargin.toFixed(
-                1
-              )}%</div>
-            </div>
-            <div>
-              <div style="color: #666; margin-bottom: 3px;">Months Data</div>
-              <div style="font-weight: 600;">${
-                company.cytd.monthsIncluded
-              }/12</div>
+              <div style="font-size: 1.4em; font-weight: bold; color: ${
+                companyData.cytd.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+              };">$${companyData.cytd.netProfit.toLocaleString()}</div>
+              <div style="color: #666;">YTD Net Profit</div>
             </div>
           </div>
+          <div style="text-align: center; margin-top: 10px; color: #666;">
+            Profit Margin: ${companyData.cytd.profitMargin.toFixed(
+              1
+            )}% | Months with Data: ${companyData.cytd.monthsIncluded}
+          </div>
         </div>
-      `
-        )
-        .join("")}
-    </div>
-    `
-        : ""
-    }
-    
-    <!-- MONTHLY DATA TABLE -->
-    <div style="background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-      <h3 style="color: #2c3e50; margin-bottom: 15px;">Monthly Financial Summary</h3>
-      <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse;">
-          <thead>
-            <tr style="background: #f8f9fa;">
-              <th style="padding: 12px; text-align: left; border-bottom: 1px solid #dee2e6;">Month</th>
-              <th style="padding: 12px; text-align: right; border-bottom: 1px solid #dee2e6;">Revenue</th>
-              <th style="padding: 12px; text-align: right; border-bottom: 1px solid #dee2e6;">Expenses</th>
-              <th style="padding: 12px; text-align: right; border-bottom: 1px solid #dee2e6;">Net Profit</th>
-              <th style="padding: 12px; text-align: right; border-bottom: 1px solid #dee2e6;">Margin %</th>
-              <th style="padding: 12px; text-align: center; border-bottom: 1px solid #dee2e6;">YoY Growth</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${consolidatedData.months
-              .map(
-                (month, index) => `
-              <tr style="cursor: pointer;" onclick="showMonthDetail('${
-                month.month
-              }', '${
-                  month.monthName
-                }')" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='white'">
-                <td style="padding: 12px; border-bottom: 1px solid #f0f0f0;">${
-                  month.monthName
-                }</td>
-                <td style="padding: 12px; text-align: right; border-bottom: 1px solid #f0f0f0;">$${month.revenue.toLocaleString()}</td>
-                <td style="padding: 12px; text-align: right; border-bottom: 1px solid #f0f0f0;">$${month.expenses.toLocaleString()}</td>
-                <td style="padding: 12px; text-align: right; border-bottom: 1px solid #f0f0f0; color: ${
-                  month.netProfit >= 0 ? "#27ae60" : "#e74c3c"
-                }; font-weight: 600;">
-                  $${month.netProfit.toLocaleString()}
-                </td>
-                <td style="padding: 12px; text-align: right; border-bottom: 1px solid #f0f0f0;">${month.profitMargin.toFixed(
-                  1
-                )}%</td>
-                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #f0f0f0; color: #666;">TBD</td>
+        
+        <!-- Monthly Breakdown Table -->
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            <thead>
+              <tr style="background: #f8f9fa;">
+                <th style="padding: 10px; text-align: left; border: 1px solid #dee2e6; font-weight: 600;">Month</th>
+                <th style="padding: 10px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">Revenue</th>
+                <th style="padding: 10px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">Expenses</th>
+                <th style="padding: 10px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">Net Profit</th>
+                <th style="padding: 10px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">Margin %</th>
               </tr>
-            `
-              )
-              .join("")}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              ${companyData.months
+                .map(
+                  (month) => `
+                <tr style="border-bottom: 1px solid #f0f0f0;">
+                  <td style="padding: 8px 10px; border: 1px solid #f0f0f0;">${
+                    month.monthName
+                  }</td>
+                  <td style="padding: 8px 10px; text-align: right; border: 1px solid #f0f0f0;">$${month.revenue.total.toLocaleString()}</td>
+                  <td style="padding: 8px 10px; text-align: right; border: 1px solid #f0f0f0;">$${month.expenses.total.toLocaleString()}</td>
+                  <td style="padding: 8px 10px; text-align: right; border: 1px solid #f0f0f0; color: ${
+                    month.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+                  }; font-weight: 600;">
+                    $${month.netProfit.toLocaleString()}
+                  </td>
+                  <td style="padding: 8px 10px; text-align: right; border: 1px solid #f0f0f0;">
+                    ${
+                      month.revenue.total > 0
+                        ? (
+                            (month.netProfit / month.revenue.total) *
+                            100
+                          ).toFixed(1)
+                        : "0.0"
+                    }%
+                  </td>
+                </tr>
+              `
+                )
+                .join("")}
+              
+              <!-- TOTALS ROW FOR RECONCILIATION -->
+              <tr style="background: #e8f4f8; border-top: 2px solid #3498db; font-weight: bold;">
+                <td style="padding: 10px; border: 1px solid #3498db;">CALCULATED TOTALS</td>
+                <td style="padding: 10px; text-align: right; border: 1px solid #3498db; color: #27ae60;">
+                  $${calculatedRevenue.toLocaleString()}
+                </td>
+                <td style="padding: 10px; text-align: right; border: 1px solid #3498db; color: #e74c3c;">
+                  $${calculatedExpenses.toLocaleString()}
+                </td>
+                <td style="padding: 10px; text-align: right; border: 1px solid #3498db; color: ${
+                  calculatedProfit >= 0 ? "#27ae60" : "#e74c3c"
+                };">
+                  $${calculatedProfit.toLocaleString()}
+                </td>
+                <td style="padding: 10px; text-align: right; border: 1px solid #3498db;">
+                  ${
+                    calculatedRevenue > 0
+                      ? ((calculatedProfit / calculatedRevenue) * 100).toFixed(
+                          1
+                        )
+                      : "0.0"
+                  }%
+                </td>
+              </tr>
+              
+              <!-- RECONCILIATION CHECK -->
+              <tr style="background: ${
+                Math.abs(calculatedRevenue - companyData.cytd.totalRevenue) <
+                  1 &&
+                Math.abs(calculatedExpenses - companyData.cytd.totalExpenses) <
+                  1 &&
+                Math.abs(calculatedProfit - companyData.cytd.netProfit) < 1
+                  ? "#d4edda"
+                  : "#f8d7da"
+              };">
+                <td style="padding: 10px; font-weight: bold;">RECONCILIATION</td>
+                <td style="padding: 10px; text-align: right; font-size: 12px;">
+                  ${
+                    Math.abs(
+                      calculatedRevenue - companyData.cytd.totalRevenue
+                    ) < 1
+                      ? "✅ Match"
+                      : `❌ Diff: $${(
+                          calculatedRevenue - companyData.cytd.totalRevenue
+                        ).toLocaleString()}`
+                  }
+                </td>
+                <td style="padding: 10px; text-align: right; font-size: 12px;">
+                  ${
+                    Math.abs(
+                      calculatedExpenses - companyData.cytd.totalExpenses
+                    ) < 1
+                      ? "✅ Match"
+                      : `❌ Diff: $${(
+                          calculatedExpenses - companyData.cytd.totalExpenses
+                        ).toLocaleString()}`
+                  }
+                </td>
+                <td style="padding: 10px; text-align: right; font-size: 12px;">
+                  ${
+                    Math.abs(calculatedProfit - companyData.cytd.netProfit) < 1
+                      ? "✅ Match"
+                      : `❌ Diff: $${(
+                          calculatedProfit - companyData.cytd.netProfit
+                        ).toLocaleString()}`
+                  }
+                </td>
+                <td style="padding: 10px; text-align: right; font-size: 12px;">
+                  ${
+                    Math.abs(
+                      calculatedRevenue - companyData.cytd.totalRevenue
+                    ) < 1
+                      ? "✅"
+                      : "❌"
+                  }
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
-  `;
+    `;
+        });
 
-        // Initialize chart after DOM is ready
-        setTimeout(() => {
-          createMonthlyTrendChart(consolidatedData);
-        }, 100);
+        dashboardElement.innerHTML = html;
       }
+
+      // Update your loadMonthlyAnalysisData function to call this simpler version:
+      // Replace the call to renderMonthlyAnalysisDashboard(monthlyDataResults);
+      // With: renderSimpleMonthlyAnalysis(monthlyDataResults);
 
       function calculateConsolidatedMonthlyData(monthlyDataResults) {
         if (monthlyDataResults.length === 0) return null;
