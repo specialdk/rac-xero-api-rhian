@@ -3293,7 +3293,7 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
             ) {
               plSummary.revenueAccounts.push({
                 name: accountName,
-                amount: Math.abs(amount),
+                amount: amount,
               });
               plSummary.totalRevenue += Math.abs(amount);
             } else if (
@@ -3302,7 +3302,7 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
             ) {
               plSummary.expenseAccounts.push({
                 name: accountName,
-                amount: Math.abs(amount),
+                amount: amount,
               });
               plSummary.totalExpenses += Math.abs(amount);
             }
@@ -3541,7 +3541,7 @@ app.get("/api/expense-analysis/:tenantId", async (req, res) => {
               if (!accountName.toLowerCase().includes("total") && amount > 0) {
                 const expenseItem = {
                   accountName,
-                  amount: Math.abs(amount),
+                  amount: amount,
                   monthlyAverage: Math.abs(amount) / periodMonths,
                   category: categorizeExpense(accountName),
                 };
