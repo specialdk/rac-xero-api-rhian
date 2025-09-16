@@ -2820,7 +2820,8 @@ app.get("/api/trial-balance/:tenantId", async (req, res) => {
                 sectionTitle.includes("income") ||
                 sectionTitle.includes("revenue") ||
                 sectionTitle.includes("trading") ||
-                sectionTitle.includes("sales")
+                sectionTitle.includes("sales") ||
+                sectionTitle.includes("property maintenance")
               ) {
                 accountInfo.credit = Math.abs(currentAmount);
                 trialBalance.revenue.push(accountInfo);
@@ -3266,24 +3267,16 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
       reportDate
     );
 
-    console.log(
-      "Raw Xero P&L Response:",
-      JSON.stringify(response.body.reports[0], null, 2)
-    );
-    console.log(
-      "P&L API call successful:",
-      response.body.reports?.[0] ? "YES" : "NO"
-    );
     const plRows = response.body.reports?.[0]?.rows || [];
 
     const plSummary = {
       totalRevenue: 0,
       totalExpenses: 0,
       netProfit: 0,
-      revenueAccounts: [],
-      expenseAccounts: [],
-      grossProfit: 0,
-      operatingExpenses: 0,
+      revenueSections: {}, // New: group by section
+      expenseSections: {}, // New: group by section
+      revenueAccounts: [], // Keep for compatibility
+      expenseAccounts: [], // Keep for compatibility
     };
 
     plRows.forEach((section) => {
@@ -3301,7 +3294,9 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
 
             if (
               sectionTitle.includes("income") ||
-              sectionTitle.includes("revenue")
+              sectionTitle.includes("revenue") ||
+              sectionTitle.includes("property maintenance") ||
+              sectionTitle.includes("trading")
             ) {
               plSummary.revenueAccounts.push({
                 name: accountName,
@@ -3310,7 +3305,10 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
               plSummary.totalRevenue += amount;
             } else if (
               sectionTitle.includes("expense") ||
-              sectionTitle.includes("cost")
+              sectionTitle.includes("cost") ||
+              sectionTitle.includes("administration") ||
+              sectionTitle.includes("operating") ||
+              sectionTitle.includes("salaries")
             ) {
               plSummary.expenseAccounts.push({
                 name: accountName,
