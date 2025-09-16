@@ -3549,7 +3549,13 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
       period: {
         from: fromDateStr,
         to: reportDate,
-        months: periodMonths,
+        months: Math.max(
+          1,
+          Math.floor(
+            (new Date(reportDate) - new Date(fromDateStr)) /
+              (1000 * 60 * 60 * 24 * 30)
+          )
+        ),
       },
       summary: plSummary,
       generatedAt: new Date().toISOString(),
