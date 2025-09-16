@@ -1163,7 +1163,7 @@ app.post("/api/cash-position", async (req, res) => {
   }
 });
 
-// Profit & Loss Summary endpoint
+// Also update the POST endpoint for P&L
 app.post("/api/profit-loss-summary", async (req, res) => {
   try {
     const { organizationName, tenantId, date, periodMonths } = req.body;
@@ -1188,11 +1188,14 @@ app.post("/api/profit-loss-summary", async (req, res) => {
       }
     }
 
-    // Call your existing GET endpoint internally
+    // Build parameters with updated defaults
     const params = new URLSearchParams();
     if (date) params.append("date", date);
-    if (periodMonths) params.append("periodMonths", periodMonths.toString());
-    const queryString = params.toString() ? `?${params.toString()}` : "";
+    // Default to 1 month instead of 12 for current month behavior
+    params.append("periodMonths", (periodMonths || 1).toString());
+    const queryString = params.toString()
+      ? `?${params.toString()}`
+      : "?periodMonths=1";
 
     const response = await fetch(
       `${req.protocol}://${req.get(
@@ -3218,7 +3221,8 @@ function toggleSectionFromElement(element) {
 // ADDITIONAL FINANCIAL ANALYSIS ENDPOINTS
 // ============================================================================
 
-// Get Profit & Loss summary
+// Replace the existing profit-loss endpoint around line 1600
+// Get Profit & Loss summary - UPDATED WITH CURRENT MONTH DEFAULT
 app.get("/api/profit-loss/:tenantId", async (req, res) => {
   try {
     const tokenData = await tokenStorage.getXeroToken(req.params.tenantId);
@@ -3230,16 +3234,26 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
 
     await xero.setTokenSet(tokenData);
 
+    // UPDATED DATE LOGIC - Default to current month
     const reportDate = req.query.date || new Date().toISOString().split("T")[0];
-    const periodMonths = parseInt(req.query.periodMonths) || 12;
+    const periodMonths = parseInt(req.query.periodMonths) || 1; // Default to 1 month instead of 12
 
-    // Calculate from date (start of period)
-    const fromDate = new Date(reportDate);
-    fromDate.setMonth(fromDate.getMonth() - periodMonths);
+    // Calculate from date based on current month logic
+    let fromDate;
+    if (periodMonths === 1) {
+      // For current month: use first day of current month
+      const currentDate = new Date(reportDate);
+      fromDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    } else {
+      // For multi-month periods: subtract months from report date
+      fromDate = new Date(reportDate);
+      fromDate.setMonth(fromDate.getMonth() - periodMonths);
+    }
+
     const fromDateStr = fromDate.toISOString().split("T")[0];
 
     console.log(
-      `Getting P&L for ${tokenData.tenantName} from ${fromDateStr} to ${reportDate}`
+      `Getting P&L for ${tokenData.tenantName} from ${fromDateStr} to ${reportDate} (${periodMonths} month period)`
     );
 
     const response = await xero.accountingApi.getReportProfitAndLoss(
@@ -3306,6 +3320,8 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
         from: fromDateStr,
         to: reportDate,
         months: periodMonths,
+        description:
+          periodMonths === 1 ? "Current Month" : `${periodMonths} Month Period`,
       },
       summary: plSummary,
       generatedAt: new Date().toISOString(),
@@ -3316,6 +3332,58 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
       error: "Failed to get P&L summary",
       details: error.message,
     });
+  }
+});
+
+// Also update the POST endpoint for P&L
+app.post("/api/profit-loss-summary", async (req, res) => {
+  try {
+    const { organizationName, tenantId, date, periodMonths } = req.body;
+
+    if (!organizationName && !tenantId) {
+      return res
+        .status(400)
+        .json({ error: "Organization name or tenant ID required" });
+    }
+
+    // Find tenant ID if organization name provided
+    let actualTenantId = tenantId;
+    if (organizationName && !tenantId) {
+      const connections = await tokenStorage.getAllXeroConnections();
+      const connection = connections.find((c) =>
+        c.tenantName.toLowerCase().includes(organizationName.toLowerCase())
+      );
+      if (connection) {
+        actualTenantId = connection.tenantId;
+      } else {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+    }
+
+    // Build parameters with updated defaults
+    const params = new URLSearchParams();
+    if (date) params.append("date", date);
+    // Default to 1 month instead of 12 for current month behavior
+    params.append("periodMonths", (periodMonths || 1).toString());
+    const queryString = params.toString()
+      ? `?${params.toString()}`
+      : "?periodMonths=1";
+
+    const response = await fetch(
+      `${req.protocol}://${req.get(
+        "host"
+      )}/api/profit-loss/${actualTenantId}${queryString}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`P&L request failed: ${response.status}`);
+    }
+
+    const result = await response.json();
+    res.json(result);
+  } catch (error) {
+    console.error("❌ P&L summary API error:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 
