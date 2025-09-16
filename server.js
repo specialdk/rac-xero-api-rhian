@@ -682,19 +682,6 @@ app.get("/api/consolidated", async (req, res) => {
       (conn) => conn.connected
     );
 
-    app.post("/update-dates", (req, res) => {
-      const { fromDate, toDate, period } = req.body;
-
-      // Update the global variables
-      GLOBAL_FROM_DATE = fromDate;
-      GLOBAL_TO_DATE = toDate;
-      SELECTED_PERIOD = period;
-
-      console.log(`Updated global dates: ${fromDate} to ${toDate} (${period})`);
-
-      res.json({ success: true });
-    });
-
     // Aggregate Xero data
     for (const connection of connectedXeroEntities) {
       try {
@@ -2025,6 +2012,19 @@ async function initializeAutoRefresh() {
     console.error("❌ Failed to initialize auto-refresh:", error);
   }
 }
+
+app.post("/update-dates", (req, res) => {
+  const { fromDate, toDate, period } = req.body;
+
+  // Update the global variables
+  GLOBAL_FROM_DATE = fromDate;
+  GLOBAL_TO_DATE = toDate;
+  SELECTED_PERIOD = period;
+
+  console.log(`Updated global dates: ${fromDate} to ${toDate} (${period})`);
+
+  res.json({ success: true });
+});
 
 // Add these endpoints to your existing server.js after your current API routes
 
@@ -3476,6 +3476,9 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
 
     // Use global dates instead of query parameters
     const reportDate = GLOBAL_TO_DATE || new Date().toISOString().split("T")[0];
+    console.log(
+      `🔍 DEBUG Trial Balance - Global FROM: ${GLOBAL_FROM_DATE}, Global TO: ${GLOBAL_TO_DATE}, Using: ${reportDate}`
+    );
     const fromDateStr =
       GLOBAL_FROM_DATE || new Date(reportDate).toISOString().split("T")[0];
 
