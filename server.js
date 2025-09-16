@@ -2818,14 +2818,18 @@ app.get("/api/trial-balance/:tenantId", async (req, res) => {
 
               if (
                 sectionTitle.includes("income") ||
-                sectionTitle.includes("revenue")
+                sectionTitle.includes("revenue") ||
+                sectionTitle.includes("trading") ||
+                sectionTitle.includes("sales")
               ) {
                 accountInfo.credit = Math.abs(currentAmount);
                 trialBalance.revenue.push(accountInfo);
                 trialBalance.totals.totalRevenue += Math.abs(currentAmount);
               } else if (
                 sectionTitle.includes("expense") ||
-                sectionTitle.includes("cost")
+                sectionTitle.includes("cost") ||
+                sectionTitle.includes("administration") ||
+                sectionTitle.includes("operating")
               ) {
                 accountInfo.debit = Math.abs(currentAmount);
                 trialBalance.expenses.push(accountInfo);
