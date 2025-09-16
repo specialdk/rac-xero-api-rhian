@@ -2673,7 +2673,7 @@
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 organizationName: orgName,
-                year: selectedYear,
+                year: selectedYear - 1, // Request previous calendar year for FY data
               }),
             });
 
