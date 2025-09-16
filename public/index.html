@@ -3043,7 +3043,8 @@
       function handleYearChange() {
         const year = document.getElementById("yearSelect").value;
         selectedYear = parseInt(year);
-        loadDashboardData(); // Reload with new year
+        console.log("Year changed to:", selectedYear); // Add this
+        loadDashboardData(); // This should reload with new year
       }
 
       function showMonthDetail(monthCode, monthName) {
