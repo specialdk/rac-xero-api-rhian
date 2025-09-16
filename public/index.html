@@ -648,6 +648,7 @@
         display: none !important;
       }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
   </head>
   <body>
     <!-- CONNECTION MANAGER SECTION -->
@@ -1481,6 +1482,7 @@
 
       function initializeChat() {
         const chatInput = document.getElementById("chatInput");
+        if (!chatInput) return; // Add this line to prevent the error
 
         chatInput.addEventListener("keydown", function (e) {
           if (e.key === "Enter" && !e.shiftKey) {
