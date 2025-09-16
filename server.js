@@ -2014,6 +2014,7 @@ async function initializeAutoRefresh() {
 }
 
 app.post("/update-dates", (req, res) => {
+  console.log("🎯 /update-dates route hit!"); // Add this line
   const { fromDate, toDate, period } = req.body;
 
   // Update the global variables
