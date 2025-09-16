@@ -2926,26 +2926,36 @@
           months: [],
         };
 
-        // Initialize months array
+        // Initialize Financial Year months (July to June)
+        const fyMonthNames = [
+          "July",
+          "August",
+          "September",
+          "October",
+          "November",
+          "December",
+          "January",
+          "February",
+          "March",
+          "April",
+          "May",
+          "June",
+        ];
+
         for (let i = 0; i < 12; i++) {
+          // For FY 2025: July-Dec 2024, Jan-June 2025
+          const isFirstHalf = i < 6; // July-December
+          const calendarYear = isFirstHalf
+            ? consolidated.year - 1
+            : consolidated.year;
+          const calendarMonth = isFirstHalf ? i + 7 : i - 5; // Map FY index to calendar month
+
           consolidated.months.push({
-            month: `${consolidated.year}-${(i + 1)
+            month: `${calendarYear}-${calendarMonth
               .toString()
               .padStart(2, "0")}`,
-            monthName: [
-              "January",
-              "February",
-              "March",
-              "April",
-              "May",
-              "June",
-              "July",
-              "August",
-              "September",
-              "October",
-              "November",
-              "December",
-            ][i],
+            monthName: fyMonthNames[i],
+            fyIndex: i, // Track FY position
             revenue: 0,
             expenses: 0,
             netProfit: 0,
@@ -2959,12 +2969,28 @@
           consolidated.totalExpenses += company.cytd.totalExpenses;
           consolidated.netProfit += company.cytd.netProfit;
 
-          // Aggregate monthly data
-          company.months.forEach((month, index) => {
-            if (index < consolidated.months.length) {
-              consolidated.months[index].revenue += month.revenue.total;
-              consolidated.months[index].expenses += month.expenses.total;
-              consolidated.months[index].netProfit += month.netProfit;
+          // Map calendar year data to financial year structure
+          company.months.forEach((monthData) => {
+            // Extract calendar month from monthData (e.g., "2024-07" = July 2024)
+            const [dataYear, dataMonth] = monthData.month
+              .split("-")
+              .map(Number);
+
+            // Find corresponding FY index
+            let fyIndex = -1;
+            if (dataMonth >= 7) {
+              // July-December (first half of FY)
+              fyIndex = dataMonth - 7;
+            } else {
+              // January-June (second half of FY)
+              fyIndex = dataMonth + 5;
+            }
+
+            // Add to consolidated data if we have a valid FY index
+            if (fyIndex >= 0 && fyIndex < 12) {
+              consolidated.months[fyIndex].revenue += monthData.revenue.total;
+              consolidated.months[fyIndex].expenses += monthData.expenses.total;
+              consolidated.months[fyIndex].netProfit += monthData.netProfit;
             }
           });
         });
@@ -2975,7 +3001,7 @@
             ? (consolidated.netProfit / consolidated.totalRevenue) * 100
             : 0;
 
-        // Calculate month profit margins
+        // Calculate month profit margins and count months with data
         consolidated.months.forEach((month) => {
           month.profitMargin =
             month.revenue > 0 ? (month.netProfit / month.revenue) * 100 : 0;
@@ -2987,107 +3013,6 @@
         ).length;
 
         return consolidated;
-      }
-
-      function createMonthlyTrendChart(consolidatedData) {
-        const canvas = document.getElementById("monthlyTrendChart");
-        if (!canvas) return;
-
-        const ctx = canvas.getContext("2d");
-
-        // Destroy existing chart if it exists
-        if (window.monthlyChart) {
-          window.monthlyChart.destroy();
-        }
-
-        const labels = consolidatedData.months.map((m) =>
-          m.monthName.substring(0, 3)
-        );
-        const revenue = consolidatedData.months.map((m) => m.revenue);
-        const expenses = consolidatedData.months.map((m) => m.expenses);
-        const profit = consolidatedData.months.map((m) => m.netProfit);
-
-        window.monthlyChart = new Chart(ctx, {
-          type: "line",
-          data: {
-            labels: labels,
-            datasets: [
-              {
-                label: "Revenue",
-                data: revenue,
-                borderColor: "#3498db",
-                backgroundColor: "rgba(52, 152, 219, 0.1)",
-                fill: false,
-                tension: 0.4,
-                pointBackgroundColor: "#3498db",
-                pointBorderColor: "#2980b9",
-                pointBorderWidth: 2,
-                pointRadius: 4,
-              },
-              {
-                label: "Expenses",
-                data: expenses,
-                borderColor: "#e74c3c",
-                backgroundColor: "rgba(231, 76, 60, 0.1)",
-                fill: false,
-                tension: 0.4,
-                pointBackgroundColor: "#e74c3c",
-                pointBorderColor: "#c0392b",
-                pointBorderWidth: 2,
-                pointRadius: 4,
-              },
-              {
-                label: "Net Profit",
-                data: profit,
-                borderColor: "#27ae60",
-                backgroundColor: "rgba(39, 174, 96, 0.1)",
-                fill: false,
-                tension: 0.4,
-                pointBackgroundColor: "#27ae60",
-                pointBorderColor: "#229954",
-                pointBorderWidth: 2,
-                pointRadius: 4,
-              },
-            ],
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              title: {
-                display: false,
-              },
-              tooltip: {
-                callbacks: {
-                  label: function (context) {
-                    return (
-                      context.dataset.label +
-                      ": $" +
-                      context.parsed.y.toLocaleString()
-                    );
-                  },
-                },
-              },
-              legend: {
-                position: "top",
-              },
-            },
-            scales: {
-              y: {
-                beginAtZero: false,
-                ticks: {
-                  callback: function (value) {
-                    return "$" + (value / 1000000).toFixed(1) + "M";
-                  },
-                },
-              },
-            },
-            interaction: {
-              intersect: false,
-              mode: "index",
-            },
-          },
-        });
       }
 
       // Event handlers for monthly analysis
