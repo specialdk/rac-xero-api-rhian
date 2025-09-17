@@ -512,6 +512,10 @@ app.get("/api/cash-position/:tenantId", async (req, res) => {
       'Type=="BANK"'
     );
     const bankAccounts = response.body.accounts || [];
+    console.log(
+      "RAW Xero bank account:",
+      JSON.stringify(bankAccounts[2], null, 2)
+    );
 
     // FIXED: Use CurrentBalance instead of runningBalance
     const totalCash = bankAccounts.reduce((sum, account) => {
