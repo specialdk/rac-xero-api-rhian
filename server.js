@@ -1181,26 +1181,43 @@ app.post("/api/cash-position", async (req, res) => {
       JSON.stringify(response.body.reports[0], null, 2)
     );
 
+    // Replace the existing Bank Summary parsing with this:
     const bankSummaryRows = response.body.reports?.[0]?.rows || [];
     const bankAccounts = [];
     let totalCash = 0;
 
-    // Parse Bank Summary report structure
+    // Find the Section that contains the bank account rows
     bankSummaryRows.forEach((row) => {
-      if (row.rowType === "Row" && row.cells && row.cells.length >= 2) {
-        const accountName = row.cells[0]?.value || "";
-        const balance = parseFloat(row.cells[1]?.value || 0);
+      if (row.rowType === "Section" && row.rows) {
+        // Loop through each bank account row in the section
+        row.rows.forEach((bankRow) => {
+          if (
+            bankRow.rowType === "Row" &&
+            bankRow.cells &&
+            bankRow.cells.length >= 5
+          ) {
+            const accountName = bankRow.cells[0]?.value || "";
+            const closingBalance = parseFloat(bankRow.cells[4]?.value || 0); // Cell[4] = Closing Balance
+            const accountId =
+              bankRow.cells[0]?.attributes?.find(
+                (attr) => attr.id === "accountID"
+              )?.value || "";
 
-        if (accountName && !accountName.toLowerCase().includes("total")) {
-          bankAccounts.push({
-            name: accountName,
-            balance: balance,
-            code: accountName.includes("11500") ? "11500" : "",
-          });
-          totalCash += balance;
-        }
+            if (accountName && !accountName.toLowerCase().includes("total")) {
+              bankAccounts.push({
+                name: accountName,
+                balance: closingBalance,
+                code: accountId,
+              });
+              totalCash += closingBalance;
+            }
+          }
+        });
       }
     });
+
+    console.log("✅ Parsed Bank Accounts:", bankAccounts);
+    console.log("✅ Total Cash:", totalCash);
 
     res.json({
       totalCash,
