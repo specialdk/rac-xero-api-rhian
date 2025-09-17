@@ -1125,7 +1125,6 @@ app.post("/api/trial-balance", async (req, res) => {
   }
 });
 
-// Cash Position endpoint
 app.post("/api/cash-position", async (req, res) => {
   try {
     const { organizationName, tenantId } = req.body;
@@ -1150,7 +1149,7 @@ app.post("/api/cash-position", async (req, res) => {
       }
     }
 
-    // Get token and call Xero directly (instead of internal fetch)
+    // Get token and call Xero directly
     const tokenData = await tokenStorage.getXeroToken(actualTenantId);
     if (!tokenData) {
       return res
@@ -1165,6 +1164,21 @@ app.post("/api/cash-position", async (req, res) => {
       null,
       'Type=="BANK"'
     );
+    const bankAccounts = response.body.accounts || [];
+
+    // FIXED: Use CurrentBalance instead of runningBalance
+    const totalCash = bankAccounts.reduce((sum, account) => {
+      return sum + (parseFloat(account.CurrentBalance) || 0);
+    }, 0);
+
+    res.json({
+      totalCash,
+      bankAccounts: bankAccounts.map((acc) => ({
+        name: acc.name,
+        balance: parseFloat(acc.CurrentBalance) || 0,
+        code: acc.code,
+      })),
+    });
   } catch (error) {
     console.error("❌ Cash position API error:", error);
     res.status(500).json({ error: error.message });
