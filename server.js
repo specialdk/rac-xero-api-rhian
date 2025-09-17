@@ -1164,6 +1164,18 @@ app.post("/api/cash-position", async (req, res) => {
       actualTenantId
     );
 
+    // Add this detailed debug logging:
+    console.log("🔍 Calling Bank Summary API...");
+    console.log("📋 FULL Bank Summary Response Structure:");
+    console.log(JSON.stringify(response.body, null, 2));
+
+    console.log("📊 Reports Array:");
+    console.log(JSON.stringify(response.body.reports, null, 2));
+
+    if (response.body.reports && response.body.reports[0]) {
+      console.log("📝 First Report Rows:");
+      console.log(JSON.stringify(response.body.reports[0].rows, null, 2));
+    }
     console.log(
       "Bank Summary Response:",
       JSON.stringify(response.body.reports[0], null, 2)
