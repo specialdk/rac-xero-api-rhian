@@ -517,6 +517,10 @@ app.get("/api/cash-position/:tenantId", async (req, res) => {
     const totalCash = bankAccounts.reduce((sum, account) => {
       return sum + (parseFloat(account.CurrentBalance) || 0);
     }, 0);
+    console.log(
+      "Bank account structure:",
+      JSON.stringify(bankAccounts[0], null, 2)
+    );
 
     res.json({
       totalCash,
