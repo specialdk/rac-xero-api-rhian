@@ -512,10 +512,6 @@ app.get("/api/cash-position/:tenantId", async (req, res) => {
       'Type=="BANK"'
     );
     const bankAccounts = response.body.accounts || [];
-    console.log(
-      "RAW Xero bank account:",
-      JSON.stringify(bankAccounts[2], null, 2)
-    );
 
     // FIXED: Use CurrentBalance instead of runningBalance
     const totalCash = bankAccounts.reduce((sum, account) => {
@@ -1154,17 +1150,21 @@ app.post("/api/cash-position", async (req, res) => {
       }
     }
 
-    // Call your existing GET endpoint internally
-    const response = await fetch(
-      `${req.protocol}://${req.get("host")}/api/cash-position/${actualTenantId}`
-    );
-
-    if (!response.ok) {
-      throw new Error(`Cash position request failed: ${response.status}`);
+    // Get token and call Xero directly (instead of internal fetch)
+    const tokenData = await tokenStorage.getXeroToken(actualTenantId);
+    if (!tokenData) {
+      return res
+        .status(404)
+        .json({ error: "Tenant not found or token expired" });
     }
 
-    const result = await response.json();
-    res.json(result);
+    await xero.setTokenSet(tokenData);
+
+    const response = await xero.accountingApi.getAccounts(
+      actualTenantId,
+      null,
+      'Type=="BANK"'
+    );
   } catch (error) {
     console.error("❌ Cash position API error:", error);
     res.status(500).json({ error: error.message });
