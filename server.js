@@ -1149,7 +1149,7 @@ app.post("/api/cash-position", async (req, res) => {
       }
     }
 
-    // Get token and call Xero directly
+    // Get token and call Bank Summary report
     const tokenData = await tokenStorage.getXeroToken(actualTenantId);
     if (!tokenData) {
       return res
@@ -1159,25 +1159,40 @@ app.post("/api/cash-position", async (req, res) => {
 
     await xero.setTokenSet(tokenData);
 
-    const response = await xero.accountingApi.getAccounts(
-      actualTenantId,
-      null,
-      'Type=="BANK"'
+    // Use Bank Summary Report API for current balances
+    const response = await xero.accountingApi.getReportBankSummary(
+      actualTenantId
     );
-    const bankAccounts = response.body.accounts || [];
 
-    // FIXED: Use CurrentBalance instead of runningBalance
-    const totalCash = bankAccounts.reduce((sum, account) => {
-      return sum + (parseFloat(account.CurrentBalance) || 0);
-    }, 0);
+    console.log(
+      "Bank Summary Response:",
+      JSON.stringify(response.body.reports[0], null, 2)
+    );
+
+    const bankSummaryRows = response.body.reports?.[0]?.rows || [];
+    const bankAccounts = [];
+    let totalCash = 0;
+
+    // Parse Bank Summary report structure
+    bankSummaryRows.forEach((row) => {
+      if (row.rowType === "Row" && row.cells && row.cells.length >= 2) {
+        const accountName = row.cells[0]?.value || "";
+        const balance = parseFloat(row.cells[1]?.value || 0);
+
+        if (accountName && !accountName.toLowerCase().includes("total")) {
+          bankAccounts.push({
+            name: accountName,
+            balance: balance,
+            code: accountName.includes("11500") ? "11500" : "",
+          });
+          totalCash += balance;
+        }
+      }
+    });
 
     res.json({
       totalCash,
-      bankAccounts: bankAccounts.map((acc) => ({
-        name: acc.name,
-        balance: parseFloat(acc.CurrentBalance) || 0,
-        code: acc.code,
-      })),
+      bankAccounts,
     });
   } catch (error) {
     console.error("❌ Cash position API error:", error);
