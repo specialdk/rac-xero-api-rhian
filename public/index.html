@@ -2319,11 +2319,11 @@
         .map((company) => {
           if (company.error) {
             return `
-            <div style="border: 1px solid #e74c3c; border-radius: 6px; padding: 15px; margin: 10px 0; background: #fff5f5;">
-              <strong style="color: #e74c3c;">${company.companyName}</strong>
-              <div style="color: #666; margin-top: 5px;">Error loading YoY data: ${company.errorMessage}</div>
-            </div>
-          `;
+      <div style="border: 1px solid #e74c3c; border-radius: 6px; padding: 15px; margin: 10px 0; background: #fff5f5;">
+        <strong style="color: #e74c3c;">${company.companyName}</strong>
+        <div style="color: #666; margin-top: 5px;">Error loading YoY data: ${company.errorMessage}</div>
+      </div>
+    `;
           }
 
           const current = company.analysis.periods.current;
@@ -2331,71 +2331,65 @@
           const growth = company.analysis.growth;
 
           return `
-          <div style="border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px; margin: 10px 0; background: #fafafa;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-              <strong style="font-size: 16px;">${company.companyName}</strong>
-              <div style="display: flex; gap: 15px; font-size: 14px;">
-                <span style="color: ${
-                  growth.revenue >= 0 ? "#27ae60" : "#e74c3c"
-                };">
-                  Revenue: ${
-                    growth.revenue >= 0 ? "+" : ""
-                  }${growth.revenue.toFixed(1)}%
-                </span>
-                <span style="color: ${
-                  growth.profit >= 0 ? "#27ae60" : "#e74c3c"
-                };">
-                  Profit: ${
-                    growth.profit >= 0 ? "+" : ""
-                  }${growth.profit.toFixed(1)}%
-                </span>
-              </div>
-            </div>
+    <div style="border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px; margin: 10px 0; background: #fafafa;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <strong style="font-size: 16px;">${company.companyName}</strong>
+        <div style="display: flex; gap: 15px; font-size: 14px;">
+          <span style="color: ${growth.revenue >= 0 ? "#27ae60" : "#e74c3c"};">
+            Revenue: ${growth.revenue >= 0 ? "+" : ""}${growth.revenue.toFixed(
+            1
+          )}%
+          </span>
+          <span style="color: ${growth.profit >= 0 ? "#27ae60" : "#e74c3c"};">
+            Profit: ${growth.profit >= 0 ? "+" : ""}${growth.profit.toFixed(1)}%
+          </span>
+        </div>
+      </div>
 
-            <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px; font-size: 13px;">
-              <div>
-                <div style="color: #666; margin-bottom: 3px;">${currentLabel} Revenue</div>
-                <div style="font-weight: 600;">$${current.revenue.toLocaleString()}</div>
-              </div>
-              <div>
-                <div style="color: #666; margin-bottom: 3px;">${previousLabel} Revenue</div>
-                <div style="font-weight: 600;">$${previous.revenue.toLocaleString()}</div>
-              </div>
-              <div>
-                <div style="color: #666; margin-bottom: 3px;">${currentLabel} Profit</div>
-                <div style="font-weight: 600; color: ${
-                  current.profit >= 0 ? "#27ae60" : "#e74c3c"
-                };">
-                  $${current.profit.toLocaleString()}
-                </div>
-              </div>
-              <div>
-                <div style="color: #666; margin-bottom: 3px;">${previousLabel} Profit</div>
-                <div style="font-weight: 600; color: ${
-                  previous.profit >= 0 ? "#27ae60" : "#e74c3c"
-                };">
-                  $${previous.profit.toLocaleString()}
-                </div>
-              </div>
-              <div>
-  <div style="color: #666; margin-bottom: 3px;">Margin ${currentLabel}</div>
-  <div style="font-weight: 600;">${
-    current.revenue > 0
-      ? ((current.profit / current.revenue) * 100).toFixed(1)
-      : 0
-  }%</div>
-</div>
-<div>
-                <div style="color: #666; margin-bottom: 3px;">Margin ${previousLabel}</div>
-                <div style="font-weight: 600;">${
-                  previous.revenue > 0
-                    ? ((previous.profit / previous.revenue) * 100).toFixed(1)
-                    : 0
-                }%</div>
-              </div>
-            </div>
+      <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px; font-size: 13px;">
+        <div>
+          <div style="color: #666; margin-bottom: 3px;">${currentLabel} Revenue</div>
+          <div style="font-weight: 600;">$${current.revenue.toLocaleString()}</div>
+        </div>
+        <div>
+          <div style="color: #666; margin-bottom: 3px;">${previousLabel} Revenue</div>
+          <div style="font-weight: 600;">$${previous.revenue.toLocaleString()}</div>
+        </div>
+        <div>
+          <div style="color: #666; margin-bottom: 3px;">${currentLabel} Profit</div>
+          <div style="font-weight: 600; color: ${
+            current.profit >= 0 ? "#27ae60" : "#e74c3c"
+          };">
+            $${current.profit.toLocaleString()}
           </div>
-        `;
+        </div>
+        <div>
+          <div style="color: #666; margin-bottom: 3px;">${previousLabel} Profit</div>
+          <div style="font-weight: 600; color: ${
+            previous.profit >= 0 ? "#27ae60" : "#e74c3c"
+          };">
+            $${previous.profit.toLocaleString()}
+          </div>
+        </div>
+        <div>
+          <div style="color: #666; margin-bottom: 3px;">Margin ${currentLabel}</div>
+          <div style="font-weight: 600;">${
+            current.revenue > 0
+              ? ((current.profit / current.revenue) * 100).toFixed(1)
+              : 0
+          }%</div>
+        </div>
+        <div>
+          <div style="color: #666; margin-bottom: 3px;">Margin ${previousLabel}</div>
+          <div style="font-weight: 600;">${
+            previous.revenue > 0
+              ? ((previous.profit / previous.revenue) * 100).toFixed(1)
+              : 0
+          }%</div>
+        </div>
+      </div>
+    </div>
+  `;
         })
         .join("")}
     </div>
