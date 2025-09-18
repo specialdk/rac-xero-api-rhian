@@ -2147,6 +2147,22 @@
       }
 
       function renderYoYDashboardFromNewEndpoint(yoyData, consolidated) {
+        console.log("=== DEBUG renderYoYDashboardFromNewEndpoint ===");
+        console.log("yoyData:", yoyData);
+        console.log("consolidated:", consolidated);
+
+        // Check each company data structure
+        yoyData.forEach((company, i) => {
+          console.log(`Company ${i}:`, company);
+          if (!company.error && company.analysis) {
+            console.log(`  Current period:`, company.analysis.periods.current);
+            console.log(
+              `  Previous period:`,
+              company.analysis.periods.previous
+            );
+            console.log(`  Growth:`, company.analysis.growth);
+          }
+        });
         const dashboardElement = document.getElementById("dashboardData");
 
         // Get period labels from first valid company
