@@ -2362,11 +2362,21 @@
                 </div>
               </div>
               <div>
-                <div style="color: #666; margin-bottom: 3px;">Margin ${currentLabel}</div>
-                <div style="font-weight: 600;">${current.profitMargin.toFixed(
-                  1
-                )}%</div>
-              </div>
+  <div style="color: #666; margin-bottom: 3px;">Margin ${currentLabel}</div>
+  <div style="font-weight: 600;">${
+    current.revenue > 0
+      ? ((current.profit / current.revenue) * 100).toFixed(1)
+      : 0
+  }%</div>
+</div>
+<div>
+  <div style="color: #666; margin-bottom: 3px;">Margin ${previousLabel}</div>
+  <div style="font-weight: 600;">${
+    previous.revenue > 0
+      ? ((previous.profit / previous.revenue) * 100).toFixed(1)
+      : 0
+  }%</div>
+</div>
               <div>
                 <div style="color: #666; margin-bottom: 3px;">Margin ${previousLabel}</div>
                 <div style="font-weight: 600;">${previous.profitMargin.toFixed(
