@@ -4222,21 +4222,25 @@ app.get("/api/monthly-breakdown/:tenantId", async (req, res) => {
       } to ${currentPeriodEnd.toISOString().split("T")[0]}`
     );
 
-    // Calculate 12 monthly periods that exactly match YoY timeframe
+    // Calculate 12 complete calendar months ending with report month
     const monthlyPeriods = [];
+    const reportMonth = new Date(reportDate);
 
-    for (let i = 0; i < 12; i++) {
-      const monthEnd = new Date(currentPeriodStart);
-      monthEnd.setMonth(currentPeriodStart.getMonth() + i + 1);
-      monthEnd.setDate(monthEnd.getDate() - 1); // Last day of the month period
+    for (let i = 11; i >= 0; i--) {
+      const monthDate = new Date(reportMonth);
+      monthDate.setMonth(reportMonth.getMonth() - i);
 
-      const monthStart = new Date(currentPeriodStart);
-      monthStart.setMonth(currentPeriodStart.getMonth() + i);
-
-      // Ensure we don't exceed the YoY end date
-      if (monthEnd > currentPeriodEnd) {
-        monthEnd.setTime(currentPeriodEnd.getTime());
-      }
+      // Always use complete calendar month (1st to last day)
+      const monthStart = new Date(
+        monthDate.getFullYear(),
+        monthDate.getMonth(),
+        1
+      );
+      const monthEnd = new Date(
+        monthDate.getFullYear(),
+        monthDate.getMonth() + 1,
+        0
+      );
 
       const monthStartStr = monthStart.toISOString().split("T")[0];
       const monthEndStr = monthEnd.toISOString().split("T")[0];
@@ -4249,11 +4253,14 @@ app.get("/api/monthly-breakdown/:tenantId", async (req, res) => {
         }),
         startDate: monthStartStr,
         endDate: monthEndStr,
-        dayCount: Math.ceil((monthEnd - monthStart) / (1000 * 60 * 60 * 24)),
+        dayCount:
+          Math.ceil((monthEnd - monthStart) / (1000 * 60 * 60 * 24)) + 1,
       });
     }
 
-    console.log(`📅 DEBUG: Created ${monthlyPeriods.length} monthly periods:`);
+    console.log(
+      `DEBUG: Created ${monthlyPeriods.length} calendar month periods:`
+    );
     monthlyPeriods.forEach((period, idx) => {
       console.log(
         `  Month ${idx + 1}: ${period.startDate} to ${period.endDate} (${
