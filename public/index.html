@@ -1997,6 +1997,7 @@
       }
 
       // ====== YoY Card ======
+      // Replace the existing loadYearOverYearData() function with this corrected version
       async function loadYearOverYearData() {
         if (activeCompanyFilters.length === 0) {
           const dashboardElement = document.getElementById("dashboardData");
@@ -2041,7 +2042,6 @@
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   organizationName: orgName,
-                  // No date parameter - let it use default logic first
                 }),
               });
 
@@ -2057,7 +2057,6 @@
                   error: false,
                 });
 
-                // Debug logging to understand the date logic
                 console.log(`YoY Analysis for ${orgName}:`, {
                   currentPeriod: data.analysis.periods.current,
                   previousPeriod: data.analysis.periods.previous,
@@ -2087,7 +2086,7 @@
           const consolidated = calculateConsolidatedFromNewEndpoint(validData);
 
           // Render with new data structure
-          renderYoYDashboardFromNewEndpoint(yoyData, consolidated);
+          renderYoYDashboard(yoyData, consolidated);
         } catch (error) {
           console.error("Error in YoY analysis:", error);
           dashboardElement.innerHTML = `
@@ -2102,7 +2101,7 @@
         }
       }
 
-      // New helper functions for the updated YoY data structure
+      // Helper function for calculating consolidated metrics
       function calculateConsolidatedFromNewEndpoint(validData) {
         const consolidated = {
           current: { revenue: 0, profit: 0, assets: 0, equity: 0 },
@@ -2146,14 +2145,11 @@
         return consolidated;
       }
 
-      function renderYoYDashboardFromNewEndpoint(yoyData, consolidated) {
-        console.log("=== DEBUG renderYoYDashboardFromNewEndpoint ===");
-        console.log("yoyData:", yoyData);
-        console.log("consolidated:", consolidated);
-
+      // Replace the renderYoYDashboardFromNewEndpoint with this simpler, working version
+      function renderYoYDashboard(yoyData, consolidated) {
         const dashboardElement = document.getElementById("dashboardData");
 
-        // Get period labels from first valid company - with fallback
+        // Get period labels from first valid company with fallback
         const firstValidCompany = yoyData.find((d) => !d.error);
         const currentLabel = firstValidCompany
           ? firstValidCompany.analysis.periods.current.label
