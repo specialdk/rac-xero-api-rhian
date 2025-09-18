@@ -517,10 +517,6 @@ app.get("/api/cash-position/:tenantId", async (req, res) => {
     const totalCash = bankAccounts.reduce((sum, account) => {
       return sum + (parseFloat(account.CurrentBalance) || 0);
     }, 0);
-    console.log(
-      "Bank account structure:",
-      JSON.stringify(bankAccounts[0], null, 2)
-    );
 
     res.json({
       totalCash,
@@ -1162,23 +1158,6 @@ app.post("/api/cash-position", async (req, res) => {
     // Use Bank Summary Report API for current balances
     const response = await xero.accountingApi.getReportBankSummary(
       actualTenantId
-    );
-
-    // Add this detailed debug logging:
-    console.log("🔍 Calling Bank Summary API...");
-    console.log("📋 FULL Bank Summary Response Structure:");
-    console.log(JSON.stringify(response.body, null, 2));
-
-    console.log("📊 Reports Array:");
-    console.log(JSON.stringify(response.body.reports, null, 2));
-
-    if (response.body.reports && response.body.reports[0]) {
-      console.log("📝 First Report Rows:");
-      console.log(JSON.stringify(response.body.reports[0].rows, null, 2));
-    }
-    console.log(
-      "Bank Summary Response:",
-      JSON.stringify(response.body.reports[0], null, 2)
     );
 
     // Replace the existing Bank Summary parsing with this:
