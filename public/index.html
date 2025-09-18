@@ -2413,13 +2413,13 @@
         }
 
         // Profit insights
-        if (consolidatedYoY.growth.netProfit > 15) {
+        if (consolidatedYoY.growth.profit > 15) {
           insights.push(
-            `<strong>Excellent Profitability:</strong> Net profit growth of ${consolidatedYoY.growth.netProfit.toFixed(
+            `<strong>Excellent Profitability:</strong> Net profit growth of ${consolidatedYoY.growth.profit.toFixed(
               1
             )}% demonstrates strong operational efficiency.`
           );
-        } else if (consolidatedYoY.growth.netProfit < -10) {
+        } else if (consolidatedYoY.growth.profit < -10) {
           insights.push(
             `<strong>Profitability Concerns:</strong> Net profit declined by ${Math.abs(
               consolidatedYoY.growth.netProfit
