@@ -2151,28 +2151,16 @@
         console.log("yoyData:", yoyData);
         console.log("consolidated:", consolidated);
 
-        // Check each company data structure
-        yoyData.forEach((company, i) => {
-          console.log(`Company ${i}:`, company);
-          if (!company.error && company.analysis) {
-            console.log(`  Current period:`, company.analysis.periods.current);
-            console.log(
-              `  Previous period:`,
-              company.analysis.periods.previous
-            );
-            console.log(`  Growth:`, company.analysis.growth);
-          }
-        });
         const dashboardElement = document.getElementById("dashboardData");
 
-        // Get period labels from first valid company
+        // Get period labels from first valid company - with fallback
         const firstValidCompany = yoyData.find((d) => !d.error);
         const currentLabel = firstValidCompany
           ? firstValidCompany.analysis.periods.current.label
-          : "Current";
+          : "Current Year";
         const previousLabel = firstValidCompany
           ? firstValidCompany.analysis.periods.previous.label
-          : "Previous";
+          : "Previous Year";
 
         dashboardElement.innerHTML = `
     <!-- CONSOLIDATED YoY SUMMARY -->
@@ -2295,23 +2283,6 @@
       </div>
     </div>
 
-    <!-- DEBUG INFO - REMOVE AFTER VALIDATION -->
-    <div class="dashboard-card" style="background: #f8f9fa; border: 2px dashed #6c757d;">
-      <h3>🔍 DEBUG: Date Periods Being Used</h3>
-      ${yoyData
-        .filter((d) => !d.error)
-        .map(
-          (company) => `
-        <div style="margin: 10px 0; padding: 10px; background: white; border-radius: 4px;">
-          <strong>${company.companyName}:</strong><br>
-          Current Period: ${company.analysis.periods.current.start} to ${company.analysis.periods.current.end}<br>
-          Previous Period: ${company.analysis.periods.previous.start} to ${company.analysis.periods.previous.end}
-        </div>
-      `
-        )
-        .join("")}
-    </div>
-
     <!-- COMPANY-BY-COMPANY YoY ANALYSIS -->
     <div class="dashboard-card">
       <h3>📈 Company Performance Comparison (${currentLabel} vs ${previousLabel})</h3>
@@ -2319,11 +2290,11 @@
         .map((company) => {
           if (company.error) {
             return `
-      <div style="border: 1px solid #e74c3c; border-radius: 6px; padding: 15px; margin: 10px 0; background: #fff5f5;">
-        <strong style="color: #e74c3c;">${company.companyName}</strong>
-        <div style="color: #666; margin-top: 5px;">Error loading YoY data: ${company.errorMessage}</div>
-      </div>
-    `;
+            <div style="border: 1px solid #e74c3c; border-radius: 6px; padding: 15px; margin: 10px 0; background: #fff5f5;">
+              <strong style="color: #e74c3c;">${company.companyName}</strong>
+              <div style="color: #666; margin-top: 5px;">Error loading YoY data: ${company.errorMessage}</div>
+            </div>
+          `;
           }
 
           const current = company.analysis.periods.current;
@@ -2331,65 +2302,71 @@
           const growth = company.analysis.growth;
 
           return `
-    <div style="border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px; margin: 10px 0; background: #fafafa;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <strong style="font-size: 16px;">${company.companyName}</strong>
-        <div style="display: flex; gap: 15px; font-size: 14px;">
-          <span style="color: ${growth.revenue >= 0 ? "#27ae60" : "#e74c3c"};">
-            Revenue: ${growth.revenue >= 0 ? "+" : ""}${growth.revenue.toFixed(
-            1
-          )}%
-          </span>
-          <span style="color: ${growth.profit >= 0 ? "#27ae60" : "#e74c3c"};">
-            Profit: ${growth.profit >= 0 ? "+" : ""}${growth.profit.toFixed(1)}%
-          </span>
-        </div>
-      </div>
+          <div style="border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px; margin: 10px 0; background: #fafafa;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+              <strong style="font-size: 16px;">${company.companyName}</strong>
+              <div style="display: flex; gap: 15px; font-size: 14px;">
+                <span style="color: ${
+                  growth.revenue >= 0 ? "#27ae60" : "#e74c3c"
+                };">
+                  Revenue: ${
+                    growth.revenue >= 0 ? "+" : ""
+                  }${growth.revenue.toFixed(1)}%
+                </span>
+                <span style="color: ${
+                  growth.profit >= 0 ? "#27ae60" : "#e74c3c"
+                };">
+                  Profit: ${
+                    growth.profit >= 0 ? "+" : ""
+                  }${growth.profit.toFixed(1)}%
+                </span>
+              </div>
+            </div>
 
-      <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px; font-size: 13px;">
-        <div>
-          <div style="color: #666; margin-bottom: 3px;">${currentLabel} Revenue</div>
-          <div style="font-weight: 600;">$${current.revenue.toLocaleString()}</div>
-        </div>
-        <div>
-          <div style="color: #666; margin-bottom: 3px;">${previousLabel} Revenue</div>
-          <div style="font-weight: 600;">$${previous.revenue.toLocaleString()}</div>
-        </div>
-        <div>
-          <div style="color: #666; margin-bottom: 3px;">${currentLabel} Profit</div>
-          <div style="font-weight: 600; color: ${
-            current.profit >= 0 ? "#27ae60" : "#e74c3c"
-          };">
-            $${current.profit.toLocaleString()}
+            <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px; font-size: 13px;">
+              <div>
+                <div style="color: #666; margin-bottom: 3px;">${currentLabel} Revenue</div>
+                <div style="font-weight: 600;">$${current.revenue.toLocaleString()}</div>
+              </div>
+              <div>
+                <div style="color: #666; margin-bottom: 3px;">${previousLabel} Revenue</div>
+                <div style="font-weight: 600;">$${previous.revenue.toLocaleString()}</div>
+              </div>
+              <div>
+                <div style="color: #666; margin-bottom: 3px;">${currentLabel} Profit</div>
+                <div style="font-weight: 600; color: ${
+                  current.profit >= 0 ? "#27ae60" : "#e74c3c"
+                };">
+                  $${current.profit.toLocaleString()}
+                </div>
+              </div>
+              <div>
+                <div style="color: #666; margin-bottom: 3px;">${previousLabel} Profit</div>
+                <div style="font-weight: 600; color: ${
+                  previous.profit >= 0 ? "#27ae60" : "#e74c3c"
+                };">
+                  $${previous.profit.toLocaleString()}
+                </div>
+              </div>
+              <div>
+                <div style="color: #666; margin-bottom: 3px;">Margin ${currentLabel}</div>
+                <div style="font-weight: 600;">${
+                  current.revenue > 0
+                    ? ((current.profit / current.revenue) * 100).toFixed(1)
+                    : 0
+                }%</div>
+              </div>
+              <div>
+                <div style="color: #666; margin-bottom: 3px;">Margin ${previousLabel}</div>
+                <div style="font-weight: 600;">${
+                  previous.revenue > 0
+                    ? ((previous.profit / previous.revenue) * 100).toFixed(1)
+                    : 0
+                }%</div>
+              </div>
+            </div>
           </div>
-        </div>
-        <div>
-          <div style="color: #666; margin-bottom: 3px;">${previousLabel} Profit</div>
-          <div style="font-weight: 600; color: ${
-            previous.profit >= 0 ? "#27ae60" : "#e74c3c"
-          };">
-            $${previous.profit.toLocaleString()}
-          </div>
-        </div>
-        <div>
-          <div style="color: #666; margin-bottom: 3px;">Margin ${currentLabel}</div>
-          <div style="font-weight: 600;">${
-            current.revenue > 0
-              ? ((current.profit / current.revenue) * 100).toFixed(1)
-              : 0
-          }%</div>
-        </div>
-        <div>
-          <div style="color: #666; margin-bottom: 3px;">Margin ${previousLabel}</div>
-          <div style="font-weight: 600;">${
-            previous.revenue > 0
-              ? ((previous.profit / previous.revenue) * 100).toFixed(1)
-              : 0
-          }%</div>
-        </div>
-      </div>
-    </div>
-  `;
+        `;
         })
         .join("")}
     </div>
