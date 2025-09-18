@@ -3549,24 +3549,14 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
     const reportDate = req.query.date || new Date().toISOString().split("T")[0];
     const periodMonths = parseInt(req.query.periodMonths) || 1; // Default to 1 month instead of 12
 
-    // Calculate from date based on current month logic
-    let fromDate, actualReportDate;
-    if (periodMonths === 1) {
-      // For current month: use first day to LAST day of current month
-      const currentDate = new Date(reportDate);
-      fromDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-      // For current month, always use the last day of the month for full month reporting
-      actualReportDate = new Date(
-        currentDate.getFullYear(),
-        currentDate.getMonth() + 1,
-        0
-      );
-    } else {
-      // For multi-month periods: subtract months from report date
-      fromDate = new Date(reportDate);
-      fromDate.setMonth(fromDate.getMonth() - periodMonths);
-      actualReportDate = new Date(reportDate);
-    }
+    // TEMPORARY: Test August reconciliation
+    const testMonth = new Date("2025-08-31");
+    fromDate = new Date(testMonth.getFullYear(), testMonth.getMonth(), 1);
+    actualReportDate = new Date(
+      testMonth.getFullYear(),
+      testMonth.getMonth() + 1,
+      0
+    );
 
     const fromDateStr = fromDate.toISOString().split("T")[0];
     const actualReportDateStr = actualReportDate.toISOString().split("T")[0];
