@@ -2474,6 +2474,13 @@
         return "Unknown";
       }
 
+      // Add this helper function (around line 1400 in your frontend)
+      function calculateGrowthRate(prior, current) {
+        if (prior === 0 && current === 0) return 0;
+        if (prior === 0) return current > 0 ? 100 : -100;
+        return ((current - prior) / Math.abs(prior)) * 100;
+      }
+
       async function loadTrialBalanceData() {
         if (activeCompanyFilters.length === 0) {
           const dashboardElement = document.getElementById("dashboardData");
