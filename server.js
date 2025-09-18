@@ -3551,8 +3551,8 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
 
     // TEMPORARY: Test August reconciliation
     const testMonth = new Date("2025-08-31");
-    fromDate = new Date(testMonth.getFullYear(), testMonth.getMonth(), 1);
-    actualReportDate = new Date(
+    let fromDate = new Date(testMonth.getFullYear(), testMonth.getMonth(), 1);
+    let actualReportDate = new Date(
       testMonth.getFullYear(),
       testMonth.getMonth() + 1,
       0
