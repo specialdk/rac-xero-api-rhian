@@ -3027,9 +3027,6 @@ app.get("/api/trial-balance/:tenantId", async (req, res) => {
     );
 
     const balanceSheetRows = balanceSheetResponse.body.reports?.[0]?.rows || [];
-    console.log(
-      `📊 Processing ${balanceSheetRows.length} Balance Sheet sections for ${reportDate}`
-    );
 
     // Initialize trial balance structure
     const trialBalance = {
@@ -3055,9 +3052,6 @@ app.get("/api/trial-balance/:tenantId", async (req, res) => {
     balanceSheetRows.forEach((section, sectionIndex) => {
       if (section.rowType === "Section" && section.rows && section.title) {
         const sectionTitle = section.title.toLowerCase();
-        console.log(
-          `🔄 Processing section: ${section.title} (${section.rows.length} rows)`
-        );
 
         section.rows.forEach((row) => {
           if (row.rowType === "Row" && row.cells && row.cells.length >= 2) {
@@ -3072,9 +3066,6 @@ app.get("/api/trial-balance/:tenantId", async (req, res) => {
             }
 
             processedAccounts++;
-            console.log(
-              `📈 Processing: ${accountName} = ${currentBalance.toLocaleString()}`
-            );
 
             const accountInfo = {
               name: accountName,
