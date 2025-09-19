@@ -2715,10 +2715,6 @@ app.get("/api/yoy-analysis/:tenantId", async (req, res) => {
 
     const reportDate = req.query.date || new Date().toISOString().split("T")[0];
 
-    console.log(
-      `Getting YoY analysis using 24 monthly reports for ${tokenData.tenantName} as of ${reportDate}`
-    );
-
     await xero.setTokenSet(tokenData);
 
     // Generate 24 monthly periods (current 12 months + previous 12 months)
@@ -2779,13 +2775,6 @@ app.get("/api/yoy-analysis/:tenantId", async (req, res) => {
       });
     }
 
-    console.log(
-      `Current year periods: ${currentYearPeriods[0].label} to ${currentYearPeriods[11].label}`
-    );
-    console.log(
-      `Previous year periods: ${previousYearPeriods[0].label} to ${previousYearPeriods[11].label}`
-    );
-
     // Function to get monthly P&L data
     async function getMonthlyPLData(periods, periodLabel) {
       let totalRevenue = 0;
@@ -2812,14 +2801,6 @@ app.get("/api/yoy-analysis/:tenantId", async (req, res) => {
 
           totalRevenue += monthlyPL.totalRevenue;
           totalExpenses += monthlyPL.totalExpenses;
-
-          console.log(
-            `${periodLabel} ${
-              period.label
-            }: Rev $${monthlyPL.totalRevenue.toLocaleString()}, Profit $${(
-              monthlyPL.totalRevenue - monthlyPL.totalExpenses
-            ).toLocaleString()}`
-          );
         } catch (monthError) {
           console.error(
             `Error loading ${periodLabel} ${period.label}:`,
@@ -2931,13 +2912,6 @@ app.get("/api/yoy-analysis/:tenantId", async (req, res) => {
         ),
       },
     };
-
-    console.log("YoY Analysis Results (from 24 monthly reports):", {
-      currentRevenue: yoyAnalysis.periods.current.revenue,
-      previousRevenue: yoyAnalysis.periods.previous.revenue,
-      revenueGrowth: yoyAnalysis.growth.revenue,
-      dataSource: "24 individual monthly P&L reports",
-    });
 
     res.json({
       tenantId: req.params.tenantId,
