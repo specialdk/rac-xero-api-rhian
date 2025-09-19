@@ -2708,7 +2708,7 @@ app.get("/dashboard", (req, res) => {
 // ==============================================================================
 // YoY Analyst EndPoint
 // ==============================================================================
-// Year-over-Year Analysis endpoint
+// Year-over-Year Analysis endpoint - UPDATED TO USE 24 MONTHLY REPORTS
 app.get("/api/yoy-analysis/:tenantId", async (req, res) => {
   try {
     const tokenData = await tokenStorage.getXeroToken(req.params.tenantId);
@@ -2721,74 +2721,155 @@ app.get("/api/yoy-analysis/:tenantId", async (req, res) => {
     const reportDate = req.query.date || new Date().toISOString().split("T")[0];
 
     console.log(
-      `Getting YoY analysis for ${tokenData.tenantName} as of ${reportDate}`
+      `Getting YoY analysis using 24 monthly reports for ${tokenData.tenantName} as of ${reportDate}`
     );
 
-    // Calculate two 12-month periods
-    const currentPeriodEnd = new Date(reportDate);
-    const currentPeriodStart = new Date(currentPeriodEnd);
-    currentPeriodStart.setFullYear(currentPeriodEnd.getFullYear() - 1);
-    currentPeriodStart.setDate(currentPeriodStart.getDate() + 1); // Add 1 day to avoid overlap
+    await xero.setTokenSet(tokenData);
 
-    const previousPeriodEnd = new Date(currentPeriodStart);
-    previousPeriodEnd.setDate(previousPeriodEnd.getDate() - 1); // Day before current period
-    const previousPeriodStart = new Date(previousPeriodEnd);
-    previousPeriodStart.setFullYear(previousPeriodEnd.getFullYear() - 1);
-    previousPeriodStart.setDate(previousPeriodStart.getDate() + 1);
+    // Generate 24 monthly periods (current 12 months + previous 12 months)
+    const reportMonth = new Date(reportDate);
+    const currentYearPeriods = [];
+    const previousYearPeriods = [];
 
-    const currentStartStr = currentPeriodStart.toISOString().split("T")[0];
-    const currentEndStr = currentPeriodEnd.toISOString().split("T")[0];
-    const previousStartStr = previousPeriodStart.toISOString().split("T")[0];
-    const previousEndStr = previousPeriodEnd.toISOString().split("T")[0];
+    // Current year - 12 months ending with report month
+    for (let i = 11; i >= 0; i--) {
+      const monthDate = new Date(reportMonth);
+      monthDate.setMonth(reportMonth.getMonth() - i);
 
-    console.log(`Current Period: ${currentStartStr} to ${currentEndStr}`);
-    console.log(`Previous Period: ${previousStartStr} to ${previousEndStr}`);
+      const monthStart = new Date(
+        monthDate.getFullYear(),
+        monthDate.getMonth(),
+        1
+      );
+      const monthEnd = new Date(
+        monthDate.getFullYear(),
+        monthDate.getMonth() + 1,
+        0
+      );
 
-    // Get P&L data for both periods in parallel
-    const [
-      currentPLResponse,
-      previousPLResponse,
-      currentTBResponse,
-      previousTBResponse,
-    ] = await Promise.all([
-      // Current year P&L (12 months)
-      xero.accountingApi.getReportProfitAndLoss(
-        req.params.tenantId,
-        currentStartStr,
-        currentEndStr
-      ),
-      // Previous year P&L (12 months)
-      xero.accountingApi.getReportProfitAndLoss(
-        req.params.tenantId,
-        previousStartStr,
-        previousEndStr
-      ),
-      // Current year trial balance
+      currentYearPeriods.push({
+        label: monthStart.toLocaleDateString("en-US", {
+          month: "short",
+          year: "numeric",
+        }),
+        startDate: monthStart.toISOString().split("T")[0],
+        endDate: monthEnd.toISOString().split("T")[0],
+      });
+    }
+
+    // Previous year - same 12 months but one year earlier
+    for (let i = 11; i >= 0; i--) {
+      const monthDate = new Date(reportMonth);
+      monthDate.setFullYear(reportMonth.getFullYear() - 1);
+      monthDate.setMonth(reportMonth.getMonth() - i);
+
+      const monthStart = new Date(
+        monthDate.getFullYear(),
+        monthDate.getMonth(),
+        1
+      );
+      const monthEnd = new Date(
+        monthDate.getFullYear(),
+        monthDate.getMonth() + 1,
+        0
+      );
+
+      previousYearPeriods.push({
+        label: monthStart.toLocaleDateString("en-US", {
+          month: "short",
+          year: "numeric",
+        }),
+        startDate: monthStart.toISOString().split("T")[0],
+        endDate: monthEnd.toISOString().split("T")[0],
+      });
+    }
+
+    console.log(
+      `Current year periods: ${currentYearPeriods[0].label} to ${currentYearPeriods[11].label}`
+    );
+    console.log(
+      `Previous year periods: ${previousYearPeriods[0].label} to ${previousYearPeriods[11].label}`
+    );
+
+    // Function to get monthly P&L data
+    async function getMonthlyPLData(periods, periodLabel) {
+      let totalRevenue = 0;
+      let totalExpenses = 0;
+      const monthlyDetails = [];
+
+      for (const period of periods) {
+        try {
+          const response = await xero.accountingApi.getReportProfitAndLoss(
+            req.params.tenantId,
+            period.startDate,
+            period.endDate
+          );
+
+          const plRows = response.body.reports?.[0]?.rows || [];
+          const monthlyPL = parsePLData(plRows);
+
+          monthlyDetails.push({
+            ...period,
+            revenue: monthlyPL.totalRevenue,
+            expenses: monthlyPL.totalExpenses,
+            profit: monthlyPL.totalRevenue - monthlyPL.totalExpenses,
+          });
+
+          totalRevenue += monthlyPL.totalRevenue;
+          totalExpenses += monthlyPL.totalExpenses;
+
+          console.log(
+            `${periodLabel} ${
+              period.label
+            }: Rev $${monthlyPL.totalRevenue.toLocaleString()}, Profit $${(
+              monthlyPL.totalRevenue - monthlyPL.totalExpenses
+            ).toLocaleString()}`
+          );
+        } catch (monthError) {
+          console.error(
+            `Error loading ${periodLabel} ${period.label}:`,
+            monthError.message
+          );
+          monthlyDetails.push({
+            ...period,
+            revenue: 0,
+            expenses: 0,
+            profit: 0,
+            error: monthError.message,
+          });
+        }
+      }
+
+      return {
+        totalRevenue,
+        totalExpenses,
+        totalProfit: totalRevenue - totalExpenses,
+        monthlyDetails,
+      };
+    }
+
+    // Get both periods in parallel
+    const [currentYearData, previousYearData] = await Promise.all([
+      getMonthlyPLData(currentYearPeriods, "Current"),
+      getMonthlyPLData(previousYearPeriods, "Previous"),
+    ]);
+
+    // Get trial balance data for asset/equity information
+    const [currentTBResponse, previousTBResponse] = await Promise.all([
       fetch(
         `${req.protocol}://${req.get("host")}/api/trial-balance/${
           req.params.tenantId
-        }?date=${currentEndStr}`
+        }?date=${reportDate}`
       ),
-      // Previous year trial balance
       fetch(
         `${req.protocol}://${req.get("host")}/api/trial-balance/${
           req.params.tenantId
-        }?date=${previousEndStr}`
+        }?date=${previousYearPeriods[11].endDate}`
       ),
     ]);
 
-    // Parse P&L data
-    const currentPL = parsePLData(
-      currentPLResponse.body.reports?.[0]?.rows || []
-    );
-    const previousPL = parsePLData(
-      previousPLResponse.body.reports?.[0]?.rows || []
-    );
-
-    // Parse trial balance data
     let currentTB = null,
       previousTB = null;
-
     if (currentTBResponse.ok) {
       currentTB = await currentTBResponse.json();
     }
@@ -2796,38 +2877,44 @@ app.get("/api/yoy-analysis/:tenantId", async (req, res) => {
       previousTB = await previousTBResponse.json();
     }
 
-    // Calculate YoY metrics
+    // Calculate YoY metrics using monthly totals
     const yoyAnalysis = {
       periods: {
         current: {
-          label: `${currentPeriodStart.getFullYear()}-${currentPeriodEnd.getFullYear()}`,
-          start: currentStartStr,
-          end: currentEndStr,
-          revenue: currentPL.totalRevenue,
-          expenses: currentPL.totalExpenses,
-          profit: currentPL.totalRevenue - currentPL.totalExpenses,
+          label: `${currentYearPeriods[0].label.split(" ")[1]}-${
+            currentYearPeriods[11].label
+          }`,
+          start: currentYearPeriods[0].startDate,
+          end: currentYearPeriods[11].endDate,
+          revenue: currentYearData.totalRevenue,
+          expenses: currentYearData.totalExpenses,
+          profit: currentYearData.totalProfit,
           assets: currentTB?.trialBalance?.totals?.totalAssets || 0,
           equity: currentTB?.trialBalance?.totals?.totalEquity || 0,
+          monthlyBreakdown: currentYearData.monthlyDetails,
         },
         previous: {
-          label: `${previousPeriodStart.getFullYear()}-${previousPeriodEnd.getFullYear()}`,
-          start: previousStartStr,
-          end: previousEndStr,
-          revenue: previousPL.totalRevenue,
-          expenses: previousPL.totalExpenses,
-          profit: previousPL.totalRevenue - previousPL.totalExpenses,
+          label: `${previousYearPeriods[0].label.split(" ")[1]}-${
+            previousYearPeriods[11].label
+          }`,
+          start: previousYearPeriods[0].startDate,
+          end: previousYearPeriods[11].endDate,
+          revenue: previousYearData.totalRevenue,
+          expenses: previousYearData.totalExpenses,
+          profit: previousYearData.totalProfit,
           assets: previousTB?.trialBalance?.totals?.totalAssets || 0,
           equity: previousTB?.trialBalance?.totals?.totalEquity || 0,
+          monthlyBreakdown: previousYearData.monthlyDetails,
         },
       },
       growth: {
         revenue: calculateGrowthRate(
-          previousPL.totalRevenue,
-          currentPL.totalRevenue
+          previousYearData.totalRevenue,
+          currentYearData.totalRevenue
         ),
         profit: calculateGrowthRate(
-          previousPL.totalRevenue - previousPL.totalExpenses,
-          currentPL.totalRevenue - currentPL.totalExpenses
+          previousYearData.totalProfit,
+          currentYearData.totalProfit
         ),
         assets: calculateGrowthRate(
           previousTB?.trialBalance?.totals?.totalAssets || 0,
@@ -2840,30 +2927,32 @@ app.get("/api/yoy-analysis/:tenantId", async (req, res) => {
       },
       margins: {
         current: calculateMargin(
-          currentPL.totalRevenue,
-          currentPL.totalRevenue - currentPL.totalExpenses
+          currentYearData.totalRevenue,
+          currentYearData.totalProfit
         ),
         previous: calculateMargin(
-          previousPL.totalRevenue,
-          previousPL.totalRevenue - previousPL.totalExpenses
+          previousYearData.totalRevenue,
+          previousYearData.totalProfit
         ),
       },
     };
 
-    console.log("YoY Analysis Results:", {
+    console.log("YoY Analysis Results (from 24 monthly reports):", {
       currentRevenue: yoyAnalysis.periods.current.revenue,
       previousRevenue: yoyAnalysis.periods.previous.revenue,
       revenueGrowth: yoyAnalysis.growth.revenue,
+      dataSource: "24 individual monthly P&L reports",
     });
 
     res.json({
       tenantId: req.params.tenantId,
       tenantName: tokenData.tenantName,
       analysis: yoyAnalysis,
+      dataSource: "24 monthly P&L reports",
       generatedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Error getting YoY analysis:", error);
+    console.error("Error getting YoY analysis with monthly reports:", error);
     res.status(500).json({
       error: "Failed to get YoY analysis",
       details: error.message,
