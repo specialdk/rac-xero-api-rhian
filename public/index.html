@@ -1596,9 +1596,15 @@
       // Helper function for calculating consolidated metrics
       function calculateConsolidatedFromNewEndpoint(validData) {
         const consolidated = {
-          current: { revenue: 0, profit: 0, assets: 0, equity: 0 },
-          previous: { revenue: 0, profit: 0, assets: 0, equity: 0 },
-          growth: { revenue: 0, profit: 0, assets: 0, equity: 0 },
+          current: { revenue: 0, expenses: 0, profit: 0, assets: 0, equity: 0 },
+          previous: {
+            revenue: 0,
+            expenses: 0,
+            profit: 0,
+            assets: 0,
+            equity: 0,
+          },
+          growth: { revenue: 0, expenses: 0, profit: 0, assets: 0, equity: 0 },
         };
 
         validData.forEach((company) => {
