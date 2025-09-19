@@ -1193,7 +1193,7 @@ app.post("/api/cash-position", async (req, res) => {
       }
     });
 
-      res.json({
+    res.json({
       totalCash,
       bankAccounts,
     });
@@ -3543,7 +3543,7 @@ app.get("/api/debug/simple/:tenantId", async (req, res) => {
     const allAccounts = response.body.accounts || [];
     const firstThree = allAccounts.slice(0, 3);
 
-      res.json({
+    res.json({
       message: "Raw Xero account data",
       totalAccounts: allAccounts.length,
       firstThreeAccounts: firstThree,
