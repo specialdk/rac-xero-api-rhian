@@ -2982,29 +2982,49 @@ function parsePLData(plRows) {
             return;
           }
 
+          // REVENUE/INCOME SECTIONS
           if (
             sectionTitle.includes("income") ||
             sectionTitle.includes("revenue") ||
-            sectionTitle.includes("trading") ||
-            sectionTitle.includes("property maintenance")
+            sectionTitle.includes("trading")
           ) {
             plData.revenueAccounts.push({ name: accountName, amount });
             plData.totalRevenue += Math.abs(amount);
-          } else if (
+            console.log(
+              `Revenue: ${accountName} = $${Math.abs(amount)} (from section: ${
+                section.title
+              })`
+            );
+          }
+          // EXPENSE/COST SECTIONS
+          else if (
             sectionTitle.includes("expense") ||
             sectionTitle.includes("cost") ||
             sectionTitle.includes("administration") ||
-            sectionTitle.includes("operating") ||
-            sectionTitle.includes("salaries")
+            sectionTitle.includes("operating")
           ) {
             plData.expenseAccounts.push({ name: accountName, amount });
             plData.totalExpenses += Math.abs(amount);
+            console.log(
+              `Expense: ${accountName} = $${Math.abs(amount)} (from section: ${
+                section.title
+              })`
+            );
+          }
+          // UNMATCHED SECTIONS
+          else {
+            console.log(
+              `UNMATCHED SECTION: "${section.title}" with account: ${accountName} = $${amount}`
+            );
           }
         }
       });
     }
   });
 
+  console.log(
+    `ParsePL Results: Revenue=$${plData.totalRevenue}, Expenses=$${plData.totalExpenses}`
+  );
   return plData;
 }
 
