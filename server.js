@@ -2929,7 +2929,7 @@ app.get("/api/yoy-analysis/:tenantId", async (req, res) => {
   }
 });
 
-// Helper function to parse P&L data - reduced logs and improved 
+// Helper function to parse P&L data - reduced logs and improved
 function parsePLData(plRows) {
   const plData = {
     totalRevenue: 0,
@@ -2951,40 +2951,29 @@ function parsePLData(plRows) {
             return;
           }
 
-          // REVENUE/INCOME SECTIONS
           if (
             sectionTitle.includes("income") ||
             sectionTitle.includes("revenue") ||
             sectionTitle.includes("trading")
           ) {
             plData.revenueAccounts.push({ name: accountName, amount });
-            plData.totalRevenue += Math.abs(amount);
-            console.log(`Revenue: ${accountName} = $${Math.abs(amount)} (from section: ${section.title})`);
-          } 
-          // EXPENSE/COST SECTIONS  
-          else if (
+            plData.totalRevenue += amount; // Remove Math.abs()
+          } else if (
             sectionTitle.includes("expense") ||
             sectionTitle.includes("cost") ||
             sectionTitle.includes("administration") ||
             sectionTitle.includes("operating")
           ) {
             plData.expenseAccounts.push({ name: accountName, amount });
-            plData.totalExpenses += Math.abs(amount);
-            console.log(`Expense: ${accountName} = $${Math.abs(amount)} (from section: ${section.title})`);
-          }
-          // UNMATCHED SECTIONS
-          else {
-            console.log(`UNMATCHED SECTION: "${section.title}" with account: ${accountName} = $${amount}`);
+            plData.totalExpenses += amount; // Remove Math.abs()
           }
         }
       });
     }
   });
 
-  console.log(`ParsePL Results: Revenue=$${plData.totalRevenue}, Expenses=$${plData.totalExpenses}`);
   return plData;
 }
-
 
 // Helper function to calculate growth rate
 function calculateGrowthRate(previousValue, currentValue) {
