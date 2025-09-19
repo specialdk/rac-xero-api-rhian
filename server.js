@@ -890,8 +890,6 @@ const enhancedTokenStorage = {
         return { refreshed: 0, failed: 0, results: [] };
       }
 
-      console.log(`🔄 Found ${result.rows.length} tokens that need refreshing`);
-
       const refreshResults = [];
       let refreshed = 0;
       let failed = 0;
@@ -1195,10 +1193,7 @@ app.post("/api/cash-position", async (req, res) => {
       }
     });
 
-    console.log("✅ Parsed Bank Accounts:", bankAccounts);
-    console.log("✅ Total Cash:", totalCash);
-
-    res.json({
+      res.json({
       totalCash,
       bankAccounts,
     });
@@ -2982,7 +2977,6 @@ function parsePLData(plRows) {
             return;
           }
 
-          // REVENUE/INCOME SECTIONS
           if (
             sectionTitle.includes("income") ||
             sectionTitle.includes("revenue") ||
@@ -2990,14 +2984,7 @@ function parsePLData(plRows) {
           ) {
             plData.revenueAccounts.push({ name: accountName, amount });
             plData.totalRevenue += Math.abs(amount);
-            console.log(
-              `Revenue: ${accountName} = $${Math.abs(amount)} (from section: ${
-                section.title
-              })`
-            );
-          }
-          // EXPENSE/COST SECTIONS
-          else if (
+          } else if (
             sectionTitle.includes("expense") ||
             sectionTitle.includes("cost") ||
             sectionTitle.includes("administration") ||
@@ -3005,29 +2992,14 @@ function parsePLData(plRows) {
           ) {
             plData.expenseAccounts.push({ name: accountName, amount });
             plData.totalExpenses += Math.abs(amount);
-            console.log(
-              `Expense: ${accountName} = $${Math.abs(amount)} (from section: ${
-                section.title
-              })`
-            );
-          }
-          // UNMATCHED SECTIONS
-          else {
-            console.log(
-              `UNMATCHED SECTION: "${section.title}" with account: ${accountName} = $${amount}`
-            );
           }
         }
       });
     }
   });
 
-  console.log(
-    `ParsePL Results: Revenue=$${plData.totalRevenue}, Expenses=$${plData.totalExpenses}`
-  );
   return plData;
 }
-
 // Helper function to calculate growth rate
 function calculateGrowthRate(previousValue, currentValue) {
   if (previousValue === 0) {
@@ -3571,15 +3543,7 @@ app.get("/api/debug/simple/:tenantId", async (req, res) => {
     const allAccounts = response.body.accounts || [];
     const firstThree = allAccounts.slice(0, 3);
 
-    console.log("Raw Xero Response Structure:");
-    console.log("Total accounts:", allAccounts.length);
-    console.log(
-      "First account keys:",
-      firstThree[0] ? Object.keys(firstThree[0]) : "No accounts"
-    );
-    console.log("First account full:", firstThree[0]);
-
-    res.json({
+      res.json({
       message: "Raw Xero account data",
       totalAccounts: allAccounts.length,
       firstThreeAccounts: firstThree,
