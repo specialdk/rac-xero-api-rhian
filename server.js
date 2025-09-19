@@ -2791,28 +2791,22 @@ app.get("/api/yoy-analysis/:tenantId", async (req, res) => {
       `Previous year periods: ${previousYearPeriods[0].label} to ${previousYearPeriods[11].label}`
     );
 
-    // Function to get monthly P&L data with rate limiting
+    // Function to get monthly P&L data
     async function getMonthlyPLData(periods, periodLabel) {
       let totalRevenue = 0;
       let totalExpenses = 0;
       const monthlyDetails = [];
 
-      for (let i = 0; i < periods.length; i++) {
-        const period = periods[i];
+      for (const period of periods) {
         try {
-          // Add delay before API call (except for first call)
-          if (i > 0) {
-            console.log(
-              `Rate limiting: waiting 3 seconds before ${periodLabel} ${period.label}...`
-            );
-            await new Promise((resolve) => setTimeout(resolve, 3000));
-          }
-
           const response = await xero.accountingApi.getReportProfitAndLoss(
             req.params.tenantId,
             period.startDate,
             period.endDate
           );
+
+          // Add 3-second delay to respect rate limits (60/minute = 1 per second, so 3 seconds is safe)
+          await new Promise((resolve) => setTimeout(resolve, 3000));
 
           const plRows = response.body.reports?.[0]?.rows || [];
           const monthlyPL = parsePLData(plRows);
