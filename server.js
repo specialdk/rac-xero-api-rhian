@@ -2805,9 +2805,6 @@ app.get("/api/yoy-analysis/:tenantId", async (req, res) => {
             period.endDate
           );
 
-          // Add 3-second delay to respect rate limits (60/minute = 1 per second, so 3 seconds is safe)
-          await new Promise((resolve) => setTimeout(resolve, 3000));
-
           const plRows = response.body.reports?.[0]?.rows || [];
           const monthlyPL = parsePLData(plRows);
 
