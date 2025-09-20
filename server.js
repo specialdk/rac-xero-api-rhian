@@ -3680,7 +3680,7 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
       tenantName: tokenData.tenantName,
       period: {
         from: fromDateStr,
-        to: reportDate,
+        to: actualReportDateStr, // Use the hardcoded August 31st date
         months: periodMonths,
         description:
           periodMonths === 1 ? "Current Month" : `${periodMonths} Month Period`,
