@@ -491,7 +491,7 @@
 
       .dashboard-grid {
         display: grid;
-        grid-template-columns: repeat(4, minmax(200px, 1fr)) !important;
+        grid-template-columns: repeat(5, minmax(200px, 1fr)) !important;
         gap: 10px;
         margin-bottom: 20px;
       }
@@ -2255,6 +2255,36 @@
       ${
         consolidated.growth.expenses >= 0 ? "+" : ""
       }${consolidated.growth.expenses.toFixed(1)}%
+    </span>
+  </div>
+</div>
+
+    <div class="dashboard-card">
+  <h3>Profit Performance</h3>
+  <div class="metric">
+    <span>${currentLabel} Profit</span>
+    <span class="metric-value ${
+      consolidated.current.profit >= 0 ? "" : "negative"
+    }">
+      $${consolidated.current.profit.toLocaleString()}
+    </span>
+  </div>
+  <div class="metric">
+    <span>${previousLabel} Profit</span>
+    <span class="metric-value ${
+      consolidated.previous.profit >= 0 ? "" : "negative"
+    }">
+      $${consolidated.previous.profit.toLocaleString()}
+    </span>
+  </div>
+  <div class="metric">
+    <span>Profit Growth</span>
+    <span class="metric-value ${
+      consolidated.growth.profit >= 0 ? "" : "negative"
+    }">
+      ${
+        consolidated.growth.profit >= 0 ? "+" : ""
+      }${consolidated.growth.profit.toFixed(1)}%
     </span>
   </div>
 </div>
