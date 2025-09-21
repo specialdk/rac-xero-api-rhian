@@ -3068,7 +3068,7 @@
     </div>
   `;
 
-        dashboardElement.innerHTML = consolidatedHtml + individualHtml;
+        dashboardElement.innerHTML = consolidatedHtml;
       }
 
       async function loadProfitLossData() {
@@ -3608,37 +3608,20 @@
         }
       }
 
-      // ====== RESIZER FUNCTIONALITY ======
+      function handleMouseMove(e) {
+        if (!isResizing) return;
 
-      function initializeResizer() {
-        let isResizing = false;
+        const container = document.querySelector(".main-container");
+        const containerRect = container.getBoundingClientRect();
+        const percentage =
+          ((e.clientX - containerRect.left) / containerRect.width) * 100;
 
-        document
-          .querySelector(".resizer")
-          .addEventListener("mousedown", function (e) {
-            isResizing = true;
-            document.addEventListener("mousemove", handleMouseMove);
-            document.addEventListener("mouseup", function () {
-              isResizing = false;
-              document.removeEventListener("mousemove", handleMouseMove);
-            });
-          });
-
-        function handleMouseMove(e) {
-          if (!isResizing) return;
-
-          const container = document.querySelector(".main-container");
-          const containerRect = container.getBoundingClientRect();
-          const percentage =
-            ((e.clientX - containerRect.left) / containerRect.width) * 100;
-
-          if (percentage > 20 && percentage < 80) {
-            document.querySelector(".ai-chat-panel").style.width =
-              percentage + "%";
-            document.querySelector(".dashboard-panel").style.width =
-              100 - percentage + "%";
-            document.querySelector(".resizer").style.left = percentage + "%";
-          }
+        if (percentage > 20 && percentage < 80) {
+          document.querySelector(".ai-chat-panel").style.width =
+            percentage + "%";
+          document.querySelector(".dashboard-panel").style.width =
+            100 - percentage + "%";
+          document.querySelector(".resizer").style.left = percentage + "%";
         }
       }
 
