@@ -920,243 +920,243 @@
       </div>
     </div>
     <script>
-            // ====== GLOBAL VARIABLES ======
-            const companies = {
-              rac: "Rirratjingu Aboriginal Corporation 8538",
-              mining: "Rirratjingu Mining Pty Ltd 7168",
-              property:
-                "Rirratjingu Property Management & Maintenance Services Pty Ltd",
-              enterprises: "Rirratjingu Enterprises Pty Ltd",
-              invest: "Rirratjingu Invest P/ L ATF Miliditjpi Trust",
-              ngarrkuwuy: "Ngarrkuwuy Developments Pty Ltd",
-              marrin: "Marrin Square Developments Pty Ltd",
-            };
+      // ====== GLOBAL VARIABLES ======
+      const companies = {
+        rac: "Rirratjingu Aboriginal Corporation 8538",
+        mining: "Rirratjingu Mining Pty Ltd 7168",
+        property:
+          "Rirratjingu Property Management & Maintenance Services Pty Ltd",
+        enterprises: "Rirratjingu Enterprises Pty Ltd",
+        invest: "Rirratjingu Invest P/ L ATF Miliditjpi Trust",
+        ngarrkuwuy: "Ngarrkuwuy Developments Pty Ltd",
+        marrin: "Marrin Square Developments Pty Ltd",
+      };
 
-            let selectedCompanies = [];
-            let oauthProgress = 0;
-            let connectedCompanies = [];
-            let isOAuthInProgress = false;
-            let activeCompanyFilters = [];
-            let currentView = "overview";
+      let selectedCompanies = [];
+      let oauthProgress = 0;
+      let connectedCompanies = [];
+      let isOAuthInProgress = false;
+      let activeCompanyFilters = [];
+      let currentView = "overview";
 
-            // ====== CONNECTION MANAGER FUNCTIONS ======
+      // ====== CONNECTION MANAGER FUNCTIONS ======
 
-            function loadSavedPreferences() {
-              const saved = localStorage.getItem("racCompanyPreferences");
-              if (saved) {
-                try {
-                  selectedCompanies = JSON.parse(saved);
-                  selectedCompanies.forEach((companyId) => {
-                    const checkbox = document.getElementById(`company-${companyId}`);
-                    if (checkbox) checkbox.checked = true;
-                  });
-                  updateSelectionSummary();
-                } catch (error) {
-                  console.log("No valid saved preferences");
-                }
-              }
-            }
-
-            function savePreferences() {
-              localStorage.setItem(
-                "racCompanyPreferences",
-                JSON.stringify(selectedCompanies)
-              );
-            }
-
-            function toggleCompany(companyId, event) {
-              event.stopPropagation();
+      function loadSavedPreferences() {
+        const saved = localStorage.getItem("racCompanyPreferences");
+        if (saved) {
+          try {
+            selectedCompanies = JSON.parse(saved);
+            selectedCompanies.forEach((companyId) => {
               const checkbox = document.getElementById(`company-${companyId}`);
-              checkbox.checked = !checkbox.checked;
+              if (checkbox) checkbox.checked = true;
+            });
+            updateSelectionSummary();
+          } catch (error) {
+            console.log("No valid saved preferences");
+          }
+        }
+      }
 
-              if (checkbox.checked) {
-                if (!selectedCompanies.includes(companyId)) {
-                  selectedCompanies.push(companyId);
-                }
-              } else {
-                selectedCompanies = selectedCompanies.filter(
-                  (id) => id !== companyId
-                );
-                document.getElementById("all-companies").checked = false;
-              }
+      function savePreferences() {
+        localStorage.setItem(
+          "racCompanyPreferences",
+          JSON.stringify(selectedCompanies)
+        );
+      }
 
-              updateSelectionSummary();
-              savePreferences();
-            }
+      function toggleCompany(companyId, event) {
+        event.stopPropagation();
+        const checkbox = document.getElementById(`company-${companyId}`);
+        checkbox.checked = !checkbox.checked;
 
-            function toggleAllCompanies(event) {
-              event.stopPropagation();
-              const allCheckbox = document.getElementById("all-companies");
-              allCheckbox.checked = !allCheckbox.checked;
+        if (checkbox.checked) {
+          if (!selectedCompanies.includes(companyId)) {
+            selectedCompanies.push(companyId);
+          }
+        } else {
+          selectedCompanies = selectedCompanies.filter(
+            (id) => id !== companyId
+          );
+          document.getElementById("all-companies").checked = false;
+        }
 
-              if (allCheckbox.checked) {
-                selectedCompanies = Object.keys(companies);
-                Object.keys(companies).forEach((companyId) => {
-                  document.getElementById(`company-${companyId}`).checked = true;
-                });
-              } else {
-                selectedCompanies = [];
-                Object.keys(companies).forEach((companyId) => {
-                  document.getElementById(`company-${companyId}`).checked = false;
-                });
-              }
+        updateSelectionSummary();
+        savePreferences();
+      }
 
-              updateSelectionSummary();
-              savePreferences();
-            }
+      function toggleAllCompanies(event) {
+        event.stopPropagation();
+        const allCheckbox = document.getElementById("all-companies");
+        allCheckbox.checked = !allCheckbox.checked;
 
-            function updateSelectionSummary() {
-              const summary = document.getElementById("selectionSummary");
-              const continueBtn = document.getElementById("continueBtn");
+        if (allCheckbox.checked) {
+          selectedCompanies = Object.keys(companies);
+          Object.keys(companies).forEach((companyId) => {
+            document.getElementById(`company-${companyId}`).checked = true;
+          });
+        } else {
+          selectedCompanies = [];
+          Object.keys(companies).forEach((companyId) => {
+            document.getElementById(`company-${companyId}`).checked = false;
+          });
+        }
 
-              summary.innerHTML = `<strong>Selected: ${selectedCompanies.length} companies</strong>`;
+        updateSelectionSummary();
+        savePreferences();
+      }
 
-              if (selectedCompanies.length > 0) {
-                const companyNames = selectedCompanies.map((id) => companies[id]);
-                summary.innerHTML += `<br><small>${companyNames.join(", ")}</small>`;
-                continueBtn.disabled = false;
-              } else {
-                continueBtn.disabled = true;
-              }
-            }
+      function updateSelectionSummary() {
+        const summary = document.getElementById("selectionSummary");
+        const continueBtn = document.getElementById("continueBtn");
 
-            function startOAuthFlow() {
-              if (selectedCompanies.length === 0) {
-                alert("Please select at least one company to continue.");
-                return;
-              }
+        summary.innerHTML = `<strong>Selected: ${selectedCompanies.length} companies</strong>`;
 
-              document.getElementById("step1").style.display = "none";
-              document.getElementById("step2").style.display = "block";
-              document.getElementById("step1Indicator").classList.add("completed");
-              document.getElementById("step1Indicator").classList.remove("active");
-              document.getElementById("step2Indicator").classList.add("active");
+        if (selectedCompanies.length > 0) {
+          const companyNames = selectedCompanies.map((id) => companies[id]);
+          summary.innerHTML += `<br><small>${companyNames.join(", ")}</small>`;
+          continueBtn.disabled = false;
+        } else {
+          continueBtn.disabled = true;
+        }
+      }
 
-              oauthProgress = 0;
-              connectedCompanies = [];
-              localStorage.setItem(
-                "oauthCompanies",
-                JSON.stringify(selectedCompanies)
-              );
-              localStorage.setItem("oauthProgress", "0");
-              updateOAuthProgress();
-            }
+      function startOAuthFlow() {
+        if (selectedCompanies.length === 0) {
+          alert("Please select at least one company to continue.");
+          return;
+        }
 
-            function updateOAuthProgress() {
-              const currentCompanyName =
-                document.getElementById("currentCompanyName");
-              const progressFill = document.getElementById("progressFill");
-              const progressText = document.getElementById("progressText");
+        document.getElementById("step1").style.display = "none";
+        document.getElementById("step2").style.display = "block";
+        document.getElementById("step1Indicator").classList.add("completed");
+        document.getElementById("step1Indicator").classList.remove("active");
+        document.getElementById("step2Indicator").classList.add("active");
 
-              if (oauthProgress < selectedCompanies.length) {
-                const companyId = selectedCompanies[oauthProgress];
-                const companyName = companies[companyId];
+        oauthProgress = 0;
+        connectedCompanies = [];
+        localStorage.setItem(
+          "oauthCompanies",
+          JSON.stringify(selectedCompanies)
+        );
+        localStorage.setItem("oauthProgress", "0");
+        updateOAuthProgress();
+      }
 
-                currentCompanyName.textContent = `Ready to connect: ${companyName} (${
-                  oauthProgress + 1
-                }/${selectedCompanies.length})`;
-                const progressPercent =
-                  (oauthProgress / selectedCompanies.length) * 100;
-                progressFill.style.width = progressPercent + "%";
-                progressText.textContent = `Step ${oauthProgress + 1} of ${
-                  selectedCompanies.length
-                }`;
+      function updateOAuthProgress() {
+        const currentCompanyName =
+          document.getElementById("currentCompanyName");
+        const progressFill = document.getElementById("progressFill");
+        const progressText = document.getElementById("progressText");
 
-                document.getElementById("oauthInstructions").innerHTML = `
+        if (oauthProgress < selectedCompanies.length) {
+          const companyId = selectedCompanies[oauthProgress];
+          const companyName = companies[companyId];
+
+          currentCompanyName.textContent = `Ready to connect: ${companyName} (${
+            oauthProgress + 1
+          }/${selectedCompanies.length})`;
+          const progressPercent =
+            (oauthProgress / selectedCompanies.length) * 100;
+          progressFill.style.width = progressPercent + "%";
+          progressText.textContent = `Step ${oauthProgress + 1} of ${
+            selectedCompanies.length
+          }`;
+
+          document.getElementById("oauthInstructions").innerHTML = `
                                       <strong>Next Company:</strong> ${companyName}<br>
                                       <small>When the Xero login opens, select "${companyName}" from the dropdown and authorize access.</small>
                                   `;
-              }
+        }
+      }
+
+      function startNextOAuth() {
+        if (oauthProgress >= selectedCompanies.length) {
+          showCompletion();
+          return;
+        }
+
+        const companyId = selectedCompanies[oauthProgress];
+        const companyName = companies[companyId];
+
+        localStorage.setItem("currentOAuthCompany", companyId);
+        localStorage.setItem("currentOAuthCompanyName", companyName);
+
+        isOAuthInProgress = true;
+        document.getElementById("startOAuthBtn").style.display = "none";
+        document.getElementById("waitingMessage").style.display = "block";
+
+        window.location.href = "/auth";
+      }
+
+      async function checkOAuthStatus() {
+        try {
+          const response = await fetch("/api/connection-status");
+          const connections = await response.json();
+
+          const currentCompanyName = localStorage.getItem(
+            "currentOAuthCompanyName"
+          );
+          const currentCompanyId = localStorage.getItem("currentOAuthCompany");
+
+          const newConnection = connections.find(
+            (conn) => conn.tenantName === currentCompanyName && conn.connected
+          );
+
+          if (newConnection) {
+            connectedCompanies.push({
+              id: currentCompanyId,
+              name: currentCompanyName,
+              tenantId: newConnection.tenantId,
+            });
+
+            oauthProgress++;
+            localStorage.setItem("oauthProgress", oauthProgress.toString());
+
+            isOAuthInProgress = false;
+            document.getElementById("startOAuthBtn").style.display =
+              "inline-block";
+            document.getElementById("waitingMessage").style.display = "none";
+
+            if (oauthProgress < selectedCompanies.length) {
+              updateOAuthProgress();
+              document.getElementById(
+                "startOAuthBtn"
+              ).textContent = `🔗 Connect Next Company (${oauthProgress + 1}/${
+                selectedCompanies.length
+              })`;
+            } else {
+              showCompletion();
             }
+          } else {
+            alert(
+              `❌ Failed to connect ${currentCompanyName}. Please try again.`
+            );
+            isOAuthInProgress = false;
+            document.getElementById("startOAuthBtn").style.display =
+              "inline-block";
+            document.getElementById("waitingMessage").style.display = "none";
+          }
+        } catch (error) {
+          console.error("❌ Error checking OAuth status:", error);
+          alert("❌ Error checking connection status. Please try again.");
+          isOAuthInProgress = false;
+          document.getElementById("startOAuthBtn").style.display =
+            "inline-block";
+          document.getElementById("waitingMessage").style.display = "none";
+        }
+      }
 
-            function startNextOAuth() {
-              if (oauthProgress >= selectedCompanies.length) {
-                showCompletion();
-                return;
-              }
+      function showCompletion() {
+        document.getElementById("step2").style.display = "none";
+        document.getElementById("step3").style.display = "block";
+        document.getElementById("step2Indicator").classList.add("completed");
+        document.getElementById("step2Indicator").classList.remove("active");
+        document.getElementById("step3Indicator").classList.add("active");
 
-              const companyId = selectedCompanies[oauthProgress];
-              const companyName = companies[companyId];
-
-              localStorage.setItem("currentOAuthCompany", companyId);
-              localStorage.setItem("currentOAuthCompanyName", companyName);
-
-              isOAuthInProgress = true;
-              document.getElementById("startOAuthBtn").style.display = "none";
-              document.getElementById("waitingMessage").style.display = "block";
-
-              window.location.href = "/auth";
-            }
-
-            async function checkOAuthStatus() {
-              try {
-                const response = await fetch("/api/connection-status");
-                const connections = await response.json();
-
-                const currentCompanyName = localStorage.getItem(
-                  "currentOAuthCompanyName"
-                );
-                const currentCompanyId = localStorage.getItem("currentOAuthCompany");
-
-                const newConnection = connections.find(
-                  (conn) => conn.tenantName === currentCompanyName && conn.connected
-                );
-
-                if (newConnection) {
-                  connectedCompanies.push({
-                    id: currentCompanyId,
-                    name: currentCompanyName,
-                    tenantId: newConnection.tenantId,
-                  });
-
-                  oauthProgress++;
-                  localStorage.setItem("oauthProgress", oauthProgress.toString());
-
-                  isOAuthInProgress = false;
-                  document.getElementById("startOAuthBtn").style.display =
-                    "inline-block";
-                  document.getElementById("waitingMessage").style.display = "none";
-
-                  if (oauthProgress < selectedCompanies.length) {
-                    updateOAuthProgress();
-                    document.getElementById(
-                      "startOAuthBtn"
-                    ).textContent = `🔗 Connect Next Company (${oauthProgress + 1}/${
-                      selectedCompanies.length
-                    })`;
-                  } else {
-                    showCompletion();
-                  }
-                } else {
-                  alert(
-                    `❌ Failed to connect ${currentCompanyName}. Please try again.`
-                  );
-                  isOAuthInProgress = false;
-                  document.getElementById("startOAuthBtn").style.display =
-                    "inline-block";
-                  document.getElementById("waitingMessage").style.display = "none";
-                }
-              } catch (error) {
-                console.error("❌ Error checking OAuth status:", error);
-                alert("❌ Error checking connection status. Please try again.");
-                isOAuthInProgress = false;
-                document.getElementById("startOAuthBtn").style.display =
-                  "inline-block";
-                document.getElementById("waitingMessage").style.display = "none";
-              }
-            }
-
-            function showCompletion() {
-              document.getElementById("step2").style.display = "none";
-              document.getElementById("step3").style.display = "block";
-              document.getElementById("step2Indicator").classList.add("completed");
-              document.getElementById("step2Indicator").classList.remove("active");
-              document.getElementById("step3Indicator").classList.add("active");
-
-              const connectedList = document.getElementById("connectedCompaniesList");
-              connectedList.innerHTML = connectedCompanies
-                .map(
-                  (company) => `
+        const connectedList = document.getElementById("connectedCompaniesList");
+        connectedList.innerHTML = connectedCompanies
+          .map(
+            (company) => `
                                   <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; border: 1px solid #28a745; background: #f8fff9; border-radius: 6px; margin-bottom: 0.5rem;">
                                       <div style="display: flex; align-items: center; gap: 0.5rem;">
                                           <div style="width: 12px; height: 12px; border-radius: 50%; background: #28a745;"></div>
@@ -1165,117 +1165,117 @@
                                       <div style="color: #28a745; font-size: 0.9rem;">✅ Connected</div>
                                   </div>
                               `
-                )
-                .join("");
+          )
+          .join("");
 
-              // Auto-launch after 3 seconds
-              setTimeout(() => showMainDashboard(), 3000);
-            }
+        // Auto-launch after 3 seconds
+        setTimeout(() => showMainDashboard(), 3000);
+      }
 
-            function showMainDashboard() {
-              localStorage.removeItem("oauthCompanies");
-              localStorage.removeItem("oauthProgress");
-              localStorage.removeItem("currentOAuthCompany");
-              localStorage.removeItem("currentOAuthCompanyName");
-              localStorage.setItem("racCompaniesConnected", "true");
+      function showMainDashboard() {
+        localStorage.removeItem("oauthCompanies");
+        localStorage.removeItem("oauthProgress");
+        localStorage.removeItem("currentOAuthCompany");
+        localStorage.removeItem("currentOAuthCompanyName");
+        localStorage.setItem("racCompaniesConnected", "true");
 
-              document.getElementById("connectionManager").style.display = "none";
-              document.getElementById("mainDashboard").style.display = "block";
+        document.getElementById("connectionManager").style.display = "none";
+        document.getElementById("mainDashboard").style.display = "block";
 
-              initializeMainDashboard();
-            }
+        initializeMainDashboard();
+      }
 
-            function handleOAuthReturn() {
-              const urlParams = new URLSearchParams(window.location.search);
-              const isSuccess = urlParams.has("success");
-              const isError = urlParams.has("error");
-              const oauthCompanies = localStorage.getItem("oauthCompanies");
+      function handleOAuthReturn() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const isSuccess = urlParams.has("success");
+        const isError = urlParams.has("error");
+        const oauthCompanies = localStorage.getItem("oauthCompanies");
 
-              if (isSuccess && oauthCompanies) {
-                selectedCompanies = JSON.parse(oauthCompanies);
-                oauthProgress = parseInt(localStorage.getItem("oauthProgress")) || 0;
+        if (isSuccess && oauthCompanies) {
+          selectedCompanies = JSON.parse(oauthCompanies);
+          oauthProgress = parseInt(localStorage.getItem("oauthProgress")) || 0;
 
-                document.getElementById("connectionManager").style.display = "block";
-                document.getElementById("mainDashboard").style.display = "none";
-                document.getElementById("step1").style.display = "none";
-                document.getElementById("step2").style.display = "block";
-                document.getElementById("step1Indicator").classList.add("completed");
-                document.getElementById("step2Indicator").classList.add("active");
+          document.getElementById("connectionManager").style.display = "block";
+          document.getElementById("mainDashboard").style.display = "none";
+          document.getElementById("step1").style.display = "none";
+          document.getElementById("step2").style.display = "block";
+          document.getElementById("step1Indicator").classList.add("completed");
+          document.getElementById("step2Indicator").classList.add("active");
 
-                setTimeout(() => checkOAuthStatus(), 1000);
-              }
+          setTimeout(() => checkOAuthStatus(), 1000);
+        }
 
-              if (isSuccess || isError) {
-                history.replaceState({}, document.title, window.location.pathname);
-              }
-            }
+        if (isSuccess || isError) {
+          history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
 
-            // ====== DASHBOARD FUNCTIONS ======
+      // ====== DASHBOARD FUNCTIONS ======
 
-            async function initializeMainDashboard() {
-              try {
-                await loadConnectedCompanies();
-                setupCompanyFilters();
-                await loadDashboardData();
-                initializeChat();
-                initializeResizer();
-              } catch (error) {
-                console.error("Error initializing dashboard:", error);
-              }
-            }
+      async function initializeMainDashboard() {
+        try {
+          await loadConnectedCompanies();
+          setupCompanyFilters();
+          await loadDashboardData();
+          initializeChat();
+          initializeResizer();
+        } catch (error) {
+          console.error("Error initializing dashboard:", error);
+        }
+      }
 
-            async function loadConnectedCompanies() {
-              try {
-                const response = await fetch("/api/connection-status");
-                const connections = await response.json();
+      async function loadConnectedCompanies() {
+        try {
+          const response = await fetch("/api/connection-status");
+          const connections = await response.json();
 
-                connectedCompanies = connections.filter((conn) => conn.connected);
-                activeCompanyFilters = connectedCompanies.map(
-                  (conn) => conn.tenantId
-                );
+          connectedCompanies = connections.filter((conn) => conn.connected);
+          activeCompanyFilters = connectedCompanies.map(
+            (conn) => conn.tenantId
+          );
 
-                document.getElementById("connectedCount").textContent =
-                  connectedCompanies.length;
+          document.getElementById("connectedCount").textContent =
+            connectedCompanies.length;
 
-                // Update status indicators
-                const hasConnections = connectedCompanies.length > 0;
-                // Remove this line since aiStatus element no longer exists:
-                // document.getElementById("aiStatus").className = `status-indicator ${
-                //   hasConnections ? "balanced" : "imbalanced"
-                // }`;
-                document.getElementById(
-                  "dashboardStatus"
-                ).className = `status-indicator ${
-                  hasConnections ? "balanced" : "imbalanced"
-                }`;
-              } catch (error) {
-                console.error("Error loading connected companies:", error);
-                connectedCompanies = [];
-              }
-            }
+          // Update status indicators
+          const hasConnections = connectedCompanies.length > 0;
+          // Remove this line since aiStatus element no longer exists:
+          // document.getElementById("aiStatus").className = `status-indicator ${
+          //   hasConnections ? "balanced" : "imbalanced"
+          // }`;
+          document.getElementById(
+            "dashboardStatus"
+          ).className = `status-indicator ${
+            hasConnections ? "balanced" : "imbalanced"
+          }`;
+        } catch (error) {
+          console.error("Error loading connected companies:", error);
+          connectedCompanies = [];
+        }
+      }
 
-            function setupCompanyFilters() {
-              const filtersContainer = document.getElementById("companyFilters");
-              const summaryElement = document.getElementById("filterSummary");
-              const chatStatus = document.getElementById("chatAnalysisStatus");
+      function setupCompanyFilters() {
+        const filtersContainer = document.getElementById("companyFilters");
+        const summaryElement = document.getElementById("filterSummary");
+        const chatStatus = document.getElementById("chatAnalysisStatus");
 
-              if (connectedCompanies.length === 0) {
-                filtersContainer.innerHTML =
-                  '<div style="color: #e74c3c;">No companies connected</div>';
-                summaryElement.textContent =
-                  "No connected companies found. Please manage connections.";
-                chatStatus.textContent = "No companies available for analysis";
-                chatStatus.style.background = "#f8d7da";
-                chatStatus.style.color = "#721c24";
-                return;
-              }
+        if (connectedCompanies.length === 0) {
+          filtersContainer.innerHTML =
+            '<div style="color: #e74c3c;">No companies connected</div>';
+          summaryElement.textContent =
+            "No connected companies found. Please manage connections.";
+          chatStatus.textContent = "No companies available for analysis";
+          chatStatus.style.background = "#f8d7da";
+          chatStatus.style.color = "#721c24";
+          return;
+        }
 
-              filtersContainer.innerHTML = connectedCompanies
-                .map((company) => {
-                  const shortName = company.tenantName
-                    .replace("Rirratjingu ", "")
-                    .replace(" Pty Ltd", "");
-                  return `
+        filtersContainer.innerHTML = connectedCompanies
+          .map((company) => {
+            const shortName = company.tenantName
+              .replace("Rirratjingu ", "")
+              .replace(" Pty Ltd", "");
+            return `
                           <div class="company-checkbox-item balanced">
                             <input type="checkbox"
                                    id="filter-${company.tenantId}"
@@ -1285,303 +1285,303 @@
                                    onclick="toggleCompanyFilterByLabel('${company.tenantId}')">${shortName}</label>
                           </div>
                         `;
-                })
-                .join("");
+          })
+          .join("");
 
-              //updateFilterSummary();
-              //updateChatAnalysisStatus();
-            }
+        //updateFilterSummary();
+        //updateChatAnalysisStatus();
+      }
 
-            // Add these functions after the setupCompanyFilters() function:
+      // Add these functions after the setupCompanyFilters() function:
 
-            function handleCompanyFilterChange(tenantId) {
-              const checkbox = document.getElementById(`filter-${tenantId}`);
+      function handleCompanyFilterChange(tenantId) {
+        const checkbox = document.getElementById(`filter-${tenantId}`);
 
-              if (checkbox.checked) {
-                if (!activeCompanyFilters.includes(tenantId)) {
-                  activeCompanyFilters.push(tenantId);
-                }
-              } else {
-                activeCompanyFilters = activeCompanyFilters.filter(
-                  (id) => id !== tenantId
-                );
-              }
+        if (checkbox.checked) {
+          if (!activeCompanyFilters.includes(tenantId)) {
+            activeCompanyFilters.push(tenantId);
+          }
+        } else {
+          activeCompanyFilters = activeCompanyFilters.filter(
+            (id) => id !== tenantId
+          );
+        }
 
-              //updateFilterSummary();
-              //updateChatAnalysisStatus();
-              loadDashboardData();
+        //updateFilterSummary();
+        //updateChatAnalysisStatus();
+        loadDashboardData();
 
-              // Add chat message about filter change
-              const selectedCompanies = getSelectedCompanyNames();
-              addMessage(
-                "assistant",
-                `Analysis scope updated: Now analyzing ${
+        // Add chat message about filter change
+        const selectedCompanies = getSelectedCompanyNames();
+        addMessage(
+          "assistant",
+          `Analysis scope updated: Now analyzing ${
+            selectedCompanies.length
+          } companies: ${selectedCompanies.join(", ")}`
+        );
+      }
+
+      function toggleCompanyFilterByLabel(tenantId) {
+        const checkbox = document.getElementById(`filter-${tenantId}`);
+        checkbox.checked = !checkbox.checked;
+
+        // Trigger the change event
+        const event = new Event("change");
+        checkbox.dispatchEvent(event);
+      }
+
+      function getSelectedCompanyNames() {
+        return activeCompanyFilters.map((tenantId) => {
+          const company = connectedCompanies.find(
+            (c) => c.tenantId === tenantId
+          );
+          return company
+            ? company.tenantName
+                .replace("Rirratjingu ", "")
+                .replace(" Pty Ltd", "")
+            : "Unknown";
+        });
+      }
+
+      // ====== QUICK FILTER FUNCTIONS ======
+      function selectAllCompanies() {
+        activeCompanyFilters = connectedCompanies.map((c) => c.tenantId);
+        connectedCompanies.forEach((company) => {
+          const checkbox = document.getElementById(
+            `filter-${company.tenantId}`
+          );
+          if (checkbox) checkbox.checked = true;
+        });
+        //updateFilterSummary();
+        //updateChatAnalysisStatus();
+        loadDashboardData();
+        addMessage(
+          "assistant",
+          "Analysis scope updated: Now analyzing all connected companies"
+        );
+      }
+
+      function selectNoCompanies() {
+        activeCompanyFilters = [];
+        connectedCompanies.forEach((company) => {
+          const checkbox = document.getElementById(
+            `filter-${company.tenantId}`
+          );
+          if (checkbox) checkbox.checked = false;
+        });
+        //updateFilterSummary();
+        //updateChatAnalysisStatus();
+        loadDashboardData();
+        addMessage(
+          "assistant",
+          "Analysis scope cleared: No companies selected. Choose companies above to begin analysis."
+        );
+      }
+
+      function selectMainEntities() {
+        // Select main entities: Aboriginal Corp and Mining
+        const mainEntityNames = ["Aboriginal Corporation", "Mining"];
+        activeCompanyFilters = [];
+
+        connectedCompanies.forEach((company) => {
+          const checkbox = document.getElementById(
+            `filter-${company.tenantId}`
+          );
+          const isMain = mainEntityNames.some((name) =>
+            company.tenantName.includes(name)
+          );
+
+          if (checkbox) checkbox.checked = isMain;
+          if (isMain) activeCompanyFilters.push(company.tenantId);
+        });
+
+        //updateFilterSummary();
+        //updateChatAnalysisStatus();
+        loadDashboardData();
+
+        const selectedNames = getSelectedCompanyNames();
+        addMessage(
+          "assistant",
+          `Analysis scope updated: Focusing on main entities - ${selectedNames.join(
+            ", "
+          )}`
+        );
+      }
+
+      // ====== QUICK ANALYSIS FUNCTIONS ======
+      function quickAnalysis(type) {
+        const selectedCompanies = getSelectedCompanyNames();
+
+        if (selectedCompanies.length === 0) {
+          addMessage(
+            "assistant",
+            "Please select companies using the filters above before requesting analysis."
+          );
+          return;
+        }
+
+        let query = "";
+        let analysisType = "";
+
+        switch (type) {
+          case "trial-balance":
+            query = "Show me the trial balance";
+            analysisType = "Trial Balance Analysis";
+            break;
+          case "cash-position":
+            query = "What is the current cash position?";
+            analysisType = "Cash Position Analysis";
+            break;
+          case "profit-loss":
+            query = "Show me the profit and loss summary";
+            analysisType = "Profit & Loss Analysis";
+            break;
+          case "financial-ratios":
+            query = "Calculate key financial ratios";
+            analysisType = "Financial Ratios Analysis";
+            break;
+          case "outstanding-invoices":
+            query = "Show me outstanding invoices";
+            analysisType = "Outstanding Invoices Analysis";
+            break;
+          case "consolidate-all":
+            query = "Show me consolidated financial summary";
+            analysisType = "Consolidated Analysis";
+            break;
+        }
+
+        addMessage("user", query);
+
+        // Show analysis in progress
+        setTimeout(() => {
+          addMessage(
+            "assistant",
+            `Processing ${analysisType} for: ${selectedCompanies.join(", ")}...`
+          );
+
+          // Simulate actual MCP analysis - replace with real MCP calls
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              `${analysisType} completed for ${selectedCompanies.length} companies. Here's the summary: [This would contain actual financial data from your MCP server tools]`
+            );
+          }, 2000);
+        }, 500);
+      }
+
+      // ====== CHAT FUNCTIONS ======
+
+      function initializeChat() {
+        const chatInput = document.getElementById("chatInput");
+
+        chatInput.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+          }
+        });
+      }
+
+      function sendMessage() {
+        const chatInput = document.getElementById("chatInput");
+        const message = chatInput.value.trim();
+
+        if (!message) return;
+
+        const selectedCompanies = getSelectedCompanyNames();
+
+        if (selectedCompanies.length === 0) {
+          addMessage(
+            "assistant",
+            "Please select companies using the filters above before asking questions."
+          );
+          return;
+        }
+
+        addMessage("user", message);
+        chatInput.value = "";
+
+        // Show analysis scope and processing message
+        setTimeout(() => {
+          const scope =
+            selectedCompanies.length === connectedCompanies.length
+              ? `all ${connectedCompanies.length} connected companies`
+              : `${
                   selectedCompanies.length
-                } companies: ${selectedCompanies.join(", ")}`
-              );
-            }
+                } selected companies: ${selectedCompanies.join(", ")}`;
 
-            function toggleCompanyFilterByLabel(tenantId) {
-              const checkbox = document.getElementById(`filter-${tenantId}`);
-              checkbox.checked = !checkbox.checked;
+          addMessage(
+            "assistant",
+            `I'll analyze ${scope} for your query: "${message}". Accessing RAC Xero MCP system with ${selectedCompanies.length} company scope...`
+          );
 
-              // Trigger the change event
-              const event = new Event("change");
-              checkbox.dispatchEvent(event);
-            }
+          // Here you would integrate with your actual MCP server
+          // For now, showing example of what the integration would look like
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              `Analysis complete for ${selectedCompanies.join(
+                ", "
+              )}. [This response would contain actual financial data from your MCP server based on the selected companies and query type.]`
+            );
+          }, 2000);
+        }, 500);
+      }
 
-            function getSelectedCompanyNames() {
-              return activeCompanyFilters.map((tenantId) => {
-                const company = connectedCompanies.find(
-                  (c) => c.tenantId === tenantId
-                );
-                return company
-                  ? company.tenantName
-                      .replace("Rirratjingu ", "")
-                      .replace(" Pty Ltd", "")
-                  : "Unknown";
-              });
-            }
+      function addMessage(type, content) {
+        const messagesContainer = document.getElementById("chatMessages");
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `message ${type}`;
+        messageDiv.innerHTML = `<strong>${
+          type === "user" ? "You" : "Claude"
+        }:</strong> ${content}`;
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
 
-            // ====== QUICK FILTER FUNCTIONS ======
-            function selectAllCompanies() {
-              activeCompanyFilters = connectedCompanies.map((c) => c.tenantId);
-              connectedCompanies.forEach((company) => {
-                const checkbox = document.getElementById(
-                  `filter-${company.tenantId}`
-                );
-                if (checkbox) checkbox.checked = true;
-              });
-              //updateFilterSummary();
-              //updateChatAnalysisStatus();
-              loadDashboardData();
-              addMessage(
-                "assistant",
-                "Analysis scope updated: Now analyzing all connected companies"
-              );
-            }
+      // ====== DASHBOARD DATA LOADING FUNCTIONS ======
 
-            function selectNoCompanies() {
-              activeCompanyFilters = [];
-              connectedCompanies.forEach((company) => {
-                const checkbox = document.getElementById(
-                  `filter-${company.tenantId}`
-                );
-                if (checkbox) checkbox.checked = false;
-              });
-              //updateFilterSummary();
-              //updateChatAnalysisStatus();
-              loadDashboardData();
-              addMessage(
-                "assistant",
-                "Analysis scope cleared: No companies selected. Choose companies above to begin analysis."
-              );
-            }
+      async function loadDashboardData() {
+        const dashboardElement = document.getElementById("dashboardData");
 
-            function selectMainEntities() {
-              // Select main entities: Aboriginal Corp and Mining
-              const mainEntityNames = ["Aboriginal Corporation", "Mining"];
-              activeCompanyFilters = [];
-
-              connectedCompanies.forEach((company) => {
-                const checkbox = document.getElementById(
-                  `filter-${company.tenantId}`
-                );
-                const isMain = mainEntityNames.some((name) =>
-                  company.tenantName.includes(name)
-                );
-
-                if (checkbox) checkbox.checked = isMain;
-                if (isMain) activeCompanyFilters.push(company.tenantId);
-              });
-
-              //updateFilterSummary();
-              //updateChatAnalysisStatus();
-              loadDashboardData();
-
-              const selectedNames = getSelectedCompanyNames();
-              addMessage(
-                "assistant",
-                `Analysis scope updated: Focusing on main entities - ${selectedNames.join(
-                  ", "
-                )}`
-              );
-            }
-
-            // ====== QUICK ANALYSIS FUNCTIONS ======
-            function quickAnalysis(type) {
-              const selectedCompanies = getSelectedCompanyNames();
-
-              if (selectedCompanies.length === 0) {
-                addMessage(
-                  "assistant",
-                  "Please select companies using the filters above before requesting analysis."
-                );
-                return;
-              }
-
-              let query = "";
-              let analysisType = "";
-
-              switch (type) {
-                case "trial-balance":
-                  query = "Show me the trial balance";
-                  analysisType = "Trial Balance Analysis";
-                  break;
-                case "cash-position":
-                  query = "What is the current cash position?";
-                  analysisType = "Cash Position Analysis";
-                  break;
-                case "profit-loss":
-                  query = "Show me the profit and loss summary";
-                  analysisType = "Profit & Loss Analysis";
-                  break;
-                case "financial-ratios":
-                  query = "Calculate key financial ratios";
-                  analysisType = "Financial Ratios Analysis";
-                  break;
-                case "outstanding-invoices":
-                  query = "Show me outstanding invoices";
-                  analysisType = "Outstanding Invoices Analysis";
-                  break;
-                case "consolidate-all":
-                  query = "Show me consolidated financial summary";
-                  analysisType = "Consolidated Analysis";
-                  break;
-              }
-
-              addMessage("user", query);
-
-              // Show analysis in progress
-              setTimeout(() => {
-                addMessage(
-                  "assistant",
-                  `Processing ${analysisType} for: ${selectedCompanies.join(", ")}...`
-                );
-
-                // Simulate actual MCP analysis - replace with real MCP calls
-                setTimeout(() => {
-                  addMessage(
-                    "assistant",
-                    `${analysisType} completed for ${selectedCompanies.length} companies. Here's the summary: [This would contain actual financial data from your MCP server tools]`
-                  );
-                }, 2000);
-              }, 500);
-            }
-
-            // ====== CHAT FUNCTIONS ======
-
-            function initializeChat() {
-              const chatInput = document.getElementById("chatInput");
-
-              chatInput.addEventListener("keydown", function (e) {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  sendMessage();
-                }
-              });
-            }
-
-            function sendMessage() {
-              const chatInput = document.getElementById("chatInput");
-              const message = chatInput.value.trim();
-
-              if (!message) return;
-
-              const selectedCompanies = getSelectedCompanyNames();
-
-              if (selectedCompanies.length === 0) {
-                addMessage(
-                  "assistant",
-                  "Please select companies using the filters above before asking questions."
-                );
-                return;
-              }
-
-              addMessage("user", message);
-              chatInput.value = "";
-
-              // Show analysis scope and processing message
-              setTimeout(() => {
-                const scope =
-                  selectedCompanies.length === connectedCompanies.length
-                    ? `all ${connectedCompanies.length} connected companies`
-                    : `${
-                        selectedCompanies.length
-                      } selected companies: ${selectedCompanies.join(", ")}`;
-
-                addMessage(
-                  "assistant",
-                  `I'll analyze ${scope} for your query: "${message}". Accessing RAC Xero MCP system with ${selectedCompanies.length} company scope...`
-                );
-
-                // Here you would integrate with your actual MCP server
-                // For now, showing example of what the integration would look like
-                setTimeout(() => {
-                  addMessage(
-                    "assistant",
-                    `Analysis complete for ${selectedCompanies.join(
-                      ", "
-                    )}. [This response would contain actual financial data from your MCP server based on the selected companies and query type.]`
-                  );
-                }, 2000);
-              }, 500);
-            }
-
-            function addMessage(type, content) {
-              const messagesContainer = document.getElementById("chatMessages");
-              const messageDiv = document.createElement("div");
-              messageDiv.className = `message ${type}`;
-              messageDiv.innerHTML = `<strong>${
-                type === "user" ? "You" : "Claude"
-              }:</strong> ${content}`;
-              messagesContainer.appendChild(messageDiv);
-              messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            }
-
-            // ====== DASHBOARD DATA LOADING FUNCTIONS ======
-
-            async function loadDashboardData() {
-              const dashboardElement = document.getElementById("dashboardData");
-
-              if (activeCompanyFilters.length === 0) {
-                dashboardElement.innerHTML = `
+        if (activeCompanyFilters.length === 0) {
+          dashboardElement.innerHTML = `
                   <div style="text-align: center; padding: 40px; color: #666;">
                     <h3>No Companies Selected</h3>
                     <p>Please select companies using the filters above to view financial data.</p>
                   </div>
                 `;
-                return;
-              }
+          return;
+        }
 
-              // Show loading with specific company count
-              const selectedCompanyNames = getSelectedCompanyNames();
-              dashboardElement.innerHTML = `
+        // Show loading with specific company count
+        const selectedCompanyNames = getSelectedCompanyNames();
+        dashboardElement.innerHTML = `
                 <div class="loading">
                   <div class="loading-spinner"></div>
                   Loading ${currentView} data from ${
-                activeCompanyFilters.length
-              } companies:<br>
+          activeCompanyFilters.length
+        } companies:<br>
                   <small>${selectedCompanyNames.join(", ")}</small>
                 </div>
               `;
 
-              try {
-                if (currentView === "overview") {
-                  await loadOverviewDataWithYoY();
-                } else if (currentView === "trial-balance") {
-                  await loadTrialBalanceData();
-                } else if (currentView === "cash-flow") {
-                  await loadCashFlowData();
-                } else if (currentView === "p-and-l") {
-                  await loadProfitLossData();
-                } else if (currentView === "year-over-year") {
-                  await loadYearOverYearData(); // <- Add this line
-                } else if (currentView === "alerts") {
-                  await loadAlertsData();
-                }
-              } catch (error) {
-                dashboardElement.innerHTML = `
+        try {
+          if (currentView === "overview") {
+            await loadOverviewDataWithYoY();
+          } else if (currentView === "trial-balance") {
+            await loadTrialBalanceData();
+          } else if (currentView === "cash-flow") {
+            await loadCashFlowData();
+          } else if (currentView === "p-and-l") {
+            await loadProfitLossData();
+          } else if (currentView === "year-over-year") {
+            await loadYearOverYearData(); // <- Add this line
+          } else if (currentView === "alerts") {
+            await loadAlertsData();
+          }
+        } catch (error) {
+          dashboardElement.innerHTML = `
                   <div style="text-align: center; padding: 40px; color: #e74c3c;">
                     <h3>Error Loading Data</h3>
                     <p>Failed to load dashboard data: ${error.message}</p>
@@ -1590,276 +1590,276 @@
                     </button>
                   </div>
                 `;
-              }
-            }
+        }
+      }
 
-            // Helper function for calculating consolidated metrics
-            function calculateConsolidatedFromNewEndpoint(validData) {
-              const consolidated = {
-                current: { revenue: 0, expenses: 0, profit: 0, assets: 0, equity: 0 },
-                previous: {
-                  revenue: 0,
-                  expenses: 0,
-                  profit: 0,
-                  assets: 0,
-                  equity: 0,
-                },
-                growth: { revenue: 0, expenses: 0, profit: 0, assets: 0, equity: 0 },
-              };
+      // Helper function for calculating consolidated metrics
+      function calculateConsolidatedFromNewEndpoint(validData) {
+        const consolidated = {
+          current: { revenue: 0, expenses: 0, profit: 0, assets: 0, equity: 0 },
+          previous: {
+            revenue: 0,
+            expenses: 0,
+            profit: 0,
+            assets: 0,
+            equity: 0,
+          },
+          growth: { revenue: 0, expenses: 0, profit: 0, assets: 0, equity: 0 },
+        };
 
-              validData.forEach((company) => {
-                const current = company.analysis.periods.current;
-                const previous = company.analysis.periods.previous;
+        validData.forEach((company) => {
+          const current = company.analysis.periods.current;
+          const previous = company.analysis.periods.previous;
 
-                consolidated.current.revenue += current.revenue;
-                consolidated.current.expenses += current.expenses;
-                consolidated.current.profit += current.profit;
-                consolidated.current.assets += current.assets;
-                consolidated.current.equity += current.equity;
+          consolidated.current.revenue += current.revenue;
+          consolidated.current.expenses += current.expenses;
+          consolidated.current.profit += current.profit;
+          consolidated.current.assets += current.assets;
+          consolidated.current.equity += current.equity;
 
-                consolidated.previous.revenue += previous.revenue;
-                consolidated.previous.expenses += previous.expenses;
-                consolidated.previous.profit += previous.profit;
-                consolidated.previous.assets += previous.assets;
-                consolidated.previous.equity += previous.equity;
-              });
+          consolidated.previous.revenue += previous.revenue;
+          consolidated.previous.expenses += previous.expenses;
+          consolidated.previous.profit += previous.profit;
+          consolidated.previous.assets += previous.assets;
+          consolidated.previous.equity += previous.equity;
+        });
 
-              // Calculate consolidated growth rates
-              consolidated.growth.revenue = calculateGrowthRate(
-                consolidated.previous.revenue,
-                consolidated.current.revenue
-              );
+        // Calculate consolidated growth rates
+        consolidated.growth.revenue = calculateGrowthRate(
+          consolidated.previous.revenue,
+          consolidated.current.revenue
+        );
 
-              consolidated.growth.expenses = calculateGrowthRate(
-                consolidated.previous.expenses,
-                consolidated.current.expenses
-              );
+        consolidated.growth.expenses = calculateGrowthRate(
+          consolidated.previous.expenses,
+          consolidated.current.expenses
+        );
 
-              consolidated.growth.profit = calculateGrowthRate(
-                consolidated.previous.profit,
-                consolidated.current.profit
-              );
-              consolidated.growth.assets = calculateGrowthRate(
-                consolidated.previous.assets,
-                consolidated.current.assets
-              );
-              consolidated.growth.equity = calculateGrowthRate(
-                consolidated.previous.equity,
-                consolidated.current.equity
-              );
+        consolidated.growth.profit = calculateGrowthRate(
+          consolidated.previous.profit,
+          consolidated.current.profit
+        );
+        consolidated.growth.assets = calculateGrowthRate(
+          consolidated.previous.assets,
+          consolidated.current.assets
+        );
+        consolidated.growth.equity = calculateGrowthRate(
+          consolidated.previous.equity,
+          consolidated.current.equity
+        );
 
-              return consolidated;
-            }
+        return consolidated;
+      }
 
-            // ====== ENHANCED loadOverviewDataWithYoY() WITH MORE BUSINESS METRICS ======
+      // ====== ENHANCED loadOverviewDataWithYoY() WITH MORE BUSINESS METRICS ======
 
-            async function loadOverviewDataWithYoY() {
-              // Check if any companies are selected
-              if (activeCompanyFilters.length === 0) {
-                const dashboardElement = document.getElementById("dashboardData");
-                dashboardElement.innerHTML = `
+      async function loadOverviewDataWithYoY() {
+        // Check if any companies are selected
+        if (activeCompanyFilters.length === 0) {
+          const dashboardElement = document.getElementById("dashboardData");
+          dashboardElement.innerHTML = `
                   <div style="text-align: center; padding: 40px; color: #666;">
                     <h3>No Companies Selected</h3>
                     <p>Please select companies using the filters above to view financial data.</p>
                   </div>
                 `;
-                return;
-              }
+          return;
+        }
 
+        try {
+          // Load consolidated data + enhanced metrics for selected companies
+          const response = await fetch("/api/consolidated-trial-balance");
+          const data = await response.json();
+
+          // Enhanced matching logic (keeping the good parts from before)
+          const selectedCompanies = [];
+          const enhancedMetrics = [];
+
+          for (const tenantId of activeCompanyFilters) {
+            const connectedCompany = connectedCompanies.find(
+              (c) => c.tenantId === tenantId
+            );
+            if (!connectedCompany) continue;
+
+            // Find matching company data
+            let matchedCompany = data.companies?.find(
+              (company) => company.tenantId === tenantId
+            );
+
+            if (!matchedCompany) {
+              matchedCompany = data.companies?.find((company) => {
+                const companyName = company.tenantName.toLowerCase();
+                const targetName = connectedCompany.tenantName.toLowerCase();
+                return (
+                  (companyName.includes("mining") &&
+                    targetName.includes("mining")) ||
+                  (companyName.includes("aboriginal") &&
+                    targetName.includes("aboriginal")) ||
+                  (companyName.includes("property") &&
+                    targetName.includes("property"))
+                );
+              });
+            }
+
+            if (matchedCompany) {
+              selectedCompanies.push(matchedCompany);
+
+              // Load enhanced metrics for each selected company
               try {
-                // Load consolidated data + enhanced metrics for selected companies
-                const response = await fetch("/api/consolidated-trial-balance");
-                const data = await response.json();
+                const orgName = getOrganizationName(
+                  connectedCompany.tenantName
+                );
 
-                // Enhanced matching logic (keeping the good parts from before)
-                const selectedCompanies = [];
-                const enhancedMetrics = [];
+                // Fetch multiple data sources in parallel
+                const [cashResponse, ratiosResponse, profitLossResponse] =
+                  await Promise.all([
+                    fetch("/api/cash-position", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ organizationName: orgName }),
+                    }).catch(() => null),
 
-                for (const tenantId of activeCompanyFilters) {
-                  const connectedCompany = connectedCompanies.find(
-                    (c) => c.tenantId === tenantId
-                  );
-                  if (!connectedCompany) continue;
+                    fetch("/api/financial-ratios", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ organizationName: orgName }),
+                    }).catch(() => null),
 
-                  // Find matching company data
-                  let matchedCompany = data.companies?.find(
-                    (company) => company.tenantId === tenantId
-                  );
+                    fetch("/api/profit-loss-summary", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ organizationName: orgName }),
+                    }).catch(() => null),
+                  ]);
 
-                  if (!matchedCompany) {
-                    matchedCompany = data.companies?.find((company) => {
-                      const companyName = company.tenantName.toLowerCase();
-                      const targetName = connectedCompany.tenantName.toLowerCase();
-                      return (
-                        (companyName.includes("mining") &&
-                          targetName.includes("mining")) ||
-                        (companyName.includes("aboriginal") &&
-                          targetName.includes("aboriginal")) ||
-                        (companyName.includes("property") &&
-                          targetName.includes("property"))
-                      );
-                    });
-                  }
+                // Read response text once and store it
+                // Read response JSON once and store it with debugging
+                let cashData = null,
+                  ratiosData = null,
+                  profitLossData = null;
 
-                  if (matchedCompany) {
-                    selectedCompanies.push(matchedCompany);
-
-                    // Load enhanced metrics for each selected company
-                    try {
-                      const orgName = getOrganizationName(
-                        connectedCompany.tenantName
-                      );
-
-                      // Fetch multiple data sources in parallel
-                      const [cashResponse, ratiosResponse, profitLossResponse] =
-                        await Promise.all([
-                          fetch("/api/cash-position", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ organizationName: orgName }),
-                          }).catch(() => null),
-
-                          fetch("/api/financial-ratios", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ organizationName: orgName }),
-                          }).catch(() => null),
-
-                          fetch("/api/profit-loss-summary", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ organizationName: orgName }),
-                          }).catch(() => null),
-                        ]);
-
-                      // Read response text once and store it
-                      // Read response JSON once and store it with debugging
-                      let cashData = null,
-                        ratiosData = null,
-                        profitLossData = null;
-
-                      if (cashResponse) {
-                        if (cashResponse.ok) {
-                          cashData = await cashResponse.json();
-                          console.log("Cash data for", orgName, ":", cashData);
-                        } else {
-                          console.error(
-                            "Cash API error for",
-                            orgName,
-                            ":",
-                            cashResponse.status,
-                            await cashResponse.text()
-                          );
-                        }
-                      }
-
-                      if (ratiosResponse) {
-                        if (ratiosResponse.ok) {
-                          ratiosData = await ratiosResponse.json();
-                          console.log("Ratios data for", orgName, ":", ratiosData);
-                        } else {
-                          console.error(
-                            "Ratios API error for",
-                            orgName,
-                            ":",
-                            ratiosResponse.status,
-                            await ratiosResponse.text()
-                          );
-                        }
-                      }
-
-                      if (profitLossResponse) {
-                        if (profitLossResponse.ok) {
-                          profitLossData = await profitLossResponse.json();
-                          console.log("P&L data for", orgName, ":", profitLossData);
-                        } else {
-                          console.error(
-                            "P&L API error for",
-                            orgName,
-                            ":",
-                            profitLossResponse.status,
-                            await profitLossResponse.text()
-                          );
-                        }
-                      }
-
-                      // Parse enhanced metrics using stored text
-                      // Extract from JSON responses
-                      const enhancedData = {
-                        tenantId: tenantId,
-                        companyName: connectedCompany.tenantName,
-
-                        // Basic financials from trial balance
-                        totalAssets: matchedCompany.totals?.totalAssets || 0,
-                        totalLiabilities: Math.abs(
-                          matchedCompany.totals?.totalLiabilities || 0
-                        ),
-                        totalEquity: matchedCompany.totals?.totalEquity || 0,
-                        balanced:
-                          matchedCompany.balanceCheck?.debitsEqualCredits || false,
-
-                        // Enhanced metrics from API responses
-                        cashPosition: cashData?.totalCash || 0,
-                        currentRatio:
-                          ratiosData?.ratios?.liquidity?.currentRatio || 0,
-                        debtToEquity: ratiosData?.ratios?.leverage?.debtToEquity || 0,
-                        netProfitMargin:
-                          ratiosData?.ratios?.profitability?.netProfitMargin || 0,
-                        returnOnAssets:
-                          ratiosData?.ratios?.profitability?.returnOnAssets || 0,
-                        revenue: profitLossData?.summary?.totalRevenue || 0,
-                        netProfit: profitLossData?.summary?.netProfit || 0,
-                      };
-                      enhancedMetrics.push(enhancedData);
-                    } catch (error) {
-                      console.error(
-                        `Error loading enhanced metrics for ${connectedCompany.tenantName}:`,
-                        error
-                      );
-                      enhancedMetrics.push({
-                        tenantId: tenantId,
-                        companyName: connectedCompany.tenantName,
-                        totalAssets: matchedCompany.totals?.totalAssets || 0,
-                        totalLiabilities: Math.abs(
-                          matchedCompany.totals?.totalLiabilities || 0
-                        ),
-                        totalEquity: matchedCompany.totals?.totalEquity || 0,
-                        balanced:
-                          matchedCompany.balanceCheck?.debitsEqualCredits || false,
-                        error: true,
-                      });
-                    }
+                if (cashResponse) {
+                  if (cashResponse.ok) {
+                    cashData = await cashResponse.json();
+                    console.log("Cash data for", orgName, ":", cashData);
+                  } else {
+                    console.error(
+                      "Cash API error for",
+                      orgName,
+                      ":",
+                      cashResponse.status,
+                      await cashResponse.text()
+                    );
                   }
                 }
 
-                // Calculate consolidated totals
-                const totals = enhancedMetrics.reduce(
-                  (acc, company) => {
-                    if (company.error) return acc;
-                    acc.totalAssets += company.totalAssets || 0;
-                    acc.totalLiabilities += company.totalLiabilities || 0;
-                    acc.totalEquity += company.totalEquity || 0;
-                    acc.totalCash += company.cashPosition || 0;
-                    acc.totalRevenue += company.revenue || 0;
-                    acc.totalProfit += company.netProfit || 0;
-                    return acc;
-                  },
-                  {
-                    totalAssets: 0,
-                    totalLiabilities: 0,
-                    totalEquity: 0,
-                    totalCash: 0,
-                    totalRevenue: 0,
-                    totalProfit: 0,
+                if (ratiosResponse) {
+                  if (ratiosResponse.ok) {
+                    ratiosData = await ratiosResponse.json();
+                    console.log("Ratios data for", orgName, ":", ratiosData);
+                  } else {
+                    console.error(
+                      "Ratios API error for",
+                      orgName,
+                      ":",
+                      ratiosResponse.status,
+                      await ratiosResponse.text()
+                    );
                   }
+                }
+
+                if (profitLossResponse) {
+                  if (profitLossResponse.ok) {
+                    profitLossData = await profitLossResponse.json();
+                    console.log("P&L data for", orgName, ":", profitLossData);
+                  } else {
+                    console.error(
+                      "P&L API error for",
+                      orgName,
+                      ":",
+                      profitLossResponse.status,
+                      await profitLossResponse.text()
+                    );
+                  }
+                }
+
+                // Parse enhanced metrics using stored text
+                // Extract from JSON responses
+                const enhancedData = {
+                  tenantId: tenantId,
+                  companyName: connectedCompany.tenantName,
+
+                  // Basic financials from trial balance
+                  totalAssets: matchedCompany.totals?.totalAssets || 0,
+                  totalLiabilities: Math.abs(
+                    matchedCompany.totals?.totalLiabilities || 0
+                  ),
+                  totalEquity: matchedCompany.totals?.totalEquity || 0,
+                  balanced:
+                    matchedCompany.balanceCheck?.debitsEqualCredits || false,
+
+                  // Enhanced metrics from API responses
+                  cashPosition: cashData?.totalCash || 0,
+                  currentRatio:
+                    ratiosData?.ratios?.liquidity?.currentRatio || 0,
+                  debtToEquity: ratiosData?.ratios?.leverage?.debtToEquity || 0,
+                  netProfitMargin:
+                    ratiosData?.ratios?.profitability?.netProfitMargin || 0,
+                  returnOnAssets:
+                    ratiosData?.ratios?.profitability?.returnOnAssets || 0,
+                  revenue: profitLossData?.summary?.totalRevenue || 0,
+                  netProfit: profitLossData?.summary?.netProfit || 0,
+                };
+                enhancedMetrics.push(enhancedData);
+              } catch (error) {
+                console.error(
+                  `Error loading enhanced metrics for ${connectedCompany.tenantName}:`,
+                  error
                 );
+                enhancedMetrics.push({
+                  tenantId: tenantId,
+                  companyName: connectedCompany.tenantName,
+                  totalAssets: matchedCompany.totals?.totalAssets || 0,
+                  totalLiabilities: Math.abs(
+                    matchedCompany.totals?.totalLiabilities || 0
+                  ),
+                  totalEquity: matchedCompany.totals?.totalEquity || 0,
+                  balanced:
+                    matchedCompany.balanceCheck?.debitsEqualCredits || false,
+                  error: true,
+                });
+              }
+            }
+          }
 
-                const balancedCompanies = enhancedMetrics.filter(
-                  (c) => !c.error && c.balanced
-                ).length;
+          // Calculate consolidated totals
+          const totals = enhancedMetrics.reduce(
+            (acc, company) => {
+              if (company.error) return acc;
+              acc.totalAssets += company.totalAssets || 0;
+              acc.totalLiabilities += company.totalLiabilities || 0;
+              acc.totalEquity += company.totalEquity || 0;
+              acc.totalCash += company.cashPosition || 0;
+              acc.totalRevenue += company.revenue || 0;
+              acc.totalProfit += company.netProfit || 0;
+              return acc;
+            },
+            {
+              totalAssets: 0,
+              totalLiabilities: 0,
+              totalEquity: 0,
+              totalCash: 0,
+              totalRevenue: 0,
+              totalProfit: 0,
+            }
+          );
 
-                const dashboardElement = document.getElementById("dashboardData");
-                dashboardElement.innerHTML = `
+          const balancedCompanies = enhancedMetrics.filter(
+            (c) => !c.error && c.balanced
+          ).length;
+
+          const dashboardElement = document.getElementById("dashboardData");
+          dashboardElement.innerHTML = `
                   <!-- ENHANCED FINANCIAL OVERVIEW -->
                   <div class="dashboard-grid" style="grid-template-columns: repeat(3, 1fr);">
 
@@ -1918,7 +1918,9 @@
                       <h3>⚖️ Health & Risk</h3>
                       <div class="metric">
                         <span>Companies</span>
-                        <span class="metric-value">${enhancedMetrics.length}</span>
+                        <span class="metric-value">${
+                          enhancedMetrics.length
+                        }</span>
                       </div>
                       <div class="metric">
                         <span>Balanced Books</span>
@@ -1932,9 +1934,9 @@
                         <span>Debt/Equity Ratio</span>
                         <span class="metric-value">${
                           totals.totalEquity > 0
-                            ? (totals.totalLiabilities / totals.totalEquity).toFixed(
-                                2
-                              )
+                            ? (
+                                totals.totalLiabilities / totals.totalEquity
+                              ).toFixed(2)
                             : "N/A"
                         }</span>
                       </div>
@@ -2003,8 +2005,12 @@
                           <div>
                             <div style="color: #666; margin-bottom: 3px;">Net Profit</div>
                             <div style="font-weight: 600; color: ${
-                              (company.netProfit || 0) > 0 ? "#27ae60" : "#e74c3c"
-                            };">$${(company.netProfit || 0).toLocaleString()}</div>
+                              (company.netProfit || 0) > 0
+                                ? "#27ae60"
+                                : "#e74c3c"
+                            };">$${(
+                          company.netProfit || 0
+                        ).toLocaleString()}</div>
                           </div>
                           <div>
                             <div style="color: #666; margin-bottom: 3px;">Profit Margin</div>
@@ -2052,10 +2058,10 @@
                       .join("")}
                   </div>
                 `;
-              } catch (error) {
-                console.error("Error in enhanced loadOverviewDataWithYoY:", error);
-                const dashboardElement = document.getElementById("dashboardData");
-                dashboardElement.innerHTML = `
+        } catch (error) {
+          console.error("Error in enhanced loadOverviewDataWithYoY:", error);
+          const dashboardElement = document.getElementById("dashboardData");
+          dashboardElement.innerHTML = `
                   <div style="text-align: center; padding: 40px; color: #e74c3c;">
                     <h3>Error Loading Enhanced Data</h3>
                     <p>Failed to load dashboard data: ${error.message}</p>
@@ -2064,27 +2070,27 @@
                     </button>
                   </div>
                 `;
-              }
-            }
+        }
+      }
 
-            // ====== YoY Card ======
-            // Replace the existing loadYearOverYearData() function with this corrected version
-            async function loadYearOverYearData() {
-              if (activeCompanyFilters.length === 0) {
-                const dashboardElement = document.getElementById("dashboardData");
-                dashboardElement.innerHTML = `
+      // ====== YoY Card ======
+      // Replace the existing loadYearOverYearData() function with this corrected version
+      async function loadYearOverYearData() {
+        if (activeCompanyFilters.length === 0) {
+          const dashboardElement = document.getElementById("dashboardData");
+          dashboardElement.innerHTML = `
                   <div style="text-align: center; padding: 40px; color: #666;">
                     <h3>No Companies Selected</h3>
                     <p>Please select companies using the filters above to view YoY analysis.</p>
                   </div>
                 `;
-                return;
-              }
+          return;
+        }
 
-              const dashboardElement = document.getElementById("dashboardData");
-              const selectedCompanyNames = getSelectedCompanyNames();
+        const dashboardElement = document.getElementById("dashboardData");
+        const selectedCompanyNames = getSelectedCompanyNames();
 
-              dashboardElement.innerHTML = `
+        dashboardElement.innerHTML = `
                 <div class="loading">
                   <div class="loading-spinner"></div>
                   Loading year-over-year analysis and monthly breakdown for ${
@@ -2094,79 +2100,79 @@
                 </div>
               `;
 
-              try {
-                const yoyData = [];
-                const monthlyData = [];
+        try {
+          const yoyData = [];
+          const monthlyData = [];
 
-                // Load both YoY and Monthly data for each company
-                for (const tenantId of activeCompanyFilters) {
-                  const connectedCompany = connectedCompanies.find(
-                    (c) => c.tenantId === tenantId
-                  );
-                  if (!connectedCompany) continue;
+          // Load both YoY and Monthly data for each company
+          for (const tenantId of activeCompanyFilters) {
+            const connectedCompany = connectedCompanies.find(
+              (c) => c.tenantId === tenantId
+            );
+            if (!connectedCompany) continue;
 
-                  try {
-                    const orgName = getOrganizationName(connectedCompany.tenantName);
+            try {
+              const orgName = getOrganizationName(connectedCompany.tenantName);
 
-                    // Load YoY and Monthly data in parallel
-                    const [yoyResponse, monthlyResponse] = await Promise.all([
-                      fetch("/api/yoy-analysis", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ organizationName: orgName }),
-                      }),
-                      fetch("/api/monthly-breakdown", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ organizationName: orgName }),
-                      }),
-                    ]);
+              // Load YoY and Monthly data in parallel
+              const [yoyResponse, monthlyResponse] = await Promise.all([
+                fetch("/api/yoy-analysis", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ organizationName: orgName }),
+                }),
+                fetch("/api/monthly-breakdown", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ organizationName: orgName }),
+                }),
+              ]);
 
-                    if (yoyResponse.ok) {
-                      const data = await yoyResponse.json();
-                      yoyData.push({
-                        companyName: connectedCompany.tenantName.replace(
-                          "Rirratjingu ",
-                          ""
-                        ),
-                        tenantName: data.tenantName,
-                        analysis: data.analysis,
-                        error: false,
-                      });
-                    }
+              if (yoyResponse.ok) {
+                const data = await yoyResponse.json();
+                yoyData.push({
+                  companyName: connectedCompany.tenantName.replace(
+                    "Rirratjingu ",
+                    ""
+                  ),
+                  tenantName: data.tenantName,
+                  analysis: data.analysis,
+                  error: false,
+                });
+              }
 
-                    if (monthlyResponse.ok) {
-                      const monthlyResult = await monthlyResponse.json();
-                      monthlyData.push({
-                        companyName: connectedCompany.tenantName.replace(
-                          "Rirratjingu ",
-                          ""
-                        ),
-                        tenantName: monthlyResult.tenantName,
-                        monthlyBreakdown: monthlyResult.monthlyBreakdown,
-                        totals: monthlyResult.totals,
-                        error: false,
-                      });
-                    }
-                  } catch (error) {
-                    console.error(
-                      `Error loading data for ${connectedCompany.tenantName}:`,
-                      error
-                    );
-                  }
-                }
+              if (monthlyResponse.ok) {
+                const monthlyResult = await monthlyResponse.json();
+                monthlyData.push({
+                  companyName: connectedCompany.tenantName.replace(
+                    "Rirratjingu ",
+                    ""
+                  ),
+                  tenantName: monthlyResult.tenantName,
+                  monthlyBreakdown: monthlyResult.monthlyBreakdown,
+                  totals: monthlyResult.totals,
+                  error: false,
+                });
+              }
+            } catch (error) {
+              console.error(
+                `Error loading data for ${connectedCompany.tenantName}:`,
+                error
+              );
+            }
+          }
 
-                // Calculate consolidated metrics
-                const validYoyData = yoyData.filter((d) => !d.error);
-                const validMonthlyData = monthlyData.filter((d) => !d.error);
-                const consolidatedYoy =
-                  calculateConsolidatedFromNewEndpoint(validYoyData);
+          // Calculate consolidated metrics
+          const validYoyData = yoyData.filter((d) => !d.error);
+          const validMonthlyData = monthlyData.filter((d) => !d.error);
+          const consolidatedYoy =
+            calculateConsolidatedFromNewEndpoint(validYoyData);
 
-                // Render YoY + Monthly analysis
-                renderYoYWithMonthlyDashboard(yoyData, monthlyData, consolidatedYoy);
-              } catch (error) {
-                console.error("Error in YoY analysis:", error);
-                dashboardElement.innerHTML = `
+          // Render YoY + Monthly analysis
+          renderYoYWithMonthlyDashboard(yoyData, monthlyData, consolidatedYoy);
+        } catch (error) {
+          console.error("Error in YoY analysis:", error);
+          dashboardElement.innerHTML = `
                   <div style="text-align: center; padding: 40px; color: #e74c3c;">
                     <h3>Error Loading YoY Data</h3>
                     <p>Failed to load year-over-year analysis: ${error.message}</p>
@@ -2175,27 +2181,27 @@
                     </button>
                   </div>
                 `;
-              }
-            }
+        }
+      }
 
-            // New rendering function that includes Monthly Card
-            function renderYoYWithMonthlyDashboard(
-              yoyData,
-              monthlyData,
-              consolidated
-            ) {
-              const dashboardElement = document.getElementById("dashboardData");
+      // New rendering function that includes Monthly Card
+      function renderYoYWithMonthlyDashboard(
+        yoyData,
+        monthlyData,
+        consolidated
+      ) {
+        const dashboardElement = document.getElementById("dashboardData");
 
-              // Get period labels from first valid company
-              const firstValidCompany = yoyData.find((d) => !d.error);
-              const currentLabel = firstValidCompany
-                ? firstValidCompany.analysis.periods.current.label
-                : "Current Year";
-              const previousLabel = firstValidCompany
-                ? firstValidCompany.analysis.periods.previous.label
-                : "Previous Year";
+        // Get period labels from first valid company
+        const firstValidCompany = yoyData.find((d) => !d.error);
+        const currentLabel = firstValidCompany
+          ? firstValidCompany.analysis.periods.current.label
+          : "Current Year";
+        const previousLabel = firstValidCompany
+          ? firstValidCompany.analysis.periods.previous.label
+          : "Previous Year";
 
-              dashboardElement.innerHTML = `
+        dashboardElement.innerHTML = `
                 <!-- CONSOLIDATED YoY SUMMARY -->
                 <div class="dashboard-grid" style="grid-template-columns: repeat(3, 1fr);">
 
@@ -2434,9 +2440,10 @@
                             <div style="color: #666; margin-bottom: 3px;">Margin ${currentLabel}</div>
                             <div style="font-weight: 600;">${
                               current.revenue > 0
-                                ? ((current.profit / current.revenue) * 100).toFixed(
-                                    1
-                                  )
+                                ? (
+                                    (current.profit / current.revenue) *
+                                    100
+                                  ).toFixed(1)
                                 : 0
                             }%</div>
                           </div>
@@ -2458,12 +2465,12 @@
                     .join("")}
                 </div>
               `;
-            }
+      }
 
-            // Monthly Card component
-            function renderMonthlyCard(monthlyData) {
-              if (!monthlyData || monthlyData.length === 0) {
-                return `
+      // Monthly Card component
+      function renderMonthlyCard(monthlyData) {
+        if (!monthlyData || monthlyData.length === 0) {
+          return `
                   <div class="dashboard-card">
                     <h3>Monthly Breakdown</h3>
                     <div style="text-align: center; padding: 20px; color: #666;">
@@ -2471,22 +2478,24 @@
                     </div>
                   </div>
                 `;
-              }
+        }
 
-              // Use first company's data for display (extend later for multi-company)
-              const companyData = monthlyData[0];
-              const months = companyData.monthlyBreakdown;
+        // Use first company's data for display (extend later for multi-company)
+        const companyData = monthlyData[0];
+        const months = companyData.monthlyBreakdown;
 
-              // Calculate totals
-              const totals = {
-                revenue: months.reduce((sum, month) => sum + month.revenue, 0),
-                expenses: months.reduce((sum, month) => sum + month.expenses, 0),
-                profit: months.reduce((sum, month) => sum + month.netProfit, 0),
-              };
+        // Calculate totals
+        const totals = {
+          revenue: months.reduce((sum, month) => sum + month.revenue, 0),
+          expenses: months.reduce((sum, month) => sum + month.expenses, 0),
+          profit: months.reduce((sum, month) => sum + month.netProfit, 0),
+        };
 
-              return `
+        return `
                 <div class="dashboard-card">
-                  <h3>Monthly Performance Breakdown (${companyData.companyName})</h3>
+                  <h3>Monthly Performance Breakdown (${
+                    companyData.companyName
+                  })</h3>
 
                   <!-- Monthly Grid -->
                   <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;">
@@ -2552,255 +2561,264 @@
                   </div>
                 </div>
               `;
-            }
+      }
 
-            // 7. Generate insights based on YoY data
-            function generateYoYInsights(consolidatedYoY, yoyData) {
-              const insights = [];
-              const validCompanies = yoyData.filter((d) => !d.error);
+      // 7. Generate insights based on YoY data
+      function generateYoYInsights(consolidatedYoY, yoyData) {
+        const insights = [];
+        const validCompanies = yoyData.filter((d) => !d.error);
 
-              // Revenue insights
-              if (consolidatedYoY.growth.revenue > 10) {
-                insights.push(
-                  `<strong>Strong Revenue Growth:</strong> Consolidated revenue increased by ${consolidatedYoY.growth.revenue.toFixed(
-                    1
-                  )}%, indicating robust business expansion.`
-                );
-              } else if (consolidatedYoY.growth.revenue < -5) {
-                insights.push(
-                  `<strong>Revenue Decline:</strong> Consolidated revenue decreased by ${Math.abs(
-                    consolidatedYoY.growth.revenue
-                  ).toFixed(1)}%, requiring strategic attention.`
-                );
-              }
+        // Revenue insights
+        if (consolidatedYoY.growth.revenue > 10) {
+          insights.push(
+            `<strong>Strong Revenue Growth:</strong> Consolidated revenue increased by ${consolidatedYoY.growth.revenue.toFixed(
+              1
+            )}%, indicating robust business expansion.`
+          );
+        } else if (consolidatedYoY.growth.revenue < -5) {
+          insights.push(
+            `<strong>Revenue Decline:</strong> Consolidated revenue decreased by ${Math.abs(
+              consolidatedYoY.growth.revenue
+            ).toFixed(1)}%, requiring strategic attention.`
+          );
+        }
 
-              // Profit insights
-              if (consolidatedYoY.growth.profit > 15) {
-                insights.push(
-                  `<strong>Excellent Profitability:</strong> Net profit growth of ${consolidatedYoY.growth.profit.toFixed(
-                    1
-                  )}% demonstrates strong operational efficiency.`
-                );
-              } else if (consolidatedYoY.growth.profit < -10) {
-                insights.push(
-                  `<strong>Profitability Concerns:</strong> Net profit declined by ${Math.abs(
-                    consolidatedYoY.growth.netProfit
-                  ).toFixed(1)}%, suggesting need for cost management review.`
-                );
-              }
+        // Profit insights
+        if (consolidatedYoY.growth.profit > 15) {
+          insights.push(
+            `<strong>Excellent Profitability:</strong> Net profit growth of ${consolidatedYoY.growth.profit.toFixed(
+              1
+            )}% demonstrates strong operational efficiency.`
+          );
+        } else if (consolidatedYoY.growth.profit < -10) {
+          insights.push(
+            `<strong>Profitability Concerns:</strong> Net profit declined by ${Math.abs(
+              consolidatedYoY.growth.netProfit
+            ).toFixed(1)}%, suggesting need for cost management review.`
+          );
+        }
 
-              // Company performance insights
-              const growingCompanies = validCompanies.filter(
-                (c) => c.growth.revenue > 0 && c.growth.netProfit > 0
-              );
-              const decliningCompanies = validCompanies.filter(
-                (c) => c.growth.revenue < 0 || c.growth.netProfit < 0
-              );
+        // Company performance insights
+        const growingCompanies = validCompanies.filter(
+          (c) => c.growth.revenue > 0 && c.growth.netProfit > 0
+        );
+        const decliningCompanies = validCompanies.filter(
+          (c) => c.growth.revenue < 0 || c.growth.netProfit < 0
+        );
 
-              if (growingCompanies.length > 0) {
-                insights.push(
-                  `<strong>High Performers:</strong> ${growingCompanies
-                    .map((c) => c.companyName)
-                    .join(", ")} showing positive growth in both revenue and profit.`
-                );
-              }
+        if (growingCompanies.length > 0) {
+          insights.push(
+            `<strong>High Performers:</strong> ${growingCompanies
+              .map((c) => c.companyName)
+              .join(", ")} showing positive growth in both revenue and profit.`
+          );
+        }
 
-              if (decliningCompanies.length > 0) {
-                insights.push(
-                  `<strong>Areas for Review:</strong> ${decliningCompanies
-                    .map((c) => c.companyName)
-                    .join(", ")} may require strategic intervention.`
-                );
-              }
+        if (decliningCompanies.length > 0) {
+          insights.push(
+            `<strong>Areas for Review:</strong> ${decliningCompanies
+              .map((c) => c.companyName)
+              .join(", ")} may require strategic intervention.`
+          );
+        }
 
-              // Asset growth insights
-              if (consolidatedYoY.growth.assets > 5) {
-                insights.push(
-                  `<strong>Asset Expansion:</strong> ${consolidatedYoY.growth.assets.toFixed(
-                    1
-                  )}% asset growth indicates successful capital investment and business development.`
-                );
-              }
+        // Asset growth insights
+        if (consolidatedYoY.growth.assets > 5) {
+          insights.push(
+            `<strong>Asset Expansion:</strong> ${consolidatedYoY.growth.assets.toFixed(
+              1
+            )}% asset growth indicates successful capital investment and business development.`
+          );
+        }
 
-              return insights.length > 0
-                ? insights.join("<br><br>")
-                : "Analyzing year-over-year trends...";
-            }
+        return insights.length > 0
+          ? insights.join("<br><br>")
+          : "Analyzing year-over-year trends...";
+      }
 
-            // 8. Update your setView function to handle YoY
-            // Find your existing setView function and add this case:
-            // else if (currentView === "year-over-year") {
-            //   await loadYearOverYearData();
-            // }
-            // ====== HELPER FUNCTIONS FOR PARSING MCP RESPONSES ======
+      // 8. Update your setView function to handle YoY
+      // Find your existing setView function and add this case:
+      // else if (currentView === "year-over-year") {
+      //   await loadYearOverYearData();
+      // }
+      // ====== HELPER FUNCTIONS FOR PARSING MCP RESPONSES ======
 
-            function getOrganizationName(tenantName) {
-              if (tenantName.includes("Mining")) return "Mining";
-              if (tenantName.includes("Aboriginal Corporation"))
-                return "Aboriginal Corporation";
-              if (tenantName.includes("Property")) return "Property";
-              if (tenantName.includes("Enterprises")) return "Enterprises";
-              if (tenantName.includes("Invest")) return "Invest";
-              if (tenantName.includes("Ngarrkuwuy")) return "Ngarrkuwuy";
-              if (tenantName.includes("Marrin")) return "Marrin";
-              return "Unknown";
-            }
+      function getOrganizationName(tenantName) {
+        if (tenantName.includes("Mining")) return "Mining";
+        if (tenantName.includes("Aboriginal Corporation"))
+          return "Aboriginal Corporation";
+        if (tenantName.includes("Property")) return "Property";
+        if (tenantName.includes("Enterprises")) return "Enterprises";
+        if (tenantName.includes("Invest")) return "Invest";
+        if (tenantName.includes("Ngarrkuwuy")) return "Ngarrkuwuy";
+        if (tenantName.includes("Marrin")) return "Marrin";
+        return "Unknown";
+      }
 
-            // Add this helper function (around line 1400 in your frontend)
-            function calculateGrowthRate(prior, current) {
-              if (prior === 0 && current === 0) return 0;
-              if (prior === 0) return current > 0 ? 100 : -100;
-              return ((current - prior) / Math.abs(prior)) * 100;
-            }
+      // Add this helper function (around line 1400 in your frontend)
+      function calculateGrowthRate(prior, current) {
+        if (prior === 0 && current === 0) return 0;
+        if (prior === 0) return current > 0 ? 100 : -100;
+        return ((current - prior) / Math.abs(prior)) * 100;
+      }
 
-            async function loadTrialBalanceData() {
-              if (activeCompanyFilters.length === 0) {
-                const dashboardElement = document.getElementById("dashboardData");
-                dashboardElement.innerHTML = `
+      async function loadTrialBalanceData() {
+        if (activeCompanyFilters.length === 0) {
+          const dashboardElement = document.getElementById("dashboardData");
+          dashboardElement.innerHTML = `
                   <div style="text-align: center; padding: 40px; color: #666;">
                     <h3>No Companies Selected</h3>
                     <p>Please select companies using the filters above to view trial balance.</p>
                   </div>
                 `;
-                return;
-              }
+          return;
+        }
 
-              const dashboardElement = document.getElementById("dashboardData");
-              dashboardElement.innerHTML = `
+        const dashboardElement = document.getElementById("dashboardData");
+        dashboardElement.innerHTML = `
                 <div class="loading">
                   <div class="loading-spinner"></div>
                   Loading consolidated trial balance data...
                 </div>
               `;
 
-              try {
-                // Build consolidated data from selected companies only
-                let consolidatedData = null;
-                if (activeCompanyFilters.length > 0) {
-                  consolidatedData = {
-                    companies: [],
-                    consolidated: {
-                      totals: { totalAssets: 0, totalLiabilities: 0, totalEquity: 0 },
-                      balanceCheck: { debitsEqualCredits: true },
-                    },
-                    summary: {
-                      totalCompanies: 0,
-                      totalAccounts: 0,
-                      balancedCompanies: 0,
-                    },
-                  };
-                }
-
-                // Get individual trial balances for selected companies
-                const trialBalanceData = [];
-                for (const tenantId of activeCompanyFilters) {
-                  const connectedCompany = connectedCompanies.find(
-                    (c) => c.tenantId === tenantId
-                  );
-                  if (!connectedCompany) continue;
-
-                  const orgName = getOrganizationName(connectedCompany.tenantName);
-                  const response = await fetch("/api/trial-balance", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ organizationName: orgName }),
-                  });
-
-                  if (response.ok) {
-        const data = await response.json();
-        trialBalanceData.push({
-          companyName: connectedCompany.tenantName.replace("Rirratjingu ", ""),
-          ...data,
-        });
-
-        // Add to consolidated data
-        if (consolidatedData) {
-          consolidatedData.companies.push({
-            sections: {
-              assets: { accounts: data.trialBalance.assets },
-              liabilities: { accounts: data.trialBalance.liabilities },
-              equity: { accounts: data.trialBalance.equity }
-            }
-          });
-
-          // Update consolidated totals
-          consolidatedData.consolidated.totals.totalAssets += data.trialBalance.totals.totalAssets;
-          consolidatedData.consolidated.totals.totalLiabilities += data.trialBalance.totals.totalLiabilities;
-          consolidatedData.consolidated.totals.totalEquity += data.trialBalance.totals.totalEquity;
-
-          consolidatedData.summary.totalCompanies++;
-          consolidatedData.summary.totalAccounts += (data.trialBalance.assets.length + data.trialBalance.liabilities.length + data.trialBalance.equity.length);
-
-          if (data.balanceCheck.debitsEqualCredits) {
-            consolidatedData.summary.balancedCompanies++;
-          } else {
-            consolidatedData.consolidated.balanceCheck.debitsEqualCredits = false;
+        try {
+          // Build consolidated data from selected companies only
+          let consolidatedData = null;
+          if (activeCompanyFilters.length > 0) {
+            consolidatedData = {
+              companies: [],
+              consolidated: {
+                totals: { totalAssets: 0, totalLiabilities: 0, totalEquity: 0 },
+                balanceCheck: { debitsEqualCredits: true },
+              },
+              summary: {
+                totalCompanies: 0,
+                totalAccounts: 0,
+                balancedCompanies: 0,
+              },
+            };
           }
-        }
-      }
 
-                // Render consolidated + individual trial balances with scroll
-                renderTrialBalanceWithConsolidated(
-                  consolidatedData,
-                  trialBalanceData
-                );
-              } catch (error) {
-                dashboardElement.innerHTML = `
+          // Get individual trial balances for selected companies
+          const trialBalanceData = [];
+          for (const tenantId of activeCompanyFilters) {
+            const connectedCompany = connectedCompanies.find(
+              (c) => c.tenantId === tenantId
+            );
+            if (!connectedCompany) continue;
+
+            const orgName = getOrganizationName(connectedCompany.tenantName);
+            const response = await fetch("/api/trial-balance", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ organizationName: orgName }),
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              trialBalanceData.push({
+                companyName: connectedCompany.tenantName.replace(
+                  "Rirratjingu ",
+                  ""
+                ),
+                ...data,
+              });
+
+              // Add to consolidated data
+              if (consolidatedData) {
+                consolidatedData.companies.push({
+                  sections: {
+                    assets: { accounts: data.trialBalance.assets },
+                    liabilities: { accounts: data.trialBalance.liabilities },
+                    equity: { accounts: data.trialBalance.equity },
+                  },
+                });
+
+                // Update consolidated totals
+                consolidatedData.consolidated.totals.totalAssets +=
+                  data.trialBalance.totals.totalAssets;
+                consolidatedData.consolidated.totals.totalLiabilities +=
+                  data.trialBalance.totals.totalLiabilities;
+                consolidatedData.consolidated.totals.totalEquity +=
+                  data.trialBalance.totals.totalEquity;
+
+                consolidatedData.summary.totalCompanies++;
+                consolidatedData.summary.totalAccounts +=
+                  data.trialBalance.assets.length +
+                  data.trialBalance.liabilities.length +
+                  data.trialBalance.equity.length;
+
+                if (data.balanceCheck.debitsEqualCredits) {
+                  consolidatedData.summary.balancedCompanies++;
+                } else {
+                  consolidatedData.consolidated.balanceCheck.debitsEqualCredits = false;
+                }
+              }
+            }
+          }
+          // Render consolidated + individual trial balances with scroll
+          renderTrialBalanceWithConsolidated(
+            consolidatedData,
+            trialBalanceData
+          );
+        } catch (error) {
+          dashboardElement.innerHTML = `
                   <div style="text-align: center; padding: 40px; color: #e74c3c;">
                     <h3>Error Loading Trial Balance</h3>
                     <p>${error.message}</p>
                   </div>
                 `;
-              }
-            }
+        }
+      }
 
-            function renderTrialBalanceWithConsolidated(
-              consolidatedData,
-              individualData
-            ) {
-              const dashboardElement = document.getElementById("dashboardData");
+      function renderTrialBalanceWithConsolidated(
+        consolidatedData,
+        individualData
+      ) {
+        const dashboardElement = document.getElementById("dashboardData");
 
-              let consolidatedHtml = "";
-              if (consolidatedData && consolidatedData.companies) {
-                // Build consolidated accounts by combining all companies
-                const consolidatedAccounts = {
-                  assets: {},
-                  liabilities: {},
-                  equity: {},
-                };
+        let consolidatedHtml = "";
+        if (consolidatedData && consolidatedData.companies) {
+          // Build consolidated accounts by combining all companies
+          const consolidatedAccounts = {
+            assets: {},
+            liabilities: {},
+            equity: {},
+          };
 
-                // Aggregate accounts across all companies
-                consolidatedData.companies.forEach((company) => {
-                  ["assets", "liabilities", "equity"].forEach((category) => {
-                    if (company.sections && company.sections[category]) {
-                      company.sections[category].accounts.forEach((account) => {
-                        if (!consolidatedAccounts[category][account.name]) {
-                          consolidatedAccounts[category][account.name] = 0;
-                        }
-                        consolidatedAccounts[category][account.name] +=
-                          account.balance;
-                      });
-                    }
-                  });
+          // Aggregate accounts across all companies
+          consolidatedData.companies.forEach((company) => {
+            ["assets", "liabilities", "equity"].forEach((category) => {
+              if (company.sections && company.sections[category]) {
+                company.sections[category].accounts.forEach((account) => {
+                  if (!consolidatedAccounts[category][account.name]) {
+                    consolidatedAccounts[category][account.name] = 0;
+                  }
+                  consolidatedAccounts[category][account.name] +=
+                    account.balance;
                 });
+              }
+            });
+          });
 
-                // Convert to arrays and sort
-                const assetAccounts = Object.entries(consolidatedAccounts.assets)
-                  .map(([name, balance]) => ({ name, balance }))
-                  .sort((a, b) => a.name.localeCompare(b.name));
-                const liabilityAccounts = Object.entries(
-                  consolidatedAccounts.liabilities
-                )
-                  .map(([name, balance]) => ({ name, balance }))
-                  .sort((a, b) => a.name.localeCompare(b.name));
-                const equityAccounts = Object.entries(consolidatedAccounts.equity)
-                  .map(([name, balance]) => ({ name, balance }))
-                  .sort((a, b) => a.name.localeCompare(b.name));
+          // Convert to arrays and sort
+          const assetAccounts = Object.entries(consolidatedAccounts.assets)
+            .map(([name, balance]) => ({ name, balance }))
+            .sort((a, b) => a.name.localeCompare(b.name));
+          const liabilityAccounts = Object.entries(
+            consolidatedAccounts.liabilities
+          )
+            .map(([name, balance]) => ({ name, balance }))
+            .sort((a, b) => a.name.localeCompare(b.name));
+          const equityAccounts = Object.entries(consolidatedAccounts.equity)
+            .map(([name, balance]) => ({ name, balance }))
+            .sort((a, b) => a.name.localeCompare(b.name));
 
-                const totals = consolidatedData.consolidated.totals;
-                const balanceCheck = consolidatedData.consolidated.balanceCheck;
+          const totals = consolidatedData.consolidated.totals;
+          const balanceCheck = consolidatedData.consolidated.balanceCheck;
 
-                consolidatedHtml = `
+          consolidatedHtml = `
             <div class="dashboard-card" style="margin-bottom: 20px;">
               <h3>Consolidated Trial Balance - All Selected Companies</h3>
               <div style="margin-bottom: 15px;">
@@ -2816,7 +2834,9 @@
                 </span>
                 <span style="margin-left: 20px; font-size: 14px; color: #666;">
                   Companies: ${consolidatedData.summary?.totalCompanies || 0} |
-                  Total Accounts: ${consolidatedData.summary?.totalAccounts || 0}
+                  Total Accounts: ${
+                    consolidatedData.summary?.totalAccounts || 0
+                  }
                 </span>
               </div>
 
@@ -2888,66 +2908,66 @@
               </div>
             </div>
           `;
-              }
+        }
 
-              dashboardElement.innerHTML = consolidatedHtml;
-            }
+        dashboardElement.innerHTML = consolidatedHtml;
+      }
 
-            async function loadCashFlowData() {
-              if (activeCompanyFilters.length === 0) {
-                const dashboardElement = document.getElementById("dashboardData");
-                dashboardElement.innerHTML = `
+      async function loadCashFlowData() {
+        if (activeCompanyFilters.length === 0) {
+          const dashboardElement = document.getElementById("dashboardData");
+          dashboardElement.innerHTML = `
                   <div style="text-align: center; padding: 40px; color: #666;">
                     <h3>No Companies Selected</h3>
                     <p>Please select companies using the filters above to view cash flow.</p>
                   </div>
                 `;
-                return;
-              }
+          return;
+        }
 
-              const dashboardElement = document.getElementById("dashboardData");
-              dashboardElement.innerHTML = `
+        const dashboardElement = document.getElementById("dashboardData");
+        dashboardElement.innerHTML = `
                 <div class="loading">
                   <div class="loading-spinner"></div>
                   Loading cash flow data...
                 </div>
               `;
 
-              try {
-                const cashData = [];
+        try {
+          const cashData = [];
 
-                for (const tenantId of activeCompanyFilters) {
-                  const connectedCompany = connectedCompanies.find(
-                    (c) => c.tenantId === tenantId
-                  );
-                  if (!connectedCompany) continue;
+          for (const tenantId of activeCompanyFilters) {
+            const connectedCompany = connectedCompanies.find(
+              (c) => c.tenantId === tenantId
+            );
+            if (!connectedCompany) continue;
 
-                  const orgName = getOrganizationName(connectedCompany.tenantName);
+            const orgName = getOrganizationName(connectedCompany.tenantName);
 
-                  const response = await fetch("/api/cash-position", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ organizationName: orgName }),
-                  });
+            const response = await fetch("/api/cash-position", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ organizationName: orgName }),
+            });
 
-                  if (response.ok) {
-                    const data = await response.json();
-                    cashData.push({
-                      companyName: connectedCompany.tenantName.replace(
-                        "Rirratjingu ",
-                        ""
-                      ),
-                      ...data,
-                    });
-                  }
-                }
+            if (response.ok) {
+              const data = await response.json();
+              cashData.push({
+                companyName: connectedCompany.tenantName.replace(
+                  "Rirratjingu ",
+                  ""
+                ),
+                ...data,
+              });
+            }
+          }
 
-                const totalCash = cashData.reduce(
-                  (sum, company) => sum + company.totalCash,
-                  0
-                );
+          const totalCash = cashData.reduce(
+            (sum, company) => sum + company.totalCash,
+            0
+          );
 
-                dashboardElement.innerHTML = `
+          dashboardElement.innerHTML = `
                   <div class="dashboard-grid">
                     <div class="dashboard-card">
                       <h3>Consolidated Cash Position</h3>
@@ -2980,7 +3000,9 @@
                               (account) => `
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
                               <div>
-                                <div style="font-weight: 600;">${account.name}</div>
+                                <div style="font-weight: 600;">${
+                                  account.name
+                                }</div>
                                 <div style="font-size: 12px; color: #666;">Code: ${
                                   account.code
                                 }</div>
@@ -3005,76 +3027,76 @@
                     )
                     .join("")}
                 `;
-              } catch (error) {
-                dashboardElement.innerHTML = `
+        } catch (error) {
+          dashboardElement.innerHTML = `
                   <div style="text-align: center; padding: 40px; color: #e74c3c;">
                     <h3>Error Loading Cash Flow Data</h3>
                     <p>${error.message}</p>
                   </div>
                 `;
-              }
-            }
+        }
+      }
 
-            async function loadProfitLossData() {
-              if (activeCompanyFilters.length === 0) {
-                const dashboardElement = document.getElementById("dashboardData");
-                dashboardElement.innerHTML = `
+      async function loadProfitLossData() {
+        if (activeCompanyFilters.length === 0) {
+          const dashboardElement = document.getElementById("dashboardData");
+          dashboardElement.innerHTML = `
                   <div style="text-align: center; padding: 40px; color: #666;">
                     <h3>No Companies Selected</h3>
                     <p>Please select companies using the filters above to view P&L.</p>
                   </div>
                 `;
-                return;
-              }
+          return;
+        }
 
-              const dashboardElement = document.getElementById("dashboardData");
-              dashboardElement.innerHTML = `
+        const dashboardElement = document.getElementById("dashboardData");
+        dashboardElement.innerHTML = `
                 <div class="loading">
                   <div class="loading-spinner"></div>
                   Loading profit & loss data...
                 </div>
               `;
 
-              try {
-                const plData = [];
+        try {
+          const plData = [];
 
-                for (const tenantId of activeCompanyFilters) {
-                  const connectedCompany = connectedCompanies.find(
-                    (c) => c.tenantId === tenantId
-                  );
-                  if (!connectedCompany) continue;
+          for (const tenantId of activeCompanyFilters) {
+            const connectedCompany = connectedCompanies.find(
+              (c) => c.tenantId === tenantId
+            );
+            if (!connectedCompany) continue;
 
-                  const orgName = getOrganizationName(connectedCompany.tenantName);
+            const orgName = getOrganizationName(connectedCompany.tenantName);
 
-                  const response = await fetch("/api/profit-loss-summary", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ organizationName: orgName }),
-                  });
+            const response = await fetch("/api/profit-loss-summary", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ organizationName: orgName }),
+            });
 
-                  if (response.ok) {
-                    const data = await response.json();
-                    plData.push({
-                      companyName: connectedCompany.tenantName.replace(
-                        "Rirratjingu ",
-                        ""
-                      ),
-                      ...data,
-                    });
-                  }
-                }
+            if (response.ok) {
+              const data = await response.json();
+              plData.push({
+                companyName: connectedCompany.tenantName.replace(
+                  "Rirratjingu ",
+                  ""
+                ),
+                ...data,
+              });
+            }
+          }
 
-                const consolidated = plData.reduce(
-                  (acc, company) => {
-                    acc.totalRevenue += company.summary.totalRevenue;
-                    acc.totalExpenses += company.summary.totalExpenses;
-                    acc.netProfit += company.summary.netProfit;
-                    return acc;
-                  },
-                  { totalRevenue: 0, totalExpenses: 0, netProfit: 0 }
-                );
+          const consolidated = plData.reduce(
+            (acc, company) => {
+              acc.totalRevenue += company.summary.totalRevenue;
+              acc.totalExpenses += company.summary.totalExpenses;
+              acc.netProfit += company.summary.netProfit;
+              return acc;
+            },
+            { totalRevenue: 0, totalExpenses: 0, netProfit: 0 }
+          );
 
-                dashboardElement.innerHTML = `
+          dashboardElement.innerHTML = `
                   <div class="dashboard-grid">
                     <div class="dashboard-card">
                       <h3>Consolidated P&L Summary</h3>
@@ -3132,7 +3154,9 @@
                             .map(
                               (account) => `
                             <div style="display: flex; justify-content: space-between; padding: 4px 0;">
-                              <span style="font-size: 13px;">${account.name}</span>
+                              <span style="font-size: 13px;">${
+                                account.name
+                              }</span>
                               <span style="font-weight: 600;">$${account.amount.toLocaleString()}</span>
                             </div>
                           `
@@ -3152,7 +3176,9 @@
                             .map(
                               (account) => `
                             <div style="display: flex; justify-content: space-between; padding: 4px 0;">
-                              <span style="font-size: 13px;">${account.name}</span>
+                              <span style="font-size: 13px;">${
+                                account.name
+                              }</span>
                               <span style="font-weight: 600;">$${account.amount.toLocaleString()}</span>
                             </div>
                           `
@@ -3170,7 +3196,9 @@
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                           <span style="font-weight: bold; font-size: 16px;">Net Profit:</span>
                           <span style="font-weight: bold; font-size: 18px; color: ${
-                            company.summary.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+                            company.summary.netProfit >= 0
+                              ? "#27ae60"
+                              : "#e74c3c"
                           };">
                             $${company.summary.netProfit.toLocaleString()}
                           </span>
@@ -3188,204 +3216,204 @@
                     )
                     .join("")}
                 `;
-              } catch (error) {
-                dashboardElement.innerHTML = `
+        } catch (error) {
+          dashboardElement.innerHTML = `
                   <div style="text-align: center; padding: 40px; color: #e74c3c;">
                     <h3>Error Loading P&L Data</h3>
                     <p>${error.message}</p>
                   </div>
                 `;
-              }
-            }
+        }
+      }
 
-            async function loadAlertsData() {
-              if (activeCompanyFilters.length === 0) {
-                const dashboardElement = document.getElementById("dashboardData");
-                dashboardElement.innerHTML = `
+      async function loadAlertsData() {
+        if (activeCompanyFilters.length === 0) {
+          const dashboardElement = document.getElementById("dashboardData");
+          dashboardElement.innerHTML = `
                   <div style="text-align: center; padding: 40px; color: #666;">
                     <h3>No Companies Selected</h3>
                     <p>Please select companies using the filters above to view alerts.</p>
                   </div>
                 `;
-                return;
-              }
+          return;
+        }
 
-              const dashboardElement = document.getElementById("dashboardData");
-              dashboardElement.innerHTML = `
+        const dashboardElement = document.getElementById("dashboardData");
+        dashboardElement.innerHTML = `
                 <div class="loading">
                   <div class="loading-spinner"></div>
                   Analyzing financial data for alerts...
                 </div>
               `;
 
-              try {
-                const alerts = [];
+        try {
+          const alerts = [];
 
-                // Check each selected company for issues
-                for (const tenantId of activeCompanyFilters) {
-                  const connectedCompany = connectedCompanies.find(
-                    (c) => c.tenantId === tenantId
-                  );
-                  if (!connectedCompany) continue;
+          // Check each selected company for issues
+          for (const tenantId of activeCompanyFilters) {
+            const connectedCompany = connectedCompanies.find(
+              (c) => c.tenantId === tenantId
+            );
+            if (!connectedCompany) continue;
 
-                  const orgName = getOrganizationName(connectedCompany.tenantName);
+            const orgName = getOrganizationName(connectedCompany.tenantName);
 
-                  // Get multiple data points for comprehensive alerts
-                  const [tbResponse, cashResponse, ratiosResponse] =
-                    await Promise.all([
-                      fetch("/api/trial-balance", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ organizationName: orgName }),
-                      }).catch(() => null),
-                      fetch("/api/cash-position", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ organizationName: orgName }),
-                      }).catch(() => null),
-                      fetch("/api/financial-ratios", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ organizationName: orgName }),
-                      }).catch(() => null),
-                    ]);
+            // Get multiple data points for comprehensive alerts
+            const [tbResponse, cashResponse, ratiosResponse] =
+              await Promise.all([
+                fetch("/api/trial-balance", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ organizationName: orgName }),
+                }).catch(() => null),
+                fetch("/api/cash-position", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ organizationName: orgName }),
+                }).catch(() => null),
+                fetch("/api/financial-ratios", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ organizationName: orgName }),
+                }).catch(() => null),
+              ]);
 
-                  const companyName = connectedCompany.tenantName.replace(
-                    "Rirratjingu ",
-                    ""
-                  );
+            const companyName = connectedCompany.tenantName.replace(
+              "Rirratjingu ",
+              ""
+            );
 
-                  // Parse responses
-                  const tbData =
-                    tbResponse && tbResponse.ok ? await tbResponse.json() : null;
-                  const cashData =
-                    cashResponse && cashResponse.ok
-                      ? await cashResponse.json()
-                      : null;
-                  const ratiosData =
-                    ratiosResponse && ratiosResponse.ok
-                      ? await ratiosResponse.json()
-                      : null;
+            // Parse responses
+            const tbData =
+              tbResponse && tbResponse.ok ? await tbResponse.json() : null;
+            const cashData =
+              cashResponse && cashResponse.ok
+                ? await cashResponse.json()
+                : null;
+            const ratiosData =
+              ratiosResponse && ratiosResponse.ok
+                ? await ratiosResponse.json()
+                : null;
 
-                  // Check for trial balance issues
-                  if (tbData && !tbData.balanceCheck.debitsEqualCredits) {
-                    alerts.push({
-                      type: "critical",
-                      company: companyName,
-                      title: "Trial Balance Imbalance",
-                      message: `Books are out of balance by $${Math.abs(
-                        tbData.balanceCheck.difference
-                      ).toLocaleString()}`,
-                      action: "Review journal entries and account reconciliations",
-                    });
-                  }
+            // Check for trial balance issues
+            if (tbData && !tbData.balanceCheck.debitsEqualCredits) {
+              alerts.push({
+                type: "critical",
+                company: companyName,
+                title: "Trial Balance Imbalance",
+                message: `Books are out of balance by $${Math.abs(
+                  tbData.balanceCheck.difference
+                ).toLocaleString()}`,
+                action: "Review journal entries and account reconciliations",
+              });
+            }
 
-                  // Check for cash flow concerns
-                  if (
-                    cashData &&
-                    cashData.totalCash === 0 &&
-                    cashData.bankAccounts.length > 0
-                  ) {
-                    alerts.push({
-                      type: "warning",
-                      company: companyName,
-                      title: "Zero Cash Position",
-                      message: `${cashData.bankAccounts.length} bank accounts but $0 total cash`,
-                      action: "Verify bank account balances and connectivity",
-                    });
-                  }
+            // Check for cash flow concerns
+            if (
+              cashData &&
+              cashData.totalCash === 0 &&
+              cashData.bankAccounts.length > 0
+            ) {
+              alerts.push({
+                type: "warning",
+                company: companyName,
+                title: "Zero Cash Position",
+                message: `${cashData.bankAccounts.length} bank accounts but $0 total cash`,
+                action: "Verify bank account balances and connectivity",
+              });
+            }
 
-                  // Check financial ratios for concerning trends
-                  if (ratiosData) {
-                    const currentRatio =
-                      ratiosData.ratios?.liquidity?.currentRatio || 0;
-                    const debtToEquity =
-                      ratiosData.ratios?.leverage?.debtToEquity || 0;
-                    const profitMargin =
-                      ratiosData.ratios?.profitability?.netProfitMargin || 0;
+            // Check financial ratios for concerning trends
+            if (ratiosData) {
+              const currentRatio =
+                ratiosData.ratios?.liquidity?.currentRatio || 0;
+              const debtToEquity =
+                ratiosData.ratios?.leverage?.debtToEquity || 0;
+              const profitMargin =
+                ratiosData.ratios?.profitability?.netProfitMargin || 0;
 
-                    if (currentRatio < 1.0 && currentRatio > 0) {
-                      alerts.push({
-                        type: "warning",
-                        company: companyName,
-                        title: "Low Liquidity Ratio",
-                        message: `Current ratio of ${currentRatio.toFixed(
-                          2
-                        )} indicates potential cash flow issues`,
-                        action: "Review accounts payable and receivable timing",
-                      });
-                    }
+              if (currentRatio < 1.0 && currentRatio > 0) {
+                alerts.push({
+                  type: "warning",
+                  company: companyName,
+                  title: "Low Liquidity Ratio",
+                  message: `Current ratio of ${currentRatio.toFixed(
+                    2
+                  )} indicates potential cash flow issues`,
+                  action: "Review accounts payable and receivable timing",
+                });
+              }
 
-                    if (debtToEquity > 2.0) {
-                      alerts.push({
-                        type: "warning",
-                        company: companyName,
-                        title: "High Debt-to-Equity Ratio",
-                        message: `Debt-to-equity ratio of ${debtToEquity.toFixed(
-                          2
-                        )} may indicate overleveraging`,
-                        action: "Consider debt reduction strategies",
-                      });
-                    }
+              if (debtToEquity > 2.0) {
+                alerts.push({
+                  type: "warning",
+                  company: companyName,
+                  title: "High Debt-to-Equity Ratio",
+                  message: `Debt-to-equity ratio of ${debtToEquity.toFixed(
+                    2
+                  )} may indicate overleveraging`,
+                  action: "Consider debt reduction strategies",
+                });
+              }
 
-                    if (profitMargin < -10) {
-                      alerts.push({
-                        type: "critical",
-                        company: companyName,
-                        title: "Negative Profit Margin",
-                        message: `Profit margin of ${profitMargin.toFixed(
-                          1
-                        )}% indicates significant losses`,
-                        action:
-                          "Urgent review of operations and cost structure needed",
-                      });
-                    }
-                  }
+              if (profitMargin < -10) {
+                alerts.push({
+                  type: "critical",
+                  company: companyName,
+                  title: "Negative Profit Margin",
+                  message: `Profit margin of ${profitMargin.toFixed(
+                    1
+                  )}% indicates significant losses`,
+                  action:
+                    "Urgent review of operations and cost structure needed",
+                });
+              }
+            }
 
-                  // Check for data loading errors
-                  if (!tbData && !cashData && !ratiosData) {
-                    alerts.push({
-                      type: "info",
-                      company: companyName,
-                      title: "Data Connection Issues",
-                      message: "Unable to load financial data for analysis",
-                      action: "Check Xero connection and token status",
-                    });
-                  }
-                }
+            // Check for data loading errors
+            if (!tbData && !cashData && !ratiosData) {
+              alerts.push({
+                type: "info",
+                company: companyName,
+                title: "Data Connection Issues",
+                message: "Unable to load financial data for analysis",
+                action: "Check Xero connection and token status",
+              });
+            }
+          }
 
-                // Add system-wide alerts
-                try {
-                  const tokenResponse = await fetch("/api/token-status");
-                  if (tokenResponse.ok) {
-                    const tokenStatus = await tokenResponse.json();
-                    if (tokenStatus.expiringTokens > 0) {
-                      alerts.push({
-                        type: "warning",
-                        company: "System",
-                        title: "OAuth Token Expiry",
-                        message: `${tokenStatus.expiringTokens} token(s) expiring soon`,
-                        action: "Refresh OAuth connections to maintain data access",
-                      });
-                    }
-                  }
-                } catch (error) {
-                  // Token status check failed, add alert
-                  alerts.push({
-                    type: "info",
-                    company: "System",
-                    title: "Token Status Unknown",
-                    message: "Unable to check OAuth token expiry status",
-                    action: "Monitor connection stability",
-                  });
-                }
+          // Add system-wide alerts
+          try {
+            const tokenResponse = await fetch("/api/token-status");
+            if (tokenResponse.ok) {
+              const tokenStatus = await tokenResponse.json();
+              if (tokenStatus.expiringTokens > 0) {
+                alerts.push({
+                  type: "warning",
+                  company: "System",
+                  title: "OAuth Token Expiry",
+                  message: `${tokenStatus.expiringTokens} token(s) expiring soon`,
+                  action: "Refresh OAuth connections to maintain data access",
+                });
+              }
+            }
+          } catch (error) {
+            // Token status check failed, add alert
+            alerts.push({
+              type: "info",
+              company: "System",
+              title: "Token Status Unknown",
+              message: "Unable to check OAuth token expiry status",
+              action: "Monitor connection stability",
+            });
+          }
 
-                // Render alerts dashboard
-                const criticalAlerts = alerts.filter((a) => a.type === "critical");
-                const warningAlerts = alerts.filter((a) => a.type === "warning");
-                const infoAlerts = alerts.filter((a) => a.type === "info");
+          // Render alerts dashboard
+          const criticalAlerts = alerts.filter((a) => a.type === "critical");
+          const warningAlerts = alerts.filter((a) => a.type === "warning");
+          const infoAlerts = alerts.filter((a) => a.type === "info");
 
-                dashboardElement.innerHTML = `
+          dashboardElement.innerHTML = `
                   <div class="dashboard-grid">
                     <div class="dashboard-card">
                       <h3>Alert Summary</h3>
@@ -3397,7 +3425,9 @@
                       </div>
                       <div class="metric">
                         <span>Warnings</span>
-                        <span class="metric-value">${warningAlerts.length}</span>
+                        <span class="metric-value">${
+                          warningAlerts.length
+                        }</span>
                       </div>
                       <div class="metric">
                         <span>Information</span>
@@ -3496,8 +3526,8 @@
                     }
                   </div>
                 `;
-              } catch (error) {
-                dashboardElement.innerHTML = `
+        } catch (error) {
+          dashboardElement.innerHTML = `
                   <div style="text-align: center; padding: 40px; color: #e74c3c;">
                     <h3>Error Loading Alerts</h3>
                     <p>Failed to analyze financial data: ${error.message}</p>
@@ -3506,118 +3536,118 @@
                     </button>
                   </div>
                 `;
-              }
-            }
+        }
+      }
 
-            function setView(view, button) {
-              currentView = view;
+      function setView(view, button) {
+        currentView = view;
 
-              // Update active button
-              document
-                .querySelectorAll(".toolbar button")
-                .forEach((btn) => btn.classList.remove("active"));
-              button.classList.add("active");
+        // Update active button
+        document
+          .querySelectorAll(".toolbar button")
+          .forEach((btn) => btn.classList.remove("active"));
+        button.classList.add("active");
 
-              // Reload dashboard data for new view
-              loadDashboardData();
-            }
+        // Reload dashboard data for new view
+        loadDashboardData();
+      }
 
-            function backToConnections() {
-              if (
-                confirm(
-                  "Return to connection manager? This will allow you to modify your company connections."
-                )
-              ) {
-                document.getElementById("mainDashboard").style.display = "none";
-                document.getElementById("connectionManager").style.display = "block";
+      function backToConnections() {
+        if (
+          confirm(
+            "Return to connection manager? This will allow you to modify your company connections."
+          )
+        ) {
+          document.getElementById("mainDashboard").style.display = "none";
+          document.getElementById("connectionManager").style.display = "block";
 
-                // Reset to step 1
-                document.getElementById("step1").style.display = "block";
-                document.getElementById("step2").style.display = "none";
-                document.getElementById("step3").style.display = "none";
+          // Reset to step 1
+          document.getElementById("step1").style.display = "block";
+          document.getElementById("step2").style.display = "none";
+          document.getElementById("step3").style.display = "none";
 
-                document.getElementById("step1Indicator").className = "step active";
-                document.getElementById("step2Indicator").className = "step";
-                document.getElementById("step3Indicator").className = "step";
+          document.getElementById("step1Indicator").className = "step active";
+          document.getElementById("step2Indicator").className = "step";
+          document.getElementById("step3Indicator").className = "step";
 
-                loadSavedPreferences();
-              }
-            }
+          loadSavedPreferences();
+        }
+      }
 
-            // ====== RESIZER FUNCTIONALITY ======
+      // ====== RESIZER FUNCTIONALITY ======
 
-            function initializeResizer() {
-              let isResizing = false;
+      function initializeResizer() {
+        let isResizing = false;
 
-              document
-                .querySelector(".resizer")
-                .addEventListener("mousedown", function (e) {
-                  isResizing = true;
-                  document.addEventListener("mousemove", handleMouseMove);
-                  document.addEventListener("mouseup", function () {
-                    isResizing = false;
-                    document.removeEventListener("mousemove", handleMouseMove);
-                  });
-                });
-
-              function handleMouseMove(e) {
-                if (!isResizing) return;
-
-                const container = document.querySelector(".main-container");
-                const containerRect = container.getBoundingClientRect();
-                const percentage =
-                  ((e.clientX - containerRect.left) / containerRect.width) * 100;
-
-                if (percentage > 20 && percentage < 80) {
-                  document.querySelector(".ai-chat-panel").style.width =
-                    percentage + "%";
-                  document.querySelector(".dashboard-panel").style.width =
-                    100 - percentage + "%";
-                  document.querySelector(".resizer").style.left = percentage + "%";
-                }
-              }
-            }
-
-            // ====== INITIALIZATION ======
-
-            async function initializePage() {
-              handleOAuthReturn();
-
-              if (localStorage.getItem("oauthCompanies")) {
-                return;
-              }
-
-              try {
-                const response = await fetch("/api/connection-status");
-                const connections = await response.json();
-                const connectedCount = connections.filter(
-                  (conn) => conn.connected
-                ).length;
-
-                if (connectedCount > 0) {
-                  document.getElementById("connectionManager").style.display = "none";
-                  document.getElementById("mainDashboard").style.display = "block";
-                  initializeMainDashboard();
-                } else {
-                  document.getElementById("connectionManager").style.display =
-                    "block";
-                  document.getElementById("mainDashboard").style.display = "none";
-                  loadSavedPreferences();
-                }
-              } catch (error) {
-                document.getElementById("connectionManager").style.display = "block";
-                document.getElementById("mainDashboard").style.display = "none";
-                loadSavedPreferences();
-              }
-            }
-
-            // ====== EVENT LISTENERS ======
-
-            document.addEventListener("DOMContentLoaded", function () {
-              initializePage();
+        document
+          .querySelector(".resizer")
+          .addEventListener("mousedown", function (e) {
+            isResizing = true;
+            document.addEventListener("mousemove", handleMouseMove);
+            document.addEventListener("mouseup", function () {
+              isResizing = false;
+              document.removeEventListener("mousemove", handleMouseMove);
             });
+          });
 
-            window.addEventListener("popstate", handleOAuthReturn);
+        function handleMouseMove(e) {
+          if (!isResizing) return;
+
+          const container = document.querySelector(".main-container");
+          const containerRect = container.getBoundingClientRect();
+          const percentage =
+            ((e.clientX - containerRect.left) / containerRect.width) * 100;
+
+          if (percentage > 20 && percentage < 80) {
+            document.querySelector(".ai-chat-panel").style.width =
+              percentage + "%";
+            document.querySelector(".dashboard-panel").style.width =
+              100 - percentage + "%";
+            document.querySelector(".resizer").style.left = percentage + "%";
+          }
+        }
+      }
+
+      // ====== INITIALIZATION ======
+
+      async function initializePage() {
+        handleOAuthReturn();
+
+        if (localStorage.getItem("oauthCompanies")) {
+          return;
+        }
+
+        try {
+          const response = await fetch("/api/connection-status");
+          const connections = await response.json();
+          const connectedCount = connections.filter(
+            (conn) => conn.connected
+          ).length;
+
+          if (connectedCount > 0) {
+            document.getElementById("connectionManager").style.display = "none";
+            document.getElementById("mainDashboard").style.display = "block";
+            initializeMainDashboard();
+          } else {
+            document.getElementById("connectionManager").style.display =
+              "block";
+            document.getElementById("mainDashboard").style.display = "none";
+            loadSavedPreferences();
+          }
+        } catch (error) {
+          document.getElementById("connectionManager").style.display = "block";
+          document.getElementById("mainDashboard").style.display = "none";
+          loadSavedPreferences();
+        }
+      }
+
+      // ====== EVENT LISTENERS ======
+
+      document.addEventListener("DOMContentLoaded", function () {
+        initializePage();
+      });
+
+      window.addEventListener("popstate", handleOAuthReturn);
     </script>
   </body>
 </html>
