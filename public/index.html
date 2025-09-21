@@ -3071,6 +3071,120 @@
         dashboardElement.innerHTML = consolidatedHtml;
       }
 
+      async function loadProfitLossData() {
+        if (activeCompanyFilters.length === 0) {
+          const dashboardElement = document.getElementById("dashboardData");
+          dashboardElement.innerHTML = `
+      <div style="text-align: center; padding: 40px; color: #666;">
+        <h3>No Companies Selected</h3>
+        <p>Please select companies using the filters above to view P&L.</p>
+      </div>
+    `;
+          return;
+        }
+
+        const dashboardElement = document.getElementById("dashboardData");
+        dashboardElement.innerHTML = `
+    <div class="loading">
+      <div class="loading-spinner"></div>
+      Loading consolidated profit & loss data...
+    </div>
+  `;
+
+        try {
+          const plData = [];
+          let consolidatedPL = {
+            totalRevenue: 0,
+            totalExpenses: 0,
+            netProfit: 0,
+            revenueAccounts: {},
+            expenseAccounts: {},
+            companies: [],
+          };
+
+          for (const tenantId of activeCompanyFilters) {
+            const connectedCompany = connectedCompanies.find(
+              (c) => c.tenantId === tenantId
+            );
+            if (!connectedCompany) continue;
+
+            const orgName = getOrganizationName(connectedCompany.tenantName);
+            const response = await fetch("/api/profit-loss-summary", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ organizationName: orgName }),
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              const companyData = {
+                companyName: connectedCompany.tenantName.replace(
+                  "Rirratjingu ",
+                  ""
+                ),
+                ...data,
+              };
+
+              plData.push(companyData);
+              consolidatedPL.companies.push(companyData);
+
+              // Aggregate P&L totals
+              consolidatedPL.totalRevenue += data.summary.totalRevenue || 0;
+              consolidatedPL.totalExpenses += data.summary.totalExpenses || 0;
+              consolidatedPL.netProfit += data.summary.netProfit || 0;
+
+              // Aggregate revenue accounts
+              if (data.summary.revenueAccounts) {
+                data.summary.revenueAccounts.forEach((account) => {
+                  if (!consolidatedPL.revenueAccounts[account.name]) {
+                    consolidatedPL.revenueAccounts[account.name] = 0;
+                  }
+                  consolidatedPL.revenueAccounts[account.name] +=
+                    account.amount;
+                });
+              }
+
+              // Aggregate expense accounts
+              if (data.summary.expenseAccounts) {
+                data.summary.expenseAccounts.forEach((account) => {
+                  if (!consolidatedPL.expenseAccounts[account.name]) {
+                    consolidatedPL.expenseAccounts[account.name] = 0;
+                  }
+                  consolidatedPL.expenseAccounts[account.name] +=
+                    account.amount;
+                });
+              }
+            }
+          }
+
+          // Convert account objects to sorted arrays
+          const consolidatedRevenueAccounts = Object.entries(
+            consolidatedPL.revenueAccounts
+          )
+            .map(([name, amount]) => ({ name, amount }))
+            .sort((a, b) => b.amount - a.amount);
+
+          const consolidatedExpenseAccounts = Object.entries(
+            consolidatedPL.expenseAccounts
+          )
+            .map(([name, amount]) => ({ name, amount }))
+            .sort((a, b) => b.amount - a.amount);
+
+          renderConsolidatedProfitLoss(
+            consolidatedPL,
+            consolidatedRevenueAccounts,
+            consolidatedExpenseAccounts
+          );
+        } catch (error) {
+          dashboardElement.innerHTML = `
+      <div style="text-align: center; padding: 40px; color: #e74c3c;">
+        <h3>Error Loading P&L Data</h3>
+        <p>${error.message}</p>
+      </div>
+    `;
+        }
+      }
+
       function renderConsolidatedProfitLoss(
         consolidatedPL,
         revenueAccounts,
