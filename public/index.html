@@ -2914,99 +2914,113 @@
       }
 
       async function loadCashFlowData() {
-  if (activeCompanyFilters.length === 0) {
-    const dashboardElement = document.getElementById("dashboardData");
-    dashboardElement.innerHTML = `
+        if (activeCompanyFilters.length === 0) {
+          const dashboardElement = document.getElementById("dashboardData");
+          dashboardElement.innerHTML = `
       <div style="text-align: center; padding: 40px; color: #666;">
         <h3>No Companies Selected</h3>
         <p>Please select companies using the filters above to view cash flow.</p>
       </div>
     `;
-    return;
-  }
+          return;
+        }
 
-  const dashboardElement = document.getElementById("dashboardData");
-  dashboardElement.innerHTML = `
+        const dashboardElement = document.getElementById("dashboardData");
+        dashboardElement.innerHTML = `
     <div class="loading">
       <div class="loading-spinner"></div>
       Loading cash flow data...
     </div>
   `;
 
-  try {
-    const cashData = [];
-    let consolidatedCash = {
-      totalCash: 0,
-      bankAccounts: {},
-      companies: []
-    };
+        try {
+          const cashData = [];
+          let consolidatedCash = {
+            totalCash: 0,
+            bankAccounts: {},
+            companies: [],
+          };
 
-    for (const tenantId of activeCompanyFilters) {
-      const connectedCompany = connectedCompanies.find(c => c.tenantId === tenantId);
-      if (!connectedCompany) continue;
+          for (const tenantId of activeCompanyFilters) {
+            const connectedCompany = connectedCompanies.find(
+              (c) => c.tenantId === tenantId
+            );
+            if (!connectedCompany) continue;
 
-      const orgName = getOrganizationName(connectedCompany.tenantName);
-      const response = await fetch("/api/cash-position", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ organizationName: orgName }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const companyData = {
-          companyName: connectedCompany.tenantName.replace("Rirratjingu ", ""),
-          ...data,
-        };
-        
-        cashData.push(companyData);
-        
-        // Build consolidated data
-        consolidatedCash.totalCash += data.totalCash || 0;
-        consolidatedCash.companies.push(companyData);
-        
-        // Aggregate bank accounts (combine accounts with same name)
-        if (data.bankAccounts) {
-          data.bankAccounts.forEach(account => {
-            const accountKey = account.name;
-            if (!consolidatedCash.bankAccounts[accountKey]) {
-              consolidatedCash.bankAccounts[accountKey] = {
-                name: account.name,
-                balance: 0,
-                code: account.code,
-                companies: []
-              };
-            }
-            consolidatedCash.bankAccounts[accountKey].balance += account.balance;
-            consolidatedCash.bankAccounts[accountKey].companies.push({
-              company: companyData.companyName,
-              balance: account.balance
+            const orgName = getOrganizationName(connectedCompany.tenantName);
+            const response = await fetch("/api/cash-position", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ organizationName: orgName }),
             });
-          });
-        }
-      }
-    }
 
-    // Convert consolidated bank accounts to array
-    const consolidatedBankAccounts = Object.values(consolidatedCash.bankAccounts)
-      .sort((a, b) => b.balance - a.balance);
+            if (response.ok) {
+              const data = await response.json();
+              const companyData = {
+                companyName: connectedCompany.tenantName.replace(
+                  "Rirratjingu ",
+                  ""
+                ),
+                ...data,
+              };
 
-    renderCashFlowWithConsolidated(consolidatedCash, consolidatedBankAccounts, cashData);
+              cashData.push(companyData);
 
-  } catch (error) {
-    dashboardElement.innerHTML = `
+              // Build consolidated data
+              consolidatedCash.totalCash += data.totalCash || 0;
+              consolidatedCash.companies.push(companyData);
+
+              // Aggregate bank accounts (combine accounts with same name)
+              if (data.bankAccounts) {
+                data.bankAccounts.forEach((account) => {
+                  const accountKey = account.name;
+                  if (!consolidatedCash.bankAccounts[accountKey]) {
+                    consolidatedCash.bankAccounts[accountKey] = {
+                      name: account.name,
+                      balance: 0,
+                      code: account.code,
+                      companies: [],
+                    };
+                  }
+                  consolidatedCash.bankAccounts[accountKey].balance +=
+                    account.balance;
+                  consolidatedCash.bankAccounts[accountKey].companies.push({
+                    company: companyData.companyName,
+                    balance: account.balance,
+                  });
+                });
+              }
+            }
+          }
+
+          // Convert consolidated bank accounts to array
+          const consolidatedBankAccounts = Object.values(
+            consolidatedCash.bankAccounts
+          ).sort((a, b) => b.balance - a.balance);
+
+          renderCashFlowWithConsolidated(
+            consolidatedCash,
+            consolidatedBankAccounts,
+            cashData
+          );
+        } catch (error) {
+          dashboardElement.innerHTML = `
       <div style="text-align: center; padding: 40px; color: #e74c3c;">
         <h3>Error Loading Cash Flow Data</h3>
         <p>${error.message}</p>
       </div>
     `;
-  }
-}
+        }
+      }
 
-function renderCashFlowWithConsolidated(consolidatedCash, consolidatedBankAccounts, individualData) {
-  const dashboardElement = document.getElementById("dashboardData");
-  
-  const consolidatedHtml = `
+      function renderCashFlowWithConsolidated(
+        consolidatedCash,
+        consolidatedBankAccounts,
+        individualData
+      ) {
+        const dashboardElement = document.getElementById("dashboardData");
+
+        const consolidatedHtml = `
     <div class="dashboard-card" style="margin-bottom: 20px;">
       <h3>Consolidated Cash Position - All Selected Companies</h3>
       <div style="margin-bottom: 15px;">
@@ -3017,68 +3031,45 @@ function renderCashFlowWithConsolidated(consolidatedCash, consolidatedBankAccoun
         </span>
       </div>
       
-      ${consolidatedBankAccounts.length > 0 ? `
+      ${
+        consolidatedBankAccounts.length > 0
+          ? `
         <div style="max-height: 60vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px;">
-          ${consolidatedBankAccounts.map(account => `
+          ${consolidatedBankAccounts
+            .map(
+              (account) => `
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
               <div>
                 <div style="font-weight: 600;">${account.name}</div>
                 <div style="font-size: 12px; color: #666;">
-                  ${account.companies.map(comp => 
-                    `${comp.company}: $${comp.balance.toLocaleString()}`
-                  ).join(' | ')}
+                  ${account.companies
+                    .map(
+                      (comp) =>
+                        `${comp.company}: $${comp.balance.toLocaleString()}`
+                    )
+                    .join(" | ")}
                 </div>
               </div>
               <div style="font-weight: 600; text-align: right;">
                 $${account.balance.toLocaleString()}
               </div>
             </div>
-          `).join('')}
+          `
+            )
+            .join("")}
         </div>
-      ` : `
+      `
+          : `
         <div style="text-align: center; padding: 20px; color: #666;">
           No bank accounts found
         </div>
-      `}
+      `
+      }
     </div>
   `;
 
-  const individualHtml = `
-    <div style="height: 50vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px;">
-      ${individualData.map(company => `
-        <div class="dashboard-card" style="margin-bottom: 20px;">
-          <h3>${company.companyName} - Bank Accounts</h3>
-          <div style="margin-bottom: 15px;">
-            <strong>Total Cash:</strong> $${company.totalCash.toLocaleString()}
-          </div>
-          
-          ${company.bankAccounts.length > 0 ? `
-            <div>
-              ${company.bankAccounts.map(account => `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
-                  <div>
-                    <div style="font-weight: 600;">${account.name}</div>
-                    <div style="font-size: 12px; color: #666;">Code: ${account.code}</div>
-                  </div>
-                  <div style="font-weight: 600; text-align: right;">
-                    $${account.balance.toLocaleString()}
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-          ` : `
-            <div style="text-align: center; padding: 20px; color: #666;">
-              No bank accounts found
-            </div>
-          `}
-        </div>
-      `).join('')}
-    </div>
-  `;
-
-  dashboardElement.innerHTML = consolidatedHtml + individualHtml;
-}
-
+        dashboardElement.innerHTML = consolidatedHtml + individualHtml;
+      }
 
       async function loadProfitLossData() {
         if (activeCompanyFilters.length === 0) {
