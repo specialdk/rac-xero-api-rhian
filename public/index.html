@@ -2079,32 +2079,51 @@
         if (activeCompanyFilters.length === 0) {
           const dashboardElement = document.getElementById("dashboardData");
           dashboardElement.innerHTML = `
-                  <div style="text-align: center; padding: 40px; color: #666;">
-                    <h3>No Companies Selected</h3>
-                    <p>Please select companies using the filters above to view YoY analysis.</p>
-                  </div>
-                `;
+      <div style="text-align: center; padding: 40px; color: #666;">
+        <h3>No Companies Selected</h3>
+        <p>Please select companies using the filters above to view YoY analysis.</p>
+      </div>
+    `;
           return;
         }
 
         const dashboardElement = document.getElementById("dashboardData");
-        const selectedCompanyNames = getSelectedCompanyNames();
-
         dashboardElement.innerHTML = `
-                <div class="loading">
-                  <div class="loading-spinner"></div>
-                  Loading year-over-year analysis and monthly breakdown for ${
-                    activeCompanyFilters.length
-                  } companies:<br>
-                  <small>${selectedCompanyNames.join(", ")}</small>
-                </div>
-              `;
+    <div class="loading">
+      <div class="loading-spinner"></div>
+      Loading consolidated year-over-year analysis...
+    </div>
+  `;
 
         try {
           const yoyData = [];
           const monthlyData = [];
+          let consolidatedYoY = {
+            current: {
+              revenue: 0,
+              expenses: 0,
+              profit: 0,
+              assets: 0,
+              equity: 0,
+            },
+            previous: {
+              revenue: 0,
+              expenses: 0,
+              profit: 0,
+              assets: 0,
+              equity: 0,
+            },
+            growth: {
+              revenue: 0,
+              expenses: 0,
+              profit: 0,
+              assets: 0,
+              equity: 0,
+            },
+            companies: [],
+          };
 
-          // Load both YoY and Monthly data for each company
+          // Load both YoY and Monthly data for each selected company
           for (const tenantId of activeCompanyFilters) {
             const connectedCompany = connectedCompanies.find(
               (c) => c.tenantId === tenantId
@@ -2130,7 +2149,7 @@
 
               if (yoyResponse.ok) {
                 const data = await yoyResponse.json();
-                yoyData.push({
+                const companyYoyData = {
                   companyName: connectedCompany.tenantName.replace(
                     "Rirratjingu ",
                     ""
@@ -2138,7 +2157,28 @@
                   tenantName: data.tenantName,
                   analysis: data.analysis,
                   error: false,
-                });
+                };
+                yoyData.push(companyYoyData);
+
+                // Add to consolidated totals
+                const current = data.analysis.periods.current;
+                const previous = data.analysis.periods.previous;
+
+                consolidatedYoY.current.revenue += current.revenue || 0;
+                consolidatedYoY.current.expenses +=
+                  current.revenue - current.profit || 0;
+                consolidatedYoY.current.profit += current.profit || 0;
+                consolidatedYoY.current.assets += current.assets || 0;
+                consolidatedYoY.current.equity += current.equity || 0;
+
+                consolidatedYoY.previous.revenue += previous.revenue || 0;
+                consolidatedYoY.previous.expenses +=
+                  previous.revenue - previous.profit || 0;
+                consolidatedYoY.previous.profit += previous.profit || 0;
+                consolidatedYoY.previous.assets += previous.assets || 0;
+                consolidatedYoY.previous.equity += previous.equity || 0;
+
+                consolidatedYoY.companies.push(companyYoyData);
               }
 
               if (monthlyResponse.ok) {
@@ -2162,33 +2202,45 @@
             }
           }
 
-          // Calculate consolidated metrics
-          const validYoyData = yoyData.filter((d) => !d.error);
-          const validMonthlyData = monthlyData.filter((d) => !d.error);
-          const consolidatedYoy =
-            calculateConsolidatedFromNewEndpoint(validYoyData);
+          // Calculate consolidated growth rates
+          consolidatedYoY.growth.revenue = calculateGrowthRate(
+            consolidatedYoY.previous.revenue,
+            consolidatedYoY.current.revenue
+          );
+          consolidatedYoY.growth.expenses = calculateGrowthRate(
+            consolidatedYoY.previous.expenses,
+            consolidatedYoY.current.expenses
+          );
+          consolidatedYoY.growth.profit = calculateGrowthRate(
+            consolidatedYoY.previous.profit,
+            consolidatedYoY.current.profit
+          );
+          consolidatedYoY.growth.assets = calculateGrowthRate(
+            consolidatedYoY.previous.assets,
+            consolidatedYoY.current.assets
+          );
+          consolidatedYoY.growth.equity = calculateGrowthRate(
+            consolidatedYoY.previous.equity,
+            consolidatedYoY.current.equity
+          );
 
-          // Render YoY + Monthly analysis
-          renderYoYWithMonthlyDashboard(yoyData, monthlyData, consolidatedYoy);
+          // Render consolidated YoY + individual companies with scroll
+          renderConsolidatedYoYAnalysis(consolidatedYoY, yoyData, monthlyData);
         } catch (error) {
           console.error("Error in YoY analysis:", error);
           dashboardElement.innerHTML = `
-                  <div style="text-align: center; padding: 40px; color: #e74c3c;">
-                    <h3>Error Loading YoY Data</h3>
-                    <p>Failed to load year-over-year analysis: ${error.message}</p>
-                    <button onclick="loadDashboardData()" style="margin-top: 10px; padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                      Retry
-                    </button>
-                  </div>
-                `;
+      <div style="text-align: center; padding: 40px; color: #e74c3c;">
+        <h3>Error Loading YoY Data</h3>
+        <p>Failed to load year-over-year analysis: ${error.message}</p>
+      </div>
+    `;
         }
       }
 
-      // New rendering function that includes Monthly Card
-      function renderYoYWithMonthlyDashboard(
+      function renderConsolidatedYoYAnalysis(
+        consolidatedYoY,
         yoyData,
-        monthlyData,
-        consolidated
+        monthlyData
       ) {
         const dashboardElement = document.getElementById("dashboardData");
 
@@ -2201,270 +2253,237 @@
           ? firstValidCompany.analysis.periods.previous.label
           : "Previous Year";
 
-        dashboardElement.innerHTML = `
-                <!-- CONSOLIDATED YoY SUMMARY -->
-                <div class="dashboard-grid" style="grid-template-columns: repeat(3, 1fr);">
+        const consolidatedHtml = `
+    <div class="dashboard-card" style="margin-bottom: 20px;">
+      <h3>Consolidated Year-over-Year Analysis - All Selected Companies</h3>
+      <div style="margin-bottom: 15px;">
+        <span style="font-size: 14px; color: #666;">
+          Companies: ${consolidatedYoY.companies.length} | 
+          Period: ${currentLabel} vs ${previousLabel}
+        </span>
+      </div>
 
-                  <div class="dashboard-card">
-                    <h3>Asset Growth Analysis</h3>
-                    <div class="metric">
-                      <span>${currentLabel} Assets</span>
-                      <span class="metric-value">$${consolidated.current.assets.toLocaleString()}</span>
-                    </div>
-                    <div class="metric">
-                      <span>${previousLabel} Assets</span>
-                      <span class="metric-value">$${consolidated.previous.assets.toLocaleString()}</span>
-                    </div>
-                    <div class="metric">
-                      <span>Asset Growth</span>
-                      <span class="metric-value ${
-                        consolidated.growth.assets >= 0 ? "" : "negative"
-                      }">
-                        ${
-                          consolidated.growth.assets >= 0 ? "+" : ""
-                        }${consolidated.growth.assets.toFixed(1)}%
-                      </span>
-                    </div>
-                    <div class="metric">
-                      <span>Net Worth Change</span>
-                      <span class="metric-value ${
-                        consolidated.growth.equity >= 0 ? "" : "negative"
-                      }">
-                        ${
-                          consolidated.growth.equity >= 0 ? "+" : ""
-                        }${consolidated.growth.equity.toFixed(1)}%
-                      </span>
-                    </div>
-                  </div>
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 20px;">
+        <div class="dashboard-card" style="padding: 15px;">
+          <h4>Revenue Performance</h4>
+          <div class="metric">
+            <span>${currentLabel}</span>
+            <span class="metric-value">$${consolidatedYoY.current.revenue.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>${previousLabel}</span>
+            <span class="metric-value">$${consolidatedYoY.previous.revenue.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>Growth</span>
+            <span class="metric-value ${
+              consolidatedYoY.growth.revenue >= 0 ? "" : "negative"
+            }">
+              ${
+                consolidatedYoY.growth.revenue >= 0 ? "+" : ""
+              }${consolidatedYoY.growth.revenue.toFixed(1)}%
+            </span>
+          </div>
+        </div>
 
-                  <div class="dashboard-card">
-              <h3>Revenue Performance</h3>
-              <div class="metric">
-                <span>${currentLabel} Revenue</span>
-                <span class="metric-value">$${consolidated.current.revenue.toLocaleString()}</span>
-              </div>
-              <div class="metric">
-                <span>${previousLabel} Revenue</span>
-                <span class="metric-value">$${consolidated.previous.revenue.toLocaleString()}</span>
-              </div>
-              <div class="metric">
-                <span>Revenue Growth</span>
-                <span class="metric-value ${
-                  consolidated.growth.revenue >= 0 ? "" : "negative"
-                }">
-                  ${
-                    consolidated.growth.revenue >= 0 ? "+" : ""
-                  }${consolidated.growth.revenue.toFixed(1)}%
+        <div class="dashboard-card" style="padding: 15px;">
+          <h4>Expense Performance</h4>
+          <div class="metric">
+            <span>${currentLabel}</span>
+            <span class="metric-value">$${consolidatedYoY.current.expenses.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>${previousLabel}</span>
+            <span class="metric-value">$${consolidatedYoY.previous.expenses.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>Growth</span>
+            <span class="metric-value ${
+              consolidatedYoY.growth.expenses >= 0 ? "negative" : ""
+            }">
+              ${
+                consolidatedYoY.growth.expenses >= 0 ? "+" : ""
+              }${consolidatedYoY.growth.expenses.toFixed(1)}%
+            </span>
+          </div>
+        </div>
+
+        <div class="dashboard-card" style="padding: 15px;">
+          <h4>Profit Performance</h4>
+          <div class="metric">
+            <span>${currentLabel}</span>
+            <span class="metric-value ${
+              consolidatedYoY.current.profit >= 0 ? "" : "negative"
+            }">$${consolidatedYoY.current.profit.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>${previousLabel}</span>
+            <span class="metric-value ${
+              consolidatedYoY.previous.profit >= 0 ? "" : "negative"
+            }">$${consolidatedYoY.previous.profit.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>Growth</span>
+            <span class="metric-value ${
+              consolidatedYoY.growth.profit >= 0 ? "" : "negative"
+            }">
+              ${
+                consolidatedYoY.growth.profit >= 0 ? "+" : ""
+              }${consolidatedYoY.growth.profit.toFixed(1)}%
+            </span>
+          </div>
+        </div>
+
+        <div class="dashboard-card" style="padding: 15px;">
+          <h4>Asset Growth</h4>
+          <div class="metric">
+            <span>${currentLabel}</span>
+            <span class="metric-value">$${consolidatedYoY.current.assets.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>${previousLabel}</span>
+            <span class="metric-value">$${consolidatedYoY.previous.assets.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>Growth</span>
+            <span class="metric-value ${
+              consolidatedYoY.growth.assets >= 0 ? "" : "negative"
+            }">
+              ${
+                consolidatedYoY.growth.assets >= 0 ? "+" : ""
+              }${consolidatedYoY.growth.assets.toFixed(1)}%
+            </span>
+          </div>
+        </div>
+
+        <div class="dashboard-card" style="padding: 15px;">
+          <h4>Financial Health</h4>
+          <div class="metric">
+            <span>Current Margin</span>
+            <span class="metric-value">
+              ${
+                consolidatedYoY.current.revenue > 0
+                  ? (
+                      (consolidatedYoY.current.profit /
+                        consolidatedYoY.current.revenue) *
+                      100
+                    ).toFixed(1)
+                  : 0
+              }%
+            </span>
+          </div>
+          <div class="metric">
+            <span>Prior Margin</span>
+            <span class="metric-value">
+              ${
+                consolidatedYoY.previous.revenue > 0
+                  ? (
+                      (consolidatedYoY.previous.profit /
+                        consolidatedYoY.previous.revenue) *
+                      100
+                    ).toFixed(1)
+                  : 0
+              }%
+            </span>
+          </div>
+          <div class="metric">
+            <span>Trend</span>
+            <span class="metric-value ${
+              consolidatedYoY.growth.revenue > 0 &&
+              consolidatedYoY.growth.profit > 0
+                ? ""
+                : "negative"
+            }">
+              ${
+                consolidatedYoY.growth.revenue > 0 &&
+                consolidatedYoY.growth.profit > 0
+                  ? "Positive"
+                  : "Declining"
+              }
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Monthly Performance Breakdown for first company as sample -->
+      ${monthlyData.length > 0 ? renderMonthlyCard(monthlyData) : ""}
+    </div>
+  `;
+
+        const individualHtml = `
+    <div style="height: 50vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px;">
+      <h3>Individual Company Performance</h3>
+      ${yoyData
+        .map((company) => {
+          if (company.error) {
+            return `
+            <div style="border: 1px solid #e74c3c; border-radius: 6px; padding: 15px; margin: 10px 0; background: #fff5f5;">
+              <strong style="color: #e74c3c;">${company.companyName}</strong>
+              <div style="color: #666; margin-top: 5px;">Error loading YoY data</div>
+            </div>
+          `;
+          }
+
+          const current = company.analysis.periods.current;
+          const previous = company.analysis.periods.previous;
+          const growth = company.analysis.growth;
+
+          return `
+          <div style="border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px; margin: 10px 0; background: #fafafa;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+              <strong style="font-size: 16px;">${company.companyName}</strong>
+              <div style="display: flex; gap: 15px; font-size: 14px;">
+                <span style="color: ${
+                  growth.revenue >= 0 ? "#27ae60" : "#e74c3c"
+                };">
+                  Revenue: ${
+                    growth.revenue >= 0 ? "+" : ""
+                  }${growth.revenue.toFixed(1)}%
+                </span>
+                <span style="color: ${
+                  growth.profit >= 0 ? "#27ae60" : "#e74c3c"
+                };">
+                  Profit: ${
+                    growth.profit >= 0 ? "+" : ""
+                  }${growth.profit.toFixed(1)}%
                 </span>
               </div>
             </div>
 
-            <div class="dashboard-card">
-              <h3>Expense Performance</h3>
-              <div class="metric">
-                <span>${currentLabel} Expenses</span>
-                <span class="metric-value">$${consolidated.current.expenses.toLocaleString()}</span>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; font-size: 13px;">
+              <div>
+                <div style="color: #666; margin-bottom: 3px;">${currentLabel} Revenue</div>
+                <div style="font-weight: 600;">$${current.revenue.toLocaleString()}</div>
               </div>
-              <div class="metric">
-                <span>${previousLabel} Expenses</span>
-                <span class="metric-value">$${consolidated.previous.expenses.toLocaleString()}</span>
+              <div>
+                <div style="color: #666; margin-bottom: 3px;">${previousLabel} Revenue</div>
+                <div style="font-weight: 600;">$${previous.revenue.toLocaleString()}</div>
               </div>
-              <div class="metric">
-                <span>Expense Growth</span>
-                <span class="metric-value ${
-                  consolidated.growth.expenses >= 0 ? "negative" : ""
-                }">
-                  ${
-                    consolidated.growth.expenses >= 0 ? "+" : ""
-                  }${consolidated.growth.expenses.toFixed(1)}%
-                </span>
-              </div>
-            </div>
-
-                <div class="dashboard-card">
-              <h3>Profit Performance</h3>
-              <div class="metric">
-                <span>${currentLabel} Profit</span>
-                <span class="metric-value ${
-                  consolidated.current.profit >= 0 ? "" : "negative"
-                }">
-                  $${consolidated.current.profit.toLocaleString()}
-                </span>
-              </div>
-              <div class="metric">
-                <span>${previousLabel} Profit</span>
-                <span class="metric-value ${
-                  consolidated.previous.profit >= 0 ? "" : "negative"
-                }">
-                  $${consolidated.previous.profit.toLocaleString()}
-                </span>
-              </div>
-              <div class="metric">
-                <span>Profit Growth</span>
-                <span class="metric-value ${
-                  consolidated.growth.profit >= 0 ? "" : "negative"
-                }">
-                  ${
-                    consolidated.growth.profit >= 0 ? "+" : ""
-                  }${consolidated.growth.profit.toFixed(1)}%
-                </span>
-              </div>
-            </div>
-
-                  <div class="dashboard-card">
-                    <h3>Financial Health Trends</h3>
-                    <div class="metric">
-                      <span>Companies Analyzed</span>
-                      <span class="metric-value">${
-                        yoyData.filter((d) => !d.error).length
-                      }</span>
-                    </div>
-                    <div class="metric">
-                      <span>Current Profit Margin</span>
-                      <span class="metric-value">
-                        ${
-                          consolidated.current.revenue > 0
-                            ? (
-                                (consolidated.current.profit /
-                                  consolidated.current.revenue) *
-                                100
-                              ).toFixed(1)
-                            : 0
-                        }%
-                      </span>
-                    </div>
-                    <div class="metric">
-                      <span>Prior Profit Margin</span>
-                      <span class="metric-value">
-                        ${
-                          consolidated.previous.revenue > 0
-                            ? (
-                                (consolidated.previous.profit /
-                                  consolidated.previous.revenue) *
-                                100
-                              ).toFixed(1)
-                            : 0
-                        }%
-                      </span>
-                    </div>
-                    <div class="metric">
-                      <span>Overall Trend</span>
-                      <span class="metric-value ${
-                        consolidated.growth.revenue > 0 &&
-                        consolidated.growth.profit > 0
-                          ? ""
-                          : "negative"
-                      }">
-                        ${
-                          consolidated.growth.revenue > 0 &&
-                          consolidated.growth.profit > 0
-                            ? "Positive"
-                            : "Declining"
-                        }
-                      </span>
-                    </div>
-                  </div>
+              <div>
+                <div style="color: #666; margin-bottom: 3px;">${currentLabel} Profit</div>
+                <div style="font-weight: 600; color: ${
+                  current.profit >= 0 ? "#27ae60" : "#e74c3c"
+                };">
+                  $${current.profit.toLocaleString()}
                 </div>
-
-                <!-- MONTHLY BREAKDOWN CARD -->
-                ${renderMonthlyCard(monthlyData)}
-
-                <!-- COMPANY-BY-COMPANY YoY ANALYSIS -->
-                <div class="dashboard-card">
-                  <h3>Company Performance Comparison (${currentLabel} vs ${previousLabel})</h3>
-                  ${yoyData
-                    .map((company) => {
-                      if (company.error) {
-                        return `
-                        <div style="border: 1px solid #e74c3c; border-radius: 6px; padding: 15px; margin: 10px 0; background: #fff5f5;">
-                          <strong style="color: #e74c3c;">${company.companyName}</strong>
-                          <div style="color: #666; margin-top: 5px;">Error loading YoY data</div>
-                        </div>
-                      `;
-                      }
-
-                      const current = company.analysis.periods.current;
-                      const previous = company.analysis.periods.previous;
-                      const growth = company.analysis.growth;
-
-                      return `
-                      <div style="border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px; margin: 10px 0; background: #fafafa;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                          <strong style="font-size: 16px;">${
-                            company.companyName
-                          }</strong>
-                          <div style="display: flex; gap: 15px; font-size: 14px;">
-                            <span style="color: ${
-                              growth.revenue >= 0 ? "#27ae60" : "#e74c3c"
-                            };">
-                              Revenue: ${
-                                growth.revenue >= 0 ? "+" : ""
-                              }${growth.revenue.toFixed(1)}%
-                            </span>
-                            <span style="color: ${
-                              growth.profit >= 0 ? "#27ae60" : "#e74c3c"
-                            };">
-                              Profit: ${
-                                growth.profit >= 0 ? "+" : ""
-                              }${growth.profit.toFixed(1)}%
-                            </span>
-                          </div>
-                        </div>
-
-                        <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px; font-size: 13px;">
-                          <div>
-                            <div style="color: #666; margin-bottom: 3px;">${currentLabel} Revenue</div>
-                            <div style="font-weight: 600;">$${current.revenue.toLocaleString()}</div>
-                          </div>
-                          <div>
-                            <div style="color: #666; margin-bottom: 3px;">${previousLabel} Revenue</div>
-                            <div style="font-weight: 600;">$${previous.revenue.toLocaleString()}</div>
-                          </div>
-                          <div>
-                            <div style="color: #666; margin-bottom: 3px;">${currentLabel} Profit</div>
-                            <div style="font-weight: 600; color: ${
-                              current.profit >= 0 ? "#27ae60" : "#e74c3c"
-                            };">
-                              $${current.profit.toLocaleString()}
-                            </div>
-                          </div>
-                          <div>
-                            <div style="color: #666; margin-bottom: 3px;">${previousLabel} Profit</div>
-                            <div style="font-weight: 600; color: ${
-                              previous.profit >= 0 ? "#27ae60" : "#e74c3c"
-                            };">
-                              $${previous.profit.toLocaleString()}
-                            </div>
-                          </div>
-                          <div>
-                            <div style="color: #666; margin-bottom: 3px;">Margin ${currentLabel}</div>
-                            <div style="font-weight: 600;">${
-                              current.revenue > 0
-                                ? (
-                                    (current.profit / current.revenue) *
-                                    100
-                                  ).toFixed(1)
-                                : 0
-                            }%</div>
-                          </div>
-                          <div>
-                            <div style="color: #666; margin-bottom: 3px;">Margin ${previousLabel}</div>
-                            <div style="font-weight: 600;">${
-                              previous.revenue > 0
-                                ? (
-                                    (previous.profit / previous.revenue) *
-                                    100
-                                  ).toFixed(1)
-                                : 0
-                            }%</div>
-                          </div>
-                        </div>
-                      </div>
-                    `;
-                    })
-                    .join("")}
+              </div>
+              <div>
+                <div style="color: #666; margin-bottom: 3px;">${previousLabel} Profit</div>
+                <div style="font-weight: 600; color: ${
+                  previous.profit >= 0 ? "#27ae60" : "#e74c3c"
+                };">
+                  $${previous.profit.toLocaleString()}
                 </div>
-              `;
+              </div>
+            </div>
+          </div>
+        `;
+        })
+        .join("")}
+    </div>
+  `;
+
+        dashboardElement.innerHTML = consolidatedHtml + individualHtml;
       }
 
       // Monthly Card component
