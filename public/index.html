@@ -2644,13 +2644,23 @@
         dashboardElement.innerHTML = `
     <div class="loading">
       <div class="loading-spinner"></div>
-      Loading detailed trial balance data...
+      Loading consolidated trial balance data...
     </div>
   `;
 
         try {
-          const trialBalanceData = [];
+          // Get consolidated trial balance first
+          const consolidatedResponse = await fetch(
+            "/api/consolidated-trial-balance"
+          );
+          let consolidatedData = null;
 
+          if (consolidatedResponse.ok) {
+            consolidatedData = await consolidatedResponse.json();
+          }
+
+          // Get individual trial balances for selected companies
+          const trialBalanceData = [];
           for (const tenantId of activeCompanyFilters) {
             const connectedCompany = connectedCompanies.find(
               (c) => c.tenantId === tenantId
@@ -2658,7 +2668,6 @@
             if (!connectedCompany) continue;
 
             const orgName = getOrganizationName(connectedCompany.tenantName);
-
             const response = await fetch("/api/trial-balance", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -2677,12 +2686,80 @@
             }
           }
 
-          // Render detailed trial balance
+          // Render consolidated + individual trial balances with scroll
+          renderTrialBalanceWithConsolidated(
+            consolidatedData,
+            trialBalanceData
+          );
+        } catch (error) {
           dashboardElement.innerHTML = `
-      ${trialBalanceData
+      <div style="text-align: center; padding: 40px; color: #e74c3c;">
+        <h3>Error Loading Trial Balance</h3>
+        <p>${error.message}</p>
+      </div>
+    `;
+        }
+      }
+
+      function renderTrialBalanceWithConsolidated(
+        consolidatedData,
+        individualData
+      ) {
+        const dashboardElement = document.getElementById("dashboardData");
+
+        let consolidatedHtml = "";
+        if (consolidatedData && consolidatedData.consolidated) {
+          const totals = consolidatedData.consolidated.totals;
+          const balanceCheck = consolidatedData.consolidated.balanceCheck;
+
+          consolidatedHtml = `
+      <div class="dashboard-card" style="margin-bottom: 20px;">
+        <h3>Consolidated Trial Balance Summary</h3>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 15px;">
+          <div class="metric">
+            <span>Total Assets</span>
+            <span class="metric-value">$${totals.totalAssets.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>Total Liabilities</span>
+            <span class="metric-value">$${Math.abs(
+              totals.totalLiabilities
+            ).toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>Total Equity</span>
+            <span class="metric-value">$${totals.totalEquity.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>Balance Status</span>
+            <span class="metric-value ${
+              balanceCheck.debitsEqualCredits ? "" : "negative"
+            }">
+              ${
+                balanceCheck.debitsEqualCredits
+                  ? "✅ Balanced"
+                  : "⚠️ Imbalanced"
+              }
+            </span>
+          </div>
+        </div>
+        <div style="font-size: 14px; color: #666;">
+          Companies: ${consolidatedData.summary?.totalCompanies || 0} | 
+          Accounts: ${consolidatedData.summary?.totalAccounts || 0} | 
+          Balanced Companies: ${
+            consolidatedData.summary?.balancedCompanies || 0
+          }
+        </div>
+      </div>
+    `;
+        }
+
+        const individualHtml = `
+    <div style="height: 70vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px;">
+      ${individualData
         .map(
           (company) => `
-        <div class="dashboard-card">
+        <div class="dashboard-card" style="margin-bottom: 20px;">
           <h3>${company.companyName} - Trial Balance</h3>
           <div style="margin-bottom: 15px;">
             <strong>Status:</strong> 
@@ -2704,69 +2781,68 @@
             }
           </div>
 
-          <div style="display: grid; grid-template-columns: repeat(3, minmax(300px, 1fr)); gap: 20px; align-items: start;">
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
             <div>
               <h4>Assets (${company.trialBalance.assets.length} accounts)</h4>
-              <div style="overflow: visible;">
-                ${company.trialBalance.assets
-                  .map(
-                    (account) => `
-                  <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
-  <span style="font-size: 13px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 10px;">${
-    account.name
-  }</span>
-  <span style="font-weight: 600; white-space: nowrap;">$${account.balance.toLocaleString()}</span>
-</div>
-                `
-                  )
-                  .join("")}
-                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-top: 2px solid #27ae60; font-weight: bold; color: #27ae60;">
-                  <span>Total Assets</span>
-                  <span>$${company.trialBalance.totals.totalAssets.toLocaleString()}</span>
+              ${company.trialBalance.assets
+                .slice(0, 10)
+                .map(
+                  (account) => `
+                <div style="display: flex; justify-content: space-between; padding: 2px 0; font-size: 13px;">
+                  <span style="flex: 1; margin-right: 10px;">${
+                    account.name
+                  }</span>
+                  <span style="font-weight: 600;">$${account.balance.toLocaleString()}</span>
                 </div>
+              `
+                )
+                .join("")}
+              <div style="border-top: 2px solid #27ae60; padding: 8px 0; font-weight: bold; color: #27ae60;">
+                Total Assets: $${company.trialBalance.totals.totalAssets.toLocaleString()}
               </div>
             </div>
 
             <div>
-  <h4>Liabilities (${company.trialBalance.liabilities.length} accounts)</h4>
-  <div style="overflow: visible;">
-    ${company.trialBalance.liabilities
-      .map(
-        (account) => `
-      <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
-        <span style="font-size: 13px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 10px;">${
-          account.name
-        }</span>
-        <span style="font-weight: 600; white-space: nowrap;">$${account.balance.toLocaleString()}</span>
-      </div>
-    `
-      )
-      .join("")}
-    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-top: 2px solid #e74c3c; font-weight: bold; color: #e74c3c;">
-      <span>Total Liabilities</span>
-      <span>$${company.trialBalance.totals.totalLiabilities.toLocaleString()}</span>
-    </div>
-  </div>
-</div>
+              <h4>Liabilities (${
+                company.trialBalance.liabilities.length
+              } accounts)</h4>
+              ${company.trialBalance.liabilities
+                .slice(0, 10)
+                .map(
+                  (account) => `
+                <div style="display: flex; justify-content: space-between; padding: 2px 0; font-size: 13px;">
+                  <span style="flex: 1; margin-right: 10px;">${
+                    account.name
+                  }</span>
+                  <span style="font-weight: 600;">$${account.balance.toLocaleString()}</span>
+                </div>
+              `
+                )
+                .join("")}
+              <div style="border-top: 2px solid #e74c3c; padding: 8px 0; font-weight: bold; color: #e74c3c;">
+                Total Liabilities: $${Math.abs(
+                  company.trialBalance.totals.totalLiabilities
+                ).toLocaleString()}
+              </div>
+            </div>
+
             <div>
               <h4>Equity (${company.trialBalance.equity.length} accounts)</h4>
-              <div style="overflow: visible;">
-                ${company.trialBalance.equity
-                  .map(
-                    (account) => `
-                  <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
-        <span style="font-size: 13px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 10px;">${
-          account.name
-        }</span>
-        <span style="font-weight: 600; white-space: nowrap;">$${account.balance.toLocaleString()}</span>
-      </div>
-                `
-                  )
-                  .join("")}
-                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-top: 2px solid #3498db; font-weight: bold; color: #3498db;">
-                  <span>Total Equity</span>
-                  <span>$${company.trialBalance.totals.totalEquity.toLocaleString()}</span>
+              ${company.trialBalance.equity
+                .slice(0, 10)
+                .map(
+                  (account) => `
+                <div style="display: flex; justify-content: space-between; padding: 2px 0; font-size: 13px;">
+                  <span style="flex: 1; margin-right: 10px;">${
+                    account.name
+                  }</span>
+                  <span style="font-weight: 600;">$${account.balance.toLocaleString()}</span>
                 </div>
+              `
+                )
+                .join("")}
+              <div style="border-top: 2px solid #3498db; padding: 8px 0; font-weight: bold; color: #3498db;">
+                Total Equity: $${company.trialBalance.totals.totalEquity.toLocaleString()}
               </div>
             </div>
           </div>
@@ -2774,15 +2850,10 @@
       `
         )
         .join("")}
-    `;
-        } catch (error) {
-          dashboardElement.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: #e74c3c;">
-        <h3>Error Loading Trial Balance</h3>
-        <p>${error.message}</p>
-      </div>
-    `;
-        }
+    </div>
+  `;
+
+        dashboardElement.innerHTML = consolidatedHtml + individualHtml;
       }
 
       async function loadCashFlowData() {
