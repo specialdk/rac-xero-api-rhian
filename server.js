@@ -3597,16 +3597,33 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
     const reportDate = req.query.date || new Date().toISOString().split("T")[0];
     const periodMonths = parseInt(req.query.periodMonths) || 1; // Default to 1 month instead of 12
 
+    // Parse the report date properly
     const reportEndDate = new Date(reportDate);
-    const fromDate = new Date(reportEndDate);
-    fromDate.setMonth(fromDate.getMonth() - (periodMonths - 1));
-    fromDate.setDate(1); // First day of the from month
+    if (isNaN(reportEndDate.getTime())) {
+      return res.status(400).json({ error: "Invalid report date provided" });
+    }
+
+    // Calculate from date based on period months
+    let fromDate;
+    if (periodMonths === 1) {
+      // Current month - first day of current month
+      fromDate = new Date(
+        reportEndDate.getFullYear(),
+        reportEndDate.getMonth(),
+        1
+      );
+    } else {
+      // Multi-month period - go back the specified number of months
+      fromDate = new Date(reportEndDate);
+      fromDate.setMonth(fromDate.getMonth() - (periodMonths - 1));
+      fromDate.setDate(1);
+    }
 
     const fromDateStr = fromDate.toISOString().split("T")[0];
-    const actualReportDateStr = actualReportDate.toISOString().split("T")[0];
+    const actualReportDateStr = reportEndDate.toISOString().split("T")[0];
 
     console.log(
-      `Getting P&L for ${tokenData.tenantName} from ${fromDateStr} to ${reportDate} (${periodMonths} month period)`
+      `P&L Date Range: ${fromDateStr} to ${actualReportDateStr} (${periodMonths} month period)`
     );
 
     const response = await xero.accountingApi.getReportProfitAndLoss(
