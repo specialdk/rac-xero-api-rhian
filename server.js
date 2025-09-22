@@ -3597,14 +3597,10 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
     const reportDate = req.query.date || new Date().toISOString().split("T")[0];
     const periodMonths = parseInt(req.query.periodMonths) || 1; // Default to 1 month instead of 12
 
-    // TEMPORARY: Test August reconciliation
-    const testMonth = new Date("2025-08-31");
-    let fromDate = new Date(testMonth.getFullYear(), testMonth.getMonth(), 1);
-    let actualReportDate = new Date(
-      testMonth.getFullYear(),
-      testMonth.getMonth() + 1,
-      0
-    );
+    const reportEndDate = new Date(reportDate);
+    const fromDate = new Date(reportEndDate);
+    fromDate.setMonth(fromDate.getMonth() - (periodMonths - 1));
+    fromDate.setDate(1); // First day of the from month
 
     const fromDateStr = fromDate.toISOString().split("T")[0];
     const actualReportDateStr = actualReportDate.toISOString().split("T")[0];
