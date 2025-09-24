@@ -1314,7 +1314,7 @@
 
       // Add these functions after the setupCompanyFilters() function:
 
-      function handleCompanyFilterChange(tenantId) {
+      async function handleCompanyFilterChange(tenantId) {
         const checkbox = document.getElementById(`filter-${tenantId}`);
 
         if (checkbox.checked) {
@@ -1327,18 +1327,44 @@
           );
         }
 
-        //updateFilterSummary();
-        //updateChatAnalysisStatus();
-        loadDashboardData();
+        // Use session for instant filtering if available
+        if (sessionManager.isSessionValid()) {
+          try {
+            const startTime = Date.now();
+            console.log(`⚡ Using session for instant company filtering`);
 
-        // Add chat message about filter change
-        const selectedCompanies = getSelectedCompanyNames();
-        addMessage(
-          "assistant",
-          `Analysis scope updated: Now analyzing ${
-            selectedCompanies.length
-          } companies: ${selectedCompanies.join(", ")}`
-        );
+            await sessionManager.updateCompanySelection(activeCompanyFilters);
+            await loadDashboardData();
+
+            const filterTime = Date.now() - startTime;
+            const selectedCompanies = getSelectedCompanyNames();
+
+            console.log(
+              `✅ Instant filtering completed in ${filterTime}ms for: ${selectedCompanies.join(
+                ", "
+              )}`
+            );
+
+            // Show brief success indicator in header
+            const sessionInfo = document.querySelector(".session-info");
+            if (sessionInfo) {
+              const originalText = sessionInfo.innerHTML;
+              sessionInfo.innerHTML = `⚡ Filtered in ${filterTime}ms | Connected Companies: ${connectedCompanies.length}`;
+              setTimeout(() => {
+                sessionInfo.innerHTML = originalText;
+              }, 2000);
+            }
+          } catch (error) {
+            console.error(
+              "⚠️ Session filtering failed, using standard method:",
+              error
+            );
+            await loadDashboardData(); // Fallback
+          }
+        } else {
+          console.log("⚠️ No valid session, using standard filtering");
+          await loadDashboardData();
+        }
       }
 
       function toggleCompanyFilterByLabel(tenantId) {
@@ -1375,10 +1401,6 @@
         //updateFilterSummary();
         //updateChatAnalysisStatus();
         loadDashboardData();
-        addMessage(
-          "assistant",
-          "Analysis scope updated: Now analyzing all connected companies"
-        );
       }
 
       function selectNoCompanies() {
@@ -1392,10 +1414,6 @@
         //updateFilterSummary();
         //updateChatAnalysisStatus();
         loadDashboardData();
-        addMessage(
-          "assistant",
-          "Analysis scope cleared: No companies selected. Choose companies above to begin analysis."
-        );
       }
 
       function selectMainEntities() {
@@ -1420,25 +1438,11 @@
         loadDashboardData();
 
         const selectedNames = getSelectedCompanyNames();
-        addMessage(
-          "assistant",
-          `Analysis scope updated: Focusing on main entities - ${selectedNames.join(
-            ", "
-          )}`
-        );
       }
 
       // ====== QUICK ANALYSIS FUNCTIONS ======
       function quickAnalysis(type) {
         const selectedCompanies = getSelectedCompanyNames();
-
-        if (selectedCompanies.length === 0) {
-          addMessage(
-            "assistant",
-            "Please select companies using the filters above before requesting analysis."
-          );
-          return;
-        }
 
         let query = "";
         let analysisType = "";
@@ -1469,24 +1473,6 @@
             analysisType = "Consolidated Analysis";
             break;
         }
-
-        addMessage("user", query);
-
-        // Show analysis in progress
-        setTimeout(() => {
-          addMessage(
-            "assistant",
-            `Processing ${analysisType} for: ${selectedCompanies.join(", ")}...`
-          );
-
-          // Simulate actual MCP analysis - replace with real MCP calls
-          setTimeout(() => {
-            addMessage(
-              "assistant",
-              `${analysisType} completed for ${selectedCompanies.length} companies. Here's the summary: [This would contain actual financial data from your MCP server tools]`
-            );
-          }, 2000);
-        }, 500);
       }
 
       // ====== CHAT FUNCTIONS ======
@@ -1509,55 +1495,19 @@
         if (!message) return;
 
         const selectedCompanies = getSelectedCompanyNames();
-
-        if (selectedCompanies.length === 0) {
-          addMessage(
-            "assistant",
-            "Please select companies using the filters above before asking questions."
-          );
-          return;
-        }
-
-        addMessage("user", message);
-        chatInput.value = "";
-
-        // Show analysis scope and processing message
-        setTimeout(() => {
-          const scope =
-            selectedCompanies.length === connectedCompanies.length
-              ? `all ${connectedCompanies.length} connected companies`
-              : `${
-                  selectedCompanies.length
-                } selected companies: ${selectedCompanies.join(", ")}`;
-
-          addMessage(
-            "assistant",
-            `I'll analyze ${scope} for your query: "${message}". Accessing RAC Xero MCP system with ${selectedCompanies.length} company scope...`
-          );
-
-          // Here you would integrate with your actual MCP server
-          // For now, showing example of what the integration would look like
-          setTimeout(() => {
-            addMessage(
-              "assistant",
-              `Analysis complete for ${selectedCompanies.join(
-                ", "
-              )}. [This response would contain actual financial data from your MCP server based on the selected companies and query type.]`
-            );
-          }, 2000);
-        }, 500);
       }
 
-      function addMessage(type, content) {
-        const messagesContainer = document.getElementById("chatMessages");
-        const messageDiv = document.createElement("div");
-        messageDiv.className = `message ${type}`;
-        messageDiv.innerHTML = `<strong>${
-          type === "user" ? "You" : "Claude"
-        }:</strong> ${content}`;
-        messagesContainer.appendChild(messageDiv);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-      }
+      chatInput.value = "";
+
+      // Show analysis scope and processing message
+      setTimeout(() => {
+        const scope =
+          selectedCompanies.length === connectedCompanies.length
+            ? `all ${connectedCompanies.length} connected companies`
+            : `${
+                selectedCompanies.length
+              } selected companies: ${selectedCompanies.join(", ")}`;
+      });
 
       // ====== DASHBOARD DATA LOADING FUNCTIONS ======
 
