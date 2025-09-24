@@ -12,9 +12,11 @@ const { XeroAccessToken, XeroIdToken, XeroClient } = pkg;
 import { Pool } from "pg";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
-import SessionDataManager from './session-data-manager.js';
+import { SessionDataManager } from './session-data-manager.js';  // ✅ Correct
 
 dotenv.config();
+
+let sessionManager = null;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -87,7 +89,7 @@ async function initializeDatabase() {
         `);
 
     // Initialize session manager (NEW SECTION)
-    sessionManager = new SessionDataManager(pool, xero, tokenStorage);
+    sessionManager = new SessionDataManager(pool);
     await sessionManager.initialize();
 
     console.log("✅ Database tables and session manager initialized successfully");
@@ -678,7 +680,7 @@ app.get("/api/consolidated", async (req, res) => {
     let totalReceivables = 0;
     let totalOutstandingInvoices = 0;
     let tenantData = [];
-    let sessionManager = null;
+    
 
     // Get all Xero connections from database
     const xeroConnections = await tokenStorage.getAllXeroConnections();
