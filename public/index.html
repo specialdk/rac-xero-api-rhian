@@ -903,8 +903,11 @@
               </button>
               <button onclick="setView('cash-flow', this)">Cash Flow</button>
               <button onclick="setView('p-and-l', this)">P&L</button>
-              <button onclick="setView('year-over-year', this)">
+              <button onclick="setView('year-over-year', this)" id="yoyButton">
                 YoY Analysis
+                <span id="yoyStatus" style="font-size: 11px; color: #999"
+                  >●</span
+                >
               </button>
               <button onclick="setView('alerts', this)">Alerts</button>
             </div>
@@ -1216,6 +1219,7 @@
         try {
           await loadConnectedCompanies();
           setupCompanyFilters();
+          loadYearOverYearDataInBackground();
           await loadDashboardData();
           //initializeChat();// Removed
           //initializeResizer();//Removed
@@ -2541,6 +2545,189 @@
           : "Analyzing year-over-year trends...";
       }
 
+      async function loadYearOverYearDataForBackground() {
+        try {
+          const yoyData = [];
+          const monthlyData = [];
+          let consolidatedYoY = {
+            current: {
+              revenue: 0,
+              expenses: 0,
+              profit: 0,
+              assets: 0,
+              equity: 0,
+            },
+            previous: {
+              revenue: 0,
+              expenses: 0,
+              profit: 0,
+              assets: 0,
+              equity: 0,
+            },
+            growth: {
+              revenue: 0,
+              expenses: 0,
+              profit: 0,
+              assets: 0,
+              equity: 0,
+            },
+            companies: [],
+          };
+
+          // Use ALL connected companies for background loading (not filtered)
+          for (const connectedCompany of connectedCompanies) {
+            try {
+              const orgName = getOrganizationName(connectedCompany.tenantName);
+
+              const [yoyResponse, monthlyResponse] = await Promise.all([
+                fetch("/api/yoy-analysis", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ organizationName: orgName }),
+                }),
+                fetch("/api/monthly-breakdown", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ organizationName: orgName }),
+                }),
+              ]);
+
+              if (yoyResponse.ok) {
+                const data = await yoyResponse.json();
+                const companyYoyData = {
+                  companyName: connectedCompany.tenantName.replace(
+                    "Rirratjingu ",
+                    ""
+                  ),
+                  tenantName: data.tenantName,
+                  analysis: data.analysis,
+                  error: false,
+                };
+                yoyData.push(companyYoyData);
+
+                const current = data.analysis.periods.current;
+                const previous = data.analysis.periods.previous;
+
+                consolidatedYoY.current.revenue += current.revenue || 0;
+                consolidatedYoY.current.expenses +=
+                  current.revenue - current.profit || 0;
+                consolidatedYoY.current.profit += current.profit || 0;
+                consolidatedYoY.current.assets += current.assets || 0;
+                consolidatedYoY.current.equity += current.equity || 0;
+
+                consolidatedYoY.previous.revenue += previous.revenue || 0;
+                consolidatedYoY.previous.expenses +=
+                  previous.revenue - previous.profit || 0;
+                consolidatedYoY.previous.profit += previous.profit || 0;
+                consolidatedYoY.previous.assets += previous.assets || 0;
+                consolidatedYoY.previous.equity += previous.equity || 0;
+
+                consolidatedYoY.companies.push(companyYoyData);
+              }
+
+              if (monthlyResponse.ok) {
+                const monthlyResult = await monthlyResponse.json();
+                monthlyData.push({
+                  companyName: connectedCompany.tenantName.replace(
+                    "Rirratjingu ",
+                    ""
+                  ),
+                  tenantName: monthlyResult.tenantName,
+                  monthlyBreakdown: monthlyResult.monthlyBreakdown,
+                  totals: monthlyResult.totals,
+                  error: false,
+                });
+              }
+            } catch (error) {
+              console.error(
+                `Background YoY loading error for ${connectedCompany.tenantName}:`,
+                error
+              );
+            }
+          }
+
+          // Calculate growth rates
+          consolidatedYoY.growth.revenue = calculateGrowthRate(
+            consolidatedYoY.previous.revenue,
+            consolidatedYoY.current.revenue
+          );
+          consolidatedYoY.growth.expenses = calculateGrowthRate(
+            consolidatedYoY.previous.expenses,
+            consolidatedYoY.current.expenses
+          );
+          consolidatedYoY.growth.profit = calculateGrowthRate(
+            consolidatedYoY.previous.profit,
+            consolidatedYoY.current.profit
+          );
+          consolidatedYoY.growth.assets = calculateGrowthRate(
+            consolidatedYoY.previous.assets,
+            consolidatedYoY.current.assets
+          );
+          consolidatedYoY.growth.equity = calculateGrowthRate(
+            consolidatedYoY.previous.equity,
+            consolidatedYoY.current.equity
+          );
+
+          // Store all the data for filtering later
+          return {
+            consolidatedYoY,
+            yoyData,
+            monthlyData,
+          };
+        } catch (error) {
+          console.error("Background YoY loading failed:", error);
+          throw error;
+        }
+      }
+
+      async function loadYearOverYearDataInBackground() {
+        updateYoYStatus("loading", "Loading...");
+
+        try {
+          console.log("Starting background YoY data loading...");
+          const startTime = Date.now();
+
+          const yoyData = await loadYearOverYearDataForBackground();
+          window.cachedYoYData = yoyData;
+
+          const loadTime = Date.now() - startTime;
+          console.log(`YoY data loaded in background: ${loadTime}ms`);
+
+          updateYoYStatus("ready", "Ready");
+        } catch (error) {
+          console.error("Background YoY loading failed:", error);
+          updateYoYStatus("error", "Error");
+        }
+      }
+
+      function updateYoYStatus(state, text) {
+        const statusElement = document.getElementById("yoyStatus");
+
+        if (!statusElement) return;
+
+        switch (state) {
+          case "loading":
+            statusElement.textContent = "⏳";
+            statusElement.style.color = "#f39c12";
+            statusElement.title = "Loading YoY data in background...";
+            break;
+          case "ready":
+            statusElement.textContent = "✓";
+            statusElement.style.color = "#27ae60";
+            statusElement.title = "YoY data ready - will load instantly";
+            break;
+          case "error":
+            statusElement.textContent = "⚠";
+            statusElement.style.color = "#e74c3c";
+            statusElement.title =
+              "YoY data loading failed - will load on demand";
+            break;
+          default:
+            statusElement.textContent = "●";
+            statusElement.style.color = "#999";
+        }
+      }
+
       // 8. Update your setView function to handle YoY
       // Find your existing setView function and add this case:
       // else if (currentView === "year-over-year") {
@@ -3504,8 +3691,14 @@
           .forEach((btn) => btn.classList.remove("active"));
         button.classList.add("active");
 
-        // Reload dashboard data for new view
-        loadDashboardData();
+        // For YoY, use cached data if available
+        if (view === "year-over-year" && window.cachedYoYData) {
+          console.log("Using cached YoY data - instant load");
+          renderYoYFromCachedData();
+        } else {
+          // Regular loading for other views or uncached YoY
+          loadDashboardData();
+        }
       }
 
       function backToConnections() {
