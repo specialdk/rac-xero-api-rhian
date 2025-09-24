@@ -1476,39 +1476,8 @@
       }
 
       // ====== CHAT FUNCTIONS ======
-
-      function initializeChat() {
-        const chatInput = document.getElementById("chatInput");
-
-        chatInput.addEventListener("keydown", function (e) {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-          }
-        });
-      }
-
-      function sendMessage() {
-        const chatInput = document.getElementById("chatInput");
-        const message = chatInput.value.trim();
-
-        if (!message) return;
-
-        const selectedCompanies = getSelectedCompanyNames();
-      }
-
-      chatInput.value = "";
-
-      // Show analysis scope and processing message
-      setTimeout(() => {
-        const scope =
-          selectedCompanies.length === connectedCompanies.length
-            ? `all ${connectedCompanies.length} connected companies`
-            : `${
-                selectedCompanies.length
-              } selected companies: ${selectedCompanies.join(", ")}`;
-      });
-
+      // Removed - replaced by MCP in Claude Desktop 
+     
       // ====== DASHBOARD DATA LOADING FUNCTIONS ======
 
       async function loadDashboardData() {
