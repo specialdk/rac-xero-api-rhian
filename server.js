@@ -12,6 +12,7 @@ const { XeroAccessToken, XeroIdToken, XeroClient } = pkg;
 import { Pool } from "pg";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
+import SessionDataManager from './session-data-manager.js';
 
 dotenv.config();
 
@@ -85,7 +86,11 @@ async function initializeDatabase() {
             )
         `);
 
-    console.error("✅ Database tables initialized successfully");
+    // Initialize session manager (NEW SECTION)
+    sessionManager = new SessionDataManager(pool, xero, tokenStorage);
+    await sessionManager.initialize();
+
+    console.log("✅ Database tables and session manager initialized successfully");
   } catch (error) {
     console.error("❌ Error initializing database:", error);
   }
@@ -673,6 +678,7 @@ app.get("/api/consolidated", async (req, res) => {
     let totalReceivables = 0;
     let totalOutstandingInvoices = 0;
     let tenantData = [];
+    let sessionManager = null;
 
     // Get all Xero connections from database
     const xeroConnections = await tokenStorage.getAllXeroConnections();
@@ -1824,6 +1830,176 @@ async function initializeAutoRefresh() {
     console.error("❌ Failed to initialize auto-refresh:", error);
   }
 }
+
+// Session initialization endpoint - called when dashboard launches
+app.post('/api/session/initialize', async (req, res) => {
+  try {
+    const { sessionId, connectedTenantIds } = req.body;
+    
+    if (!sessionId || !connectedTenantIds || connectedTenantIds.length === 0) {
+      return res.status(400).json({ 
+        error: 'sessionId and connectedTenantIds are required' 
+      });
+    }
+
+    console.log(`Initializing session ${sessionId} with ${connectedTenantIds.length} companies`);
+    const startTime = Date.now();
+
+    // Load all company data in parallel (this is the expensive operation)
+    const result = await sessionManager.loadSessionData(sessionId, connectedTenantIds);
+    
+    const loadTime = Date.now() - startTime;
+    console.log(`Session initialized in ${loadTime}ms`);
+
+    res.json({
+      success: true,
+      sessionId: result.sessionId,
+      totalCompanies: result.totalCompanies,
+      successfulCompanies: result.successfulCompanies,
+      loadTime,
+      expiresAt: result.expiresAt,
+      message: `Session data loaded for ${result.successfulCompanies}/${result.totalCompanies} companies`
+    });
+
+  } catch (error) {
+    console.error('Session initialization error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Instant consolidation endpoint - gets data from session cache
+app.post('/api/dashboard/consolidated', async (req, res) => {
+  try {
+    const { sessionId, selectedTenantIds, view = 'overview' } = req.body;
+    
+    if (!sessionId) {
+      return res.status(400).json({ error: 'sessionId is required' });
+    }
+
+    const startTime = Date.now();
+
+    // Update display selection if provided
+    if (selectedTenantIds) {
+      await sessionManager.setDisplaySelection(sessionId, selectedTenantIds, view);
+    }
+
+    // Get consolidated data (instant - from database only)
+    const consolidatedData = await sessionManager.getConsolidatedData(sessionId, selectedTenantIds);
+    
+    if (consolidatedData.error) {
+      return res.status(404).json(consolidatedData);
+    }
+
+    const loadTime = Date.now() - startTime;
+
+    res.json({
+      success: true,
+      view,
+      data: consolidatedData,
+      metadata: {
+        loadTime,
+        companies: consolidatedData.companies.length,
+        balancedCompanies: consolidatedData.summary.balancedCompanies,
+        fromCache: true, // Always from session cache
+        sessionId
+      }
+    });
+
+  } catch (error) {
+    console.error('Consolidated dashboard error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Instant company filtering endpoint
+app.post('/api/session/update-selection', async (req, res) => {
+  try {
+    const { sessionId, selectedTenantIds, currentView } = req.body;
+    
+    if (!sessionId || !selectedTenantIds) {
+      return res.status(400).json({ 
+        error: 'sessionId and selectedTenantIds are required' 
+      });
+    }
+
+    const startTime = Date.now();
+
+    // Update selection (instant database update)
+    await sessionManager.setDisplaySelection(sessionId, selectedTenantIds, currentView);
+
+    // Get new consolidated data (instant math)
+    const consolidatedData = await sessionManager.getConsolidatedData(sessionId, selectedTenantIds);
+    
+    const loadTime = Date.now() - startTime;
+
+    res.json({
+      success: true,
+      selectedCompanies: selectedTenantIds.length,
+      loadTime,
+      data: consolidatedData
+    });
+
+  } catch (error) {
+    console.error('Selection update error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Session status check endpoint
+app.get('/api/session/status/:sessionId', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    
+    const sessionStatus = await sessionManager.hasValidSessionData(sessionId);
+    const displaySelection = await sessionManager.getDisplaySelection(sessionId);
+    
+    res.json({
+      sessionId,
+      hasValidData: sessionStatus.hasData,
+      companiesCount: sessionStatus.companiesCount,
+      expiresAt: sessionStatus.expiresAt,
+      selectedCompanies: displaySelection.selected_tenant_ids.length,
+      currentView: displaySelection.current_view,
+      minutesUntilExpiry: sessionStatus.expiresAt ? 
+        Math.max(0, Math.floor((new Date(sessionStatus.expiresAt) - new Date()) / (1000 * 60))) : 0
+    });
+
+  } catch (error) {
+    console.error('Session status error:', error);
+    res.status(500).json({
+      error: error.message
+    });
+  }
+});
+
+// ============================================================================
+// 5. ADD SESSION CLEANUP (add this after your existing endpoints)
+// ============================================================================
+
+// Clean up expired sessions every 10 minutes
+setInterval(async () => {
+  try {
+    if (sessionManager) {
+      const result = await pool.query('DELETE FROM session_company_data WHERE expires_at < NOW()');
+      if (result.rowCount > 0) {
+        console.log(`🗑️ Cleaned up ${result.rowCount} expired session records`);
+      }
+    }
+  } catch (error) {
+    console.error('Session cleanup error:', error);
+  }
+}, 10 * 60 * 1000); // Every 10 minutes
+
+console.log('✅ Session-based endpoints added to server');
 
 // Add these endpoints to your existing server.js after your current API routes
 
