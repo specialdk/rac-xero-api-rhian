@@ -2689,11 +2689,119 @@
         }
       }
 
-      // 8. Update your setView function to handle YoY
-      // Find your existing setView function and add this case:
-      // else if (currentView === "year-over-year") {
-      //   await loadYearOverYearData();
-      // }
+      function renderYoYFromCachedData() {
+        const cached = window.cachedYoYData;
+
+        if (!cached) {
+          console.log(
+            "No cached YoY data available, falling back to normal loading"
+          );
+          loadYearOverYearData();
+          return;
+        }
+
+        // Filter cached data based on current company filters
+        const filteredYoY = {
+          current: { revenue: 0, expenses: 0, profit: 0, assets: 0, equity: 0 },
+          previous: {
+            revenue: 0,
+            expenses: 0,
+            profit: 0,
+            assets: 0,
+            equity: 0,
+          },
+          growth: { revenue: 0, expenses: 0, profit: 0, assets: 0, equity: 0 },
+          companies: [],
+        };
+
+        const filteredYoyData = [];
+        const filteredMonthlyData = [];
+
+        // Filter based on activeCompanyFilters
+        for (const company of cached.yoyData) {
+          const matchingConnection = connectedCompanies.find(
+            (c) =>
+              c.tenantName.includes(company.companyName) ||
+              company.companyName.includes(
+                c.tenantName.replace("Rirratjingu ", "")
+              )
+          );
+
+          if (
+            matchingConnection &&
+            activeCompanyFilters.includes(matchingConnection.tenantId)
+          ) {
+            filteredYoyData.push(company);
+
+            // Add to totals
+            const current = company.analysis.periods.current;
+            const previous = company.analysis.periods.previous;
+
+            filteredYoY.current.revenue += current.revenue || 0;
+            filteredYoY.current.expenses +=
+              current.revenue - current.profit || 0;
+            filteredYoY.current.profit += current.profit || 0;
+            filteredYoY.current.assets += current.assets || 0;
+            filteredYoY.current.equity += current.equity || 0;
+
+            filteredYoY.previous.revenue += previous.revenue || 0;
+            filteredYoY.previous.expenses +=
+              previous.revenue - previous.profit || 0;
+            filteredYoY.previous.profit += previous.profit || 0;
+            filteredYoY.previous.assets += previous.assets || 0;
+            filteredYoY.previous.equity += previous.equity || 0;
+
+            filteredYoY.companies.push(company);
+          }
+        }
+
+        // Filter monthly data similarly
+        for (const monthly of cached.monthlyData) {
+          const matchingConnection = connectedCompanies.find(
+            (c) =>
+              c.tenantName.includes(monthly.companyName) ||
+              monthly.companyName.includes(
+                c.tenantName.replace("Rirratjingu ", "")
+              )
+          );
+
+          if (
+            matchingConnection &&
+            activeCompanyFilters.includes(matchingConnection.tenantId)
+          ) {
+            filteredMonthlyData.push(monthly);
+          }
+        }
+
+        // Calculate growth rates for filtered data
+        filteredYoY.growth.revenue = calculateGrowthRate(
+          filteredYoY.previous.revenue,
+          filteredYoY.current.revenue
+        );
+        filteredYoY.growth.expenses = calculateGrowthRate(
+          filteredYoY.previous.expenses,
+          filteredYoY.current.expenses
+        );
+        filteredYoY.growth.profit = calculateGrowthRate(
+          filteredYoY.previous.profit,
+          filteredYoY.current.profit
+        );
+        filteredYoY.growth.assets = calculateGrowthRate(
+          filteredYoY.previous.assets,
+          filteredYoY.current.assets
+        );
+        filteredYoY.growth.equity = calculateGrowthRate(
+          filteredYoY.previous.equity,
+          filteredYoY.current.equity
+        );
+
+        // Use existing render function
+        renderConsolidatedYoYAnalysis(
+          filteredYoY,
+          filteredYoyData,
+          filteredMonthlyData
+        );
+      }
       // ====== HELPER FUNCTIONS FOR PARSING MCP RESPONSES ======
 
       function getOrganizationName(tenantName) {
