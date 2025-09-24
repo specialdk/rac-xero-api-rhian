@@ -1392,89 +1392,57 @@
         const selectedNames = getSelectedCompanyNames();
       }
 
-      /*
-      // ====== QUICK ANALYSIS FUNCTIONS ======
-      function quickAnalysis(type) {
-        const selectedCompanies = getSelectedCompanyNames();
-      }
+      async function loadDashboardData() {
+        const dashboardElement = document.getElementById("dashboardData");
 
-      let query = "";
-      let analysisType = "";
-
-      switch (type) {
-        case "trial-balance":
-          query = "Show me the trial balance";
-          analysisType = "Trial Balance Analysis";
-          break;
-        case "cash-position":
-          query = "What is the current cash position?";
-          analysisType = "Cash Position Analysis";
-          break;
-        case "profit-loss":
-          query = "Show me the profit and loss summary";
-          analysisType = "Profit & Loss Analysis";
-          break;
-        case "financial-ratios":
-          query = "Calculate key financial ratios";
-          analysisType = "Financial Ratios Analysis";
-          break;
-        case "outstanding-invoices":
-          query = "Show me outstanding invoices";
-          analysisType = "Outstanding Invoices Analysis";
-          break;
-        case "consolidate-all":
-          query = "Show me consolidated financial summary";
-          analysisType = "Consolidated Analysis";
-          break;
-      }
-      
-      // ====== CHAT FUNCTIONS REMOVED ======
-
-      // ====== QUICK ANALYSIS FUNCTIONS ======
-      function quickAnalysis(type) {
-        const selectedCompanies = getSelectedCompanyNames();
-
-        if (selectedCompanies.length === 0) {
-          console.log(
-            "Please select companies using the filters above before requesting analysis."
-          );
+        if (activeCompanyFilters.length === 0) {
+          dashboardElement.innerHTML = `
+                  <div style="text-align: center; padding: 40px; color: #666;">
+                    <h3>No Companies Selected</h3>
+                    <p>Please select companies using the filters above to view financial data.</p>
+                  </div>
+                `;
           return;
         }
 
-        let query = "";
-        let analysisType = "";
+        // Show loading with specific company count
+        const selectedCompanyNames = getSelectedCompanyNames();
+        dashboardElement.innerHTML = `
+                <div class="loading">
+                  <div class="loading-spinner"></div>
+                  Loading ${currentView} data from ${
+          activeCompanyFilters.length
+        } companies:<br>
+                  <small>${selectedCompanyNames.join(", ")}</small>
+                </div>
+              `;
 
-        switch (type) {
-          case "trial-balance":
-            query = "Show me the trial balance";
-            analysisType = "Trial Balance Analysis";
-            break;
-          case "cash-position":
-            query = "What is the current cash position?";
-            analysisType = "Cash Position Analysis";
-            break;
-          case "profit-loss":
-            query = "Show me the profit and loss summary";
-            analysisType = "Profit & Loss Analysis";
-            break;
-          case "financial-ratios":
-            query = "Calculate key financial ratios";
-            analysisType = "Financial Ratios Analysis";
-            break;
-          case "outstanding-invoices":
-            query = "Show me outstanding invoices";
-            analysisType = "Outstanding Invoices Analysis";
-            break;
-          case "consolidate-all":
-            query = "Show me consolidated financial summary";
-            analysisType = "Consolidated Analysis";
-            break;
+        try {
+          if (currentView === "overview") {
+            await loadOverviewDataWithYoY();
+          } else if (currentView === "trial-balance") {
+            await loadTrialBalanceData();
+          } else if (currentView === "cash-flow") {
+            await loadCashFlowData();
+          } else if (currentView === "p-and-l") {
+            await loadProfitLossData();
+          } else if (currentView === "year-over-year") {
+            await loadYearOverYearData(); // <- Add this line
+          } else if (currentView === "alerts") {
+            await loadAlertsData();
+          }
+        } catch (error) {
+          dashboardElement.innerHTML = `
+                  <div style="text-align: center; padding: 40px; color: #e74c3c;">
+                    <h3>Error Loading Data</h3>
+                    <p>Failed to load dashboard data: ${error.message}</p>
+                    <button onclick="loadDashboardData()" style="margin-top: 10px; padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                      Retry
+                    </button>
+                  </div>
+                `;
         }
-
-        console.log(
-          `Processing ${analysisType} for: ${selectedCompanies.join(", ")}`
-        );
-      }*/
+      }
 
       // Helper function for calculating consolidated metrics
       function calculateConsolidatedFromNewEndpoint(validData) {
