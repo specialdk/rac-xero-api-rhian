@@ -939,6 +939,26 @@
       let activeCompanyFilters = [];
       let currentView = "overview";
 
+      //Then Session Management function
+      function updateSessionStatus() {
+        const statusElement = document.getElementById("sessionStatus");
+        if (!statusElement) return;
+
+        if (sessionManager.isSessionValid()) {
+          const timeRemaining = Math.round(
+            (sessionManager.sessionExpiry - new Date()) / 1000 / 60
+          );
+          statusElement.innerHTML = `Session: ⚡ Optimized (${timeRemaining}m remaining)`;
+          statusElement.style.color = "#27ae60";
+        } else {
+          statusElement.innerHTML = `Session: Standard Mode`;
+          statusElement.style.color = "#f39c12";
+        }
+      }
+
+      // Call this after session initialization and periodically
+      setInterval(updateSessionStatus, 30000); // Update every 30 seconds
+
       // ====== CONNECTION MANAGER FUNCTIONS ======
 
       function loadSavedPreferences() {
