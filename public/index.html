@@ -1,932 +1,1051 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+  <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RAC XERO API - FINANCE DASHBOARD</title>
-    
-
-<style>
-  /* ====== SECTION 1: CSS STYLES & LAYOUT ====== */
-  /* Organized and consolidated styles with redundancy removed */
-  
-  /* ====== GLOBAL RESET & BASE STYLES ====== */
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    height: 100vh;
-    overflow: hidden;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  }
-
-  /* ====== CONNECTION MANAGER STYLES ====== */
-  .connection-manager {
-    min-height: 100vh;
-    padding: 2rem;
-    display: block;
-  }
-
-  .login-container {
-    max-width: 800px;
-    margin: 40px auto;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-    overflow: hidden;
-  }
-
-  .login-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 2rem;
-    text-align: center;
-  }
-
-  .login-header h1 {
-    font-size: 1.8rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .login-content {
-    padding: 2rem;
-  }
-
-  /* ====== STEP INDICATOR ====== */
-  .step-indicator {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 2rem;
-  }
-
-  .step {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    background: #f8f9fa;
-    color: #666;
-    font-size: 0.9rem;
-    margin: 0 0.5rem;
-  }
-
-  .step.active {
-    background: #667eea;
-    color: white;
-  }
-
-  .step.completed {
-    background: #28a745;
-    color: white;
-  }
-
-  .step-number {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8rem;
-    font-weight: bold;
-  }
-
-  /* ====== COMPANY SELECTION STYLES ====== */
-  .company-list {
-    max-height: 400px;
-    overflow-y: auto;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 1rem;
-    margin-bottom: 1rem;
-  }
-
-  .company-item {
-    display: flex;
-    align-items: center;
-    padding: 0.75rem;
-    border-radius: 6px;
-    margin-bottom: 0.5rem;
-    transition: background-color 0.2s;
-    cursor: pointer;
-  }
-
-  .company-item:hover {
-    background-color: #f8f9fa;
-  }
-
-  .company-item.all-companies {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    font-weight: bold;
-    margin-bottom: 1rem;
-  }
-
-  .company-checkbox {
-    width: 18px;
-    height: 18px;
-    margin-right: 1rem;
-    cursor: pointer;
-  }
-
-  .company-name {
-    flex: 1;
-    font-size: 1rem;
-  }
-
-  .selection-summary {
-    background: #f8f9fa;
-    padding: 1rem;
-    border-radius: 6px;
-    margin-bottom: 1rem;
-    text-align: center;
-  }
-
-  /* ====== BUTTONS ====== */
-  .continue-btn, .oauth-btn, .launch-btn {
-    border: none;
-    border-radius: 6px;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-
-  .continue-btn {
-    background: #667eea;
-    color: white;
-    padding: 1rem 2rem;
-    width: 100%;
-  }
-
-  .continue-btn:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-  }
-
-  .oauth-btn {
-    background: #28a745;
-    color: white;
-    padding: 1rem 2rem;
-    margin: 0.5rem;
-  }
-
-  .oauth-btn.primary {
-    background: #667eea;
-  }
-
-  .launch-btn {
-    background: #667eea;
-    color: white;
-    padding: 1.5rem 3rem;
-    border-radius: 8px;
-    font-size: 1.1rem;
-    margin-top: 1rem;
-  }
-
-  .back-to-connections {
-    background: #6c757d;
-    color: white;
-    border: none;
-    padding: 4px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    margin-left: 10px;
-  }
-
-  /* ====== OAUTH FLOW STYLES ====== */
-  .oauth-flow, .completion {
-    display: none;
-    text-align: center;
-  }
-
-  .current-connection {
-    background: #f8f9fa;
-    padding: 2rem;
-    border-radius: 8px;
-    margin-bottom: 2rem;
-  }
-
-  .progress-bar {
-    background: #e0e0e0;
-    border-radius: 10px;
-    height: 8px;
-    margin: 15px 0;
-    overflow: hidden;
-  }
-
-  .progress-fill {
-    background: linear-gradient(45deg, #4caf50, #8bc34a);
-    height: 100%;
-    transition: width 0.3s ease;
-  }
-
-  /* ====== SUCCESS/ERROR BOXES ====== */
-  .success-box {
-    background: #d4edda;
-    border: 1px solid #c3e6cb;
-    border-radius: 8px;
-    padding: 12px;
-    margin: 10px 0;
-    color: #155724;
-  }
-
-  .error-box {
-    background: #f8d7da;
-    border: 1px solid #f5c6cb;
-    color: #721c24;
-    padding: 1rem;
-    border-radius: 6px;
-    margin: 1rem 0;
-  }
-
-  /* ====== MAIN DASHBOARD LAYOUT ====== */
-  .main-dashboard {
-    display: none;
-    height: 100vh;
-    background: #f5f5f5;
-  }
-
-  .header {
-    background: #2c3e50;
-    color: white;
-    padding: 12px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    z-index: 1000;
-    position: relative;
-  }
-
-  .header h1 {
-    font-size: 18px;
-    font-weight: 600;
-  }
-
-  .header .session-info {
-    font-size: 14px;
-    opacity: 0.9;
-  }
-
-  .main-container {
-    display: block;
-    height: calc(100vh - 60px);
-    position: relative;
-  }
-
-  /* ====== DASHBOARD PANEL ====== */
-  .dashboard-panel {
-    width: 100%;
-    background: #fafafa;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-  }
-
-  .panel-header {
-    background: #34495e;
-    color: white;
-    padding: 12px 20px;
-    font-weight: 600;
-    font-size: 14px;
-    border-bottom: 1px solid #2c3e50;
-  }
-
-  .dashboard-content {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-    height: calc(100vh - 120px);
-  }
-
-  /* ====== COMPANY FILTERS ====== */
-  .company-filter-bar {
-    background: #ecf0f1;
-    padding: 12px 20px;
-    border-bottom: 1px solid #bdc3c7;
-    font-size: 13px;
-  }
-
-  .company-filter-bar .filter-label {
-    display: inline-block;
-    margin-right: 15px;
-    font-weight: 600;
-    color: #2c3e50;
-  }
-
-  .company-checkboxes {
-    display: inline-flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-bottom: 8px;
-  }
-
-  .company-checkbox-item {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-  }
-
-  .company-checkbox-item:hover {
-    background: rgba(52, 152, 219, 0.1);
-  }
-
-  .company-checkbox-item input[type="checkbox"] {
-    margin: 0;
-    cursor: pointer;
-  }
-
-  .company-checkbox-item label {
-    font-weight: 500;
-    color: #2c3e50;
-    cursor: pointer;
-    font-size: 12px;
-  }
-
-  .company-checkbox-item.balanced label {
-    color: #27ae60;
-  }
-
-  .company-checkbox-item.imbalanced label {
-    color: #e74c3c;
-  }
-
-  /* ====== DASHBOARD GRID & CARDS ====== */
-  .dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(200px, 1fr));
-    gap: 10px;
-    margin-bottom: 20px;
-  }
-
-  .dashboard-card {
-    background: white;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    border: 1px solid #e0e0e0;
-    min-width: 250px;
-  }
-
-  .dashboard-card h3 {
-    color: #2c3e50;
-    margin-bottom: 15px;
-    font-size: 16px;
-  }
-
-  .dashboard-card h4 {
-    color: #34495e;
-    margin-bottom: 10px;
-    font-size: 14px;
-  }
-
-  /* ====== METRICS ====== */
-  .metric {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid #f0f0f0;
-  }
-
-  .metric:last-child {
-    border-bottom: none;
-  }
-
-  .metric-value {
-    font-weight: 600;
-    color: #27ae60;
-  }
-
-  .metric-value.negative {
-    color: #e74c3c;
-  }
-
-  /* ====== STATUS INDICATORS ====== */
-  .status-indicator {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    margin-right: 8px;
-  }
-
-  .status-indicator.balanced {
-    background: #27ae60;
-  }
-
-  .status-indicator.imbalanced {
-    background: #e74c3c;
-  }
-
-  /* ====== TOOLBAR ====== */
-  .toolbar {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-  }
-
-  .toolbar button {
-    padding: 8px 12px;
-    border: 1px solid #ddd;
-    background: white;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    transition: all 0.2s;
-  }
-
-  .toolbar button:hover {
-    background: #f0f0f0;
-  }
-
-  .toolbar button.active {
-    background: #3498db;
-    color: white;
-    border-color: #3498db;
-  }
-
-  /* ====== LOADING STATES ====== */
-  .loading {
-    text-align: center;
-    padding: 40px;
-    color: #666;
-  }
-
-  .loading-spinner {
-    border: 3px solid #f3f3f3;
-    border-top: 3px solid #3498db;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 15px;
-  }
-
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-
-  /* ====== UTILITY CLASSES ====== */
-  .hidden {
-    display: none !important;
-  }
-
-  /* ====== RESPONSIVE DESIGN ====== */
-  @media (max-width: 768px) {
-    .dashboard-grid {
-      grid-template-columns: 1fr;
-    }
-    
-    .company-checkboxes {
-      flex-direction: column;
-      gap: 6px;
-    }
-    
-    .main-container {
-      flex-direction: column;
-    }
-    
-    .login-container {
-      margin: 20px;
-      max-width: none;
-    }
-  }
-
-  @media (max-width: 480px) {
-    body {
-      padding: 10px;
-    }
-    
-    .dashboard-content {
-      padding: 10px;
-    }
-    
-    .header {
-      padding: 8px 15px;
-    }
-    
-    .header h1 {
-      font-size: 16px;
-    }
-  }
-</style>
-</head>
-<!-- ====== SECTION 2: HTML STRUCTURE ====== -->
-<!-- Organized and streamlined HTML with redundancy removed -->
-
-<body>
-  <!-- CONNECTION MANAGER SECTION -->
-  <div class="connection-manager" id="connectionManager">
-    <div class="login-container">
-      <div class="login-header">
-        <h1>RAC Multi-Company Login Manager</h1>
-        <p>Streamlined access to your Xero organisations</p>
-      </div>
-
-      <div class="login-content">
-        <!-- Step Indicator -->
-        <div class="step-indicator">
-          <div class="step active" id="step1Indicator">
-            <div class="step-number">1</div>
-            <span>Select Companies</span>
-          </div>
-          <div class="step" id="step2Indicator">
-            <div class="step-number">2</div>
-            <span>OAuth Authentication</span>
-          </div>
-          <div class="step" id="step3Indicator">
-            <div class="step-number">3</div>
-            <span>Launch Dashboard</span>
-          </div>
+
+    <style>
+      /* ====== SECTION 1: CSS STYLES & LAYOUT ====== */
+      /* Organized and consolidated styles with redundancy removed */
+
+      /* ====== GLOBAL RESET & BASE STYLES ====== */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        height: 100vh;
+        overflow: hidden;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      }
+
+      /* ====== CONNECTION MANAGER STYLES ====== */
+      .connection-manager {
+        min-height: 100vh;
+        padding: 2rem;
+        display: block;
+      }
+
+      .login-container {
+        max-width: 800px;
+        margin: 40px auto;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+      }
+
+      .login-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        text-align: center;
+      }
+
+      .login-header h1 {
+        font-size: 1.8rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .login-content {
+        padding: 2rem;
+      }
+
+      /* ====== STEP INDICATOR ====== */
+      .step-indicator {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 2rem;
+      }
+
+      .step {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        background: #f8f9fa;
+        color: #666;
+        font-size: 0.9rem;
+        margin: 0 0.5rem;
+      }
+
+      .step.active {
+        background: #667eea;
+        color: white;
+      }
+
+      .step.completed {
+        background: #28a745;
+        color: white;
+      }
+
+      .step-number {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        font-weight: bold;
+      }
+
+      /* ====== COMPANY SELECTION STYLES ====== */
+      .company-list {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .company-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        border-radius: 6px;
+        margin-bottom: 0.5rem;
+        transition: background-color 0.2s;
+        cursor: pointer;
+      }
+
+      .company-item:hover {
+        background-color: #f8f9fa;
+      }
+
+      .company-item.all-companies {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        font-weight: bold;
+        margin-bottom: 1rem;
+      }
+
+      .company-checkbox {
+        width: 18px;
+        height: 18px;
+        margin-right: 1rem;
+        cursor: pointer;
+      }
+
+      .company-name {
+        flex: 1;
+        font-size: 1rem;
+      }
+
+      .selection-summary {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 6px;
+        margin-bottom: 1rem;
+        text-align: center;
+      }
+
+      /* ====== BUTTONS ====== */
+      .continue-btn,
+      .oauth-btn,
+      .launch-btn {
+        border: none;
+        border-radius: 6px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .continue-btn {
+        background: #667eea;
+        color: white;
+        padding: 1rem 2rem;
+        width: 100%;
+      }
+
+      .continue-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .oauth-btn {
+        background: #28a745;
+        color: white;
+        padding: 1rem 2rem;
+        margin: 0.5rem;
+      }
+
+      .oauth-btn.primary {
+        background: #667eea;
+      }
+
+      .launch-btn {
+        background: #667eea;
+        color: white;
+        padding: 1.5rem 3rem;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        margin-top: 1rem;
+      }
+
+      .back-to-connections {
+        background: #6c757d;
+        color: white;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        margin-left: 10px;
+      }
+
+      /* ====== OAUTH FLOW STYLES ====== */
+      .oauth-flow,
+      .completion {
+        display: none;
+        text-align: center;
+      }
+
+      .current-connection {
+        background: #f8f9fa;
+        padding: 2rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+      }
+
+      .progress-bar {
+        background: #e0e0e0;
+        border-radius: 10px;
+        height: 8px;
+        margin: 15px 0;
+        overflow: hidden;
+      }
+
+      .progress-fill {
+        background: linear-gradient(45deg, #4caf50, #8bc34a);
+        height: 100%;
+        transition: width 0.3s ease;
+      }
+
+      /* ====== SUCCESS/ERROR BOXES ====== */
+      .success-box {
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        border-radius: 8px;
+        padding: 12px;
+        margin: 10px 0;
+        color: #155724;
+      }
+
+      .error-box {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+        padding: 1rem;
+        border-radius: 6px;
+        margin: 1rem 0;
+      }
+
+      /* ====== MAIN DASHBOARD LAYOUT ====== */
+      .main-dashboard {
+        display: none;
+        height: 100vh;
+        background: #f5f5f5;
+      }
+
+      .header {
+        background: #2c3e50;
+        color: white;
+        padding: 12px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+        position: relative;
+      }
+
+      .header h1 {
+        font-size: 18px;
+        font-weight: 600;
+      }
+
+      .header .session-info {
+        font-size: 14px;
+        opacity: 0.9;
+      }
+
+      .main-container {
+        display: block;
+        height: calc(100vh - 60px);
+        position: relative;
+      }
+
+      /* ====== DASHBOARD PANEL ====== */
+      .dashboard-panel {
+        width: 100%;
+        background: #fafafa;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+      }
+
+      .panel-header {
+        background: #34495e;
+        color: white;
+        padding: 12px 20px;
+        font-weight: 600;
+        font-size: 14px;
+        border-bottom: 1px solid #2c3e50;
+      }
+
+      .dashboard-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        height: calc(100vh - 120px);
+      }
+
+      /* ====== COMPANY FILTERS ====== */
+      .company-filter-bar {
+        background: #ecf0f1;
+        padding: 12px 20px;
+        border-bottom: 1px solid #bdc3c7;
+        font-size: 13px;
+      }
+
+      .company-filter-bar .filter-label {
+        display: inline-block;
+        margin-right: 15px;
+        font-weight: 600;
+        color: #2c3e50;
+      }
+
+      .company-checkboxes {
+        display: inline-flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+      }
+
+      .company-checkbox-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+
+      .company-checkbox-item:hover {
+        background: rgba(52, 152, 219, 0.1);
+      }
+
+      .company-checkbox-item input[type="checkbox"] {
+        margin: 0;
+        cursor: pointer;
+      }
+
+      .company-checkbox-item label {
+        font-weight: 500;
+        color: #2c3e50;
+        cursor: pointer;
+        font-size: 12px;
+      }
+
+      .company-checkbox-item.balanced label {
+        color: #27ae60;
+      }
+
+      .company-checkbox-item.imbalanced label {
+        color: #e74c3c;
+      }
+
+      /* ====== DASHBOARD GRID & CARDS ====== */
+      .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(200px, 1fr));
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+
+      .dashboard-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e0e0e0;
+        min-width: 250px;
+      }
+
+      .dashboard-card h3 {
+        color: #2c3e50;
+        margin-bottom: 15px;
+        font-size: 16px;
+      }
+
+      .dashboard-card h4 {
+        color: #34495e;
+        margin-bottom: 10px;
+        font-size: 14px;
+      }
+
+      /* ====== METRICS ====== */
+      .metric {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #f0f0f0;
+      }
+
+      .metric:last-child {
+        border-bottom: none;
+      }
+
+      .metric-value {
+        font-weight: 600;
+        color: #27ae60;
+      }
+
+      .metric-value.negative {
+        color: #e74c3c;
+      }
+
+      /* ====== STATUS INDICATORS ====== */
+      .status-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 8px;
+      }
+
+      .status-indicator.balanced {
+        background: #27ae60;
+      }
+
+      .status-indicator.imbalanced {
+        background: #e74c3c;
+      }
+
+      /* ====== TOOLBAR ====== */
+      .toolbar {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+      }
+
+      .toolbar button {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        background: white;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.2s;
+      }
+
+      .toolbar button:hover {
+        background: #f0f0f0;
+      }
+
+      .toolbar button.active {
+        background: #3498db;
+        color: white;
+        border-color: #3498db;
+      }
+
+      /* ====== LOADING STATES ====== */
+      .loading {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+      }
+
+      .loading-spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #3498db;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 15px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* ====== UTILITY CLASSES ====== */
+      .hidden {
+        display: none !important;
+      }
+
+      /* ====== RESPONSIVE DESIGN ====== */
+      @media (max-width: 768px) {
+        .dashboard-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .company-checkboxes {
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .main-container {
+          flex-direction: column;
+        }
+
+        .login-container {
+          margin: 20px;
+          max-width: none;
+        }
+      }
+
+      @media (max-width: 480px) {
+        body {
+          padding: 10px;
+        }
+
+        .dashboard-content {
+          padding: 10px;
+        }
+
+        .header {
+          padding: 8px 15px;
+        }
+
+        .header h1 {
+          font-size: 16px;
+        }
+      }
+    </style>
+  </head>
+  <!-- ====== SECTION 2: HTML STRUCTURE ====== -->
+  <!-- Organized and streamlined HTML with redundancy removed -->
+
+  <body>
+    <!-- CONNECTION MANAGER SECTION -->
+    <div class="connection-manager" id="connectionManager">
+      <div class="login-container">
+        <div class="login-header">
+          <h1>RAC Multi-Company Login Manager</h1>
+          <p>Streamlined access to your Xero organisations</p>
         </div>
 
-        <!-- Step 1: Company Selection -->
-        <div class="company-selection" id="step1">
-          <h2 style="text-align: center; margin-bottom: 1rem; color: #333">
-            Select Companies to Connect
-          </h2>
-
-          <div class="company-list">
-            <!-- ALL Companies Option -->
-            <div class="company-item all-companies" onclick="toggleAllCompanies(event)">
-              <input type="checkbox" class="company-checkbox" id="all-companies" />
-              <div class="company-name">🚀 ALL COMPANIES (Quick Connect)</div>
+        <div class="login-content">
+          <!-- Step Indicator -->
+          <div class="step-indicator">
+            <div class="step active" id="step1Indicator">
+              <div class="step-number">1</div>
+              <span>Select Companies</span>
             </div>
-
-            <!-- Individual Companies -->
-            <div class="company-item" onclick="toggleCompany('rac', event)">
-              <input type="checkbox" class="company-checkbox" id="company-rac" />
-              <div class="company-name">Rirratjingu Aboriginal Corporation 8538</div>
+            <div class="step" id="step2Indicator">
+              <div class="step-number">2</div>
+              <span>OAuth Authentication</span>
             </div>
-
-            <div class="company-item" onclick="toggleCompany('mining', event)">
-              <input type="checkbox" class="company-checkbox" id="company-mining" />
-              <div class="company-name">Rirratjingu Mining Pty Ltd 7168</div>
-            </div>
-
-            <div class="company-item" onclick="toggleCompany('property', event)">
-              <input type="checkbox" class="company-checkbox" id="company-property" />
-              <div class="company-name">Rirratjingu Property Management & Maintenance Services Pty Ltd</div>
-            </div>
-
-            <div class="company-item" onclick="toggleCompany('enterprises', event)">
-              <input type="checkbox" class="company-checkbox" id="company-enterprises" />
-              <div class="company-name">Rirratjingu Enterprises Pty Ltd</div>
-            </div>
-
-            <div class="company-item" onclick="toggleCompany('invest', event)">
-              <input type="checkbox" class="company-checkbox" id="company-invest" />
-              <div class="company-name">Rirratjingu Invest P/ L ATF Miliditjpi Trust</div>
-            </div>
-
-            <div class="company-item" onclick="toggleCompany('ngarrkuwuy', event)">
-              <input type="checkbox" class="company-checkbox" id="company-ngarrkuwuy" />
-              <div class="company-name">Ngarrkuwuy Developments Pty Ltd</div>
-            </div>
-
-            <div class="company-item" onclick="toggleCompany('marrin', event)">
-              <input type="checkbox" class="company-checkbox" id="company-marrin" />
-              <div class="company-name">Marrin Square Developments Pty Ltd</div>
+            <div class="step" id="step3Indicator">
+              <div class="step-number">3</div>
+              <span>Launch Dashboard</span>
             </div>
           </div>
 
-          <div class="selection-summary" id="selectionSummary">
-            <strong>Selected: 0 companies</strong>
-          </div>
+          <!-- Step 1: Company Selection -->
+          <div class="company-selection" id="step1">
+            <h2 style="text-align: center; margin-bottom: 1rem; color: #333">
+              Select Companies to Connect
+            </h2>
 
-          <button class="continue-btn" id="continueBtn" onclick="startOAuthFlow()" disabled>
-            Continue with Selected Companies
-          </button>
-        </div>
+            <div class="company-list">
+              <!-- ALL Companies Option -->
+              <div
+                class="company-item all-companies"
+                onclick="toggleAllCompanies(event)"
+              >
+                <input
+                  type="checkbox"
+                  class="company-checkbox"
+                  id="all-companies"
+                />
+                <div class="company-name">🚀 ALL COMPANIES (Quick Connect)</div>
+              </div>
 
-        <!-- Step 2: OAuth Flow -->
-        <div class="oauth-flow" id="step2">
-          <h2>Connecting to Your Companies</h2>
+              <!-- Individual Companies -->
+              <div class="company-item" onclick="toggleCompany('rac', event)">
+                <input
+                  type="checkbox"
+                  class="company-checkbox"
+                  id="company-rac"
+                />
+                <div class="company-name">
+                  Rirratjingu Aboriginal Corporation 8538
+                </div>
+              </div>
 
-          <div class="current-connection">
-            <h3 id="currentCompanyName">Ready to connect...</h3>
-            <div class="progress-bar">
-              <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+              <div
+                class="company-item"
+                onclick="toggleCompany('mining', event)"
+              >
+                <input
+                  type="checkbox"
+                  class="company-checkbox"
+                  id="company-mining"
+                />
+                <div class="company-name">Rirratjingu Mining Pty Ltd 7168</div>
+              </div>
+
+              <div
+                class="company-item"
+                onclick="toggleCompany('property', event)"
+              >
+                <input
+                  type="checkbox"
+                  class="company-checkbox"
+                  id="company-property"
+                />
+                <div class="company-name">
+                  Rirratjingu Property Management & Maintenance Services Pty Ltd
+                </div>
+              </div>
+
+              <div
+                class="company-item"
+                onclick="toggleCompany('enterprises', event)"
+              >
+                <input
+                  type="checkbox"
+                  class="company-checkbox"
+                  id="company-enterprises"
+                />
+                <div class="company-name">Rirratjingu Enterprises Pty Ltd</div>
+              </div>
+
+              <div
+                class="company-item"
+                onclick="toggleCompany('invest', event)"
+              >
+                <input
+                  type="checkbox"
+                  class="company-checkbox"
+                  id="company-invest"
+                />
+                <div class="company-name">
+                  Rirratjingu Invest P/ L ATF Miliditjpi Trust
+                </div>
+              </div>
+
+              <div
+                class="company-item"
+                onclick="toggleCompany('ngarrkuwuy', event)"
+              >
+                <input
+                  type="checkbox"
+                  class="company-checkbox"
+                  id="company-ngarrkuwuy"
+                />
+                <div class="company-name">Ngarrkuwuy Developments Pty Ltd</div>
+              </div>
+
+              <div
+                class="company-item"
+                onclick="toggleCompany('marrin', event)"
+              >
+                <input
+                  type="checkbox"
+                  class="company-checkbox"
+                  id="company-marrin"
+                />
+                <div class="company-name">
+                  Marrin Square Developments Pty Ltd
+                </div>
+              </div>
             </div>
-            <div id="progressText">Preparing connections...</div>
-          </div>
 
-          <div class="success-box" id="oauthInstructions">
-            <strong>Ready to start:</strong> Click "Start OAuth Flow" to begin connecting to your selected companies.
-          </div>
+            <div class="selection-summary" id="selectionSummary">
+              <strong>Selected: 0 companies</strong>
+            </div>
 
-          <div id="oauthButtons">
-            <button class="oauth-btn primary" onclick="startNextOAuth()" id="startOAuthBtn">
-              🔗 Start OAuth Flow
+            <button
+              class="continue-btn"
+              id="continueBtn"
+              onclick="startOAuthFlow()"
+              disabled
+            >
+              Continue with Selected Companies
             </button>
           </div>
 
-          <div id="waitingMessage" style="display: none">
+          <!-- Step 2: OAuth Flow -->
+          <div class="oauth-flow" id="step2">
+            <h2>Connecting to Your Companies</h2>
+
+            <div class="current-connection">
+              <h3 id="currentCompanyName">Ready to connect...</h3>
+              <div class="progress-bar">
+                <div
+                  class="progress-fill"
+                  id="progressFill"
+                  style="width: 0%"
+                ></div>
+              </div>
+              <div id="progressText">Preparing connections...</div>
+            </div>
+
+            <div class="success-box" id="oauthInstructions">
+              <strong>Ready to start:</strong> Click "Start OAuth Flow" to begin
+              connecting to your selected companies.
+            </div>
+
+            <div id="oauthButtons">
+              <button
+                class="oauth-btn primary"
+                onclick="startNextOAuth()"
+                id="startOAuthBtn"
+              >
+                🔗 Start OAuth Flow
+              </button>
+            </div>
+
+            <div id="waitingMessage" style="display: none">
+              <div class="success-box">
+                <strong>Waiting for OAuth completion...</strong><br />
+                Complete the Xero authorization, then return here.
+              </div>
+              <button class="oauth-btn" onclick="checkOAuthStatus()">
+                ✅ I've completed the OAuth - Continue
+              </button>
+            </div>
+          </div>
+
+          <!-- Step 3: Completion -->
+          <div class="completion" id="step3">
+            <h2>🎉 All Companies Connected!</h2>
+            <div class="connected-companies" id="connectedCompaniesList"></div>
             <div class="success-box">
-              <strong>Waiting for OAuth completion...</strong><br />
-              Complete the Xero authorization, then return here.
+              <strong>Ready to launch!</strong> All selected companies are now
+              connected.
             </div>
-            <button class="oauth-btn" onclick="checkOAuthStatus()">
-              ✅ I've completed the OAuth - Continue
+            <button class="launch-btn" onclick="showMainDashboard()">
+              🚀 Launch Financial Dashboard
             </button>
           </div>
         </div>
+      </div>
+    </div>
 
-        <!-- Step 3: Completion -->
-        <div class="completion" id="step3">
-          <h2>🎉 All Companies Connected!</h2>
-          <div class="connected-companies" id="connectedCompaniesList"></div>
-          <div class="success-box">
-            <strong>Ready to launch!</strong> All selected companies are now connected.
-          </div>
-          <button class="launch-btn" onclick="showMainDashboard()">
-            🚀 Launch Financial Dashboard
+    <!-- MAIN DASHBOARD SECTION -->
+    <div class="main-dashboard" id="mainDashboard">
+      <div class="header">
+        <h1>RAC Financial Dashboard</h1>
+        <div class="session-info">
+          Session: Active | Connected Companies:
+          <span id="connectedCount">0</span>
+          <button class="back-to-connections" onclick="backToConnections()">
+            🔙 Manage Connections
           </button>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- MAIN DASHBOARD SECTION -->
-  <div class="main-dashboard" id="mainDashboard">
-    <div class="header">
-      <h1>RAC Financial Dashboard</h1>
-      <div class="session-info">
-        Session: Active | Connected Companies: <span id="connectedCount">0</span>
-        <button class="back-to-connections" onclick="backToConnections()">
-          🔙 Manage Connections
-        </button>
-      </div>
-    </div>
+      <div class="main-container">
+        <div class="dashboard-panel">
+          <div class="panel-header">
+            <span class="status-indicator balanced" id="dashboardStatus"></span>
+            Financial Dashboard - Live Data
 
-    <div class="main-container">
-      <div class="dashboard-panel">
-        <div class="panel-header">
-          <span class="status-indicator balanced" id="dashboardStatus"></span>
-          Financial Dashboard - Live Data
+            <!-- Company filter in header -->
+            <div
+              style="
+                display: inline-flex;
+                gap: 15px;
+                margin-left: 30px;
+                font-size: 13px;
+              "
+            >
+              <span style="font-weight: 600">Companies:</span>
+              <div id="companyFilters" style="display: inline-flex; gap: 10px">
+                <!-- Company checkboxes populated by JavaScript -->
+              </div>
+            </div>
+          </div>
 
-          <!-- Company filter in header -->
-          <div style="display: inline-flex; gap: 15px; margin-left: 30px; font-size: 13px;">
-            <span style="font-weight: 600">Companies:</span>
-            <div id="companyFilters" style="display: inline-flex; gap: 10px">
-              <!-- Company checkboxes populated by JavaScript -->
+          <div class="dashboard-content">
+            <div class="toolbar">
+              <button class="active" onclick="setView('overview', this)">
+                Overview
+              </button>
+              <button onclick="setView('trial-balance', this)">
+                Trial Balance
+              </button>
+              <button onclick="setView('cash-flow', this)">Cash Flow</button>
+              <button onclick="setView('p-and-l', this)">P&L</button>
+              <button onclick="setView('year-over-year', this)">
+                YoY Analysis
+              </button>
+              <button onclick="setView('alerts', this)">Alerts</button>
+            </div>
+
+            <div id="dashboardData">
+              <div class="loading">
+                <div class="loading-spinner"></div>
+                Loading financial data from connected companies...
+              </div>
             </div>
           </div>
         </div>
-
-        <div class="dashboard-content">
-          <div class="toolbar">
-            <button class="active" onclick="setView('overview', this)">Overview</button>
-            <button onclick="setView('trial-balance', this)">Trial Balance</button>
-            <button onclick="setView('cash-flow', this)">Cash Flow</button>
-            <button onclick="setView('p-and-l', this)">P&L</button>
-            <button onclick="setView('year-over-year', this)">YoY Analysis</button>
-            <button onclick="setView('alerts', this)">Alerts</button>
-          </div>
-
-          <div id="dashboardData">
-            <div class="loading">
-              <div class="loading-spinner"></div>
-              Loading financial data from connected companies...
-            </div>
-          </div>
-        </div>
       </div>
     </div>
-  </div>
- 
-  /* ====== SECTION 3: CORE JAVASCRIPT FUNCTIONS ====== */
-/* Organized and consolidated JavaScript with redundancy removed */
 
-<script>
-  // ====== GLOBAL VARIABLES ====== 
-  const companies = {
-    rac: "Rirratjingu Aboriginal Corporation 8538",
-    mining: "Rirratjingu Mining Pty Ltd 7168", 
-    property: "Rirratjingu Property Management & Maintenance Services Pty Ltd",
-    enterprises: "Rirratjingu Enterprises Pty Ltd",
-    invest: "Rirratjingu Invest P/ L ATF Miliditjpi Trust",
-    ngarrkuwuy: "Ngarrkuwuy Developments Pty Ltd",
-    marrin: "Marrin Square Developments Pty Ltd",
-  };
+    /* ====== SECTION 3: CORE JAVASCRIPT FUNCTIONS ====== */ /* Organized and
+    consolidated JavaScript with redundancy removed */
 
-  let selectedCompanies = [];
-  let oauthProgress = 0;
-  let connectedCompanies = [];
-  let isOAuthInProgress = false;
-  let activeCompanyFilters = [];
-  let currentView = "overview";
+    <script>
+      // ====== GLOBAL VARIABLES ======
+      const companies = {
+        rac: "Rirratjingu Aboriginal Corporation 8538",
+        mining: "Rirratjingu Mining Pty Ltd 7168",
+        property:
+          "Rirratjingu Property Management & Maintenance Services Pty Ltd",
+        enterprises: "Rirratjingu Enterprises Pty Ltd",
+        invest: "Rirratjingu Invest P/ L ATF Miliditjpi Trust",
+        ngarrkuwuy: "Ngarrkuwuy Developments Pty Ltd",
+        marrin: "Marrin Square Developments Pty Ltd",
+      };
 
-  // ====== CONNECTION MANAGER FUNCTIONS ======
+      let selectedCompanies = [];
+      let oauthProgress = 0;
+      let connectedCompanies = [];
+      let isOAuthInProgress = false;
+      let activeCompanyFilters = [];
+      let currentView = "overview";
 
-  function loadSavedPreferences() {
-    const saved = localStorage.getItem("racCompanyPreferences");
-    if (saved) {
-      try {
-        selectedCompanies = JSON.parse(saved);
-        selectedCompanies.forEach((companyId) => {
-          const checkbox = document.getElementById(`company-${companyId}`);
-          if (checkbox) checkbox.checked = true;
-        });
+      // ====== CONNECTION MANAGER FUNCTIONS ======
+
+      function loadSavedPreferences() {
+        const saved = localStorage.getItem("racCompanyPreferences");
+        if (saved) {
+          try {
+            selectedCompanies = JSON.parse(saved);
+            selectedCompanies.forEach((companyId) => {
+              const checkbox = document.getElementById(`company-${companyId}`);
+              if (checkbox) checkbox.checked = true;
+            });
+            updateSelectionSummary();
+          } catch (error) {
+            console.log("No valid saved preferences");
+          }
+        }
+      }
+
+      function savePreferences() {
+        localStorage.setItem(
+          "racCompanyPreferences",
+          JSON.stringify(selectedCompanies)
+        );
+      }
+
+      function toggleCompany(companyId, event) {
+        event.stopPropagation();
+        const checkbox = document.getElementById(`company-${companyId}`);
+        checkbox.checked = !checkbox.checked;
+
+        if (checkbox.checked) {
+          if (!selectedCompanies.includes(companyId)) {
+            selectedCompanies.push(companyId);
+          }
+        } else {
+          selectedCompanies = selectedCompanies.filter(
+            (id) => id !== companyId
+          );
+          document.getElementById("all-companies").checked = false;
+        }
+
         updateSelectionSummary();
-      } catch (error) {
-        console.log("No valid saved preferences");
+        savePreferences();
       }
-    }
-  }
 
-  function savePreferences() {
-    localStorage.setItem("racCompanyPreferences", JSON.stringify(selectedCompanies));
-  }
+      function toggleAllCompanies(event) {
+        event.stopPropagation();
+        const allCheckbox = document.getElementById("all-companies");
+        allCheckbox.checked = !allCheckbox.checked;
 
-  function toggleCompany(companyId, event) {
-    event.stopPropagation();
-    const checkbox = document.getElementById(`company-${companyId}`);
-    checkbox.checked = !checkbox.checked;
+        if (allCheckbox.checked) {
+          selectedCompanies = Object.keys(companies);
+          Object.keys(companies).forEach((companyId) => {
+            document.getElementById(`company-${companyId}`).checked = true;
+          });
+        } else {
+          selectedCompanies = [];
+          Object.keys(companies).forEach((companyId) => {
+            document.getElementById(`company-${companyId}`).checked = false;
+          });
+        }
 
-    if (checkbox.checked) {
-      if (!selectedCompanies.includes(companyId)) {
-        selectedCompanies.push(companyId);
+        updateSelectionSummary();
+        savePreferences();
       }
-    } else {
-      selectedCompanies = selectedCompanies.filter(id => id !== companyId);
-      document.getElementById("all-companies").checked = false;
-    }
 
-    updateSelectionSummary();
-    savePreferences();
-  }
+      function updateSelectionSummary() {
+        const summary = document.getElementById("selectionSummary");
+        const continueBtn = document.getElementById("continueBtn");
 
-  function toggleAllCompanies(event) {
-    event.stopPropagation();
-    const allCheckbox = document.getElementById("all-companies");
-    allCheckbox.checked = !allCheckbox.checked;
+        summary.innerHTML = `<strong>Selected: ${selectedCompanies.length} companies</strong>`;
 
-    if (allCheckbox.checked) {
-      selectedCompanies = Object.keys(companies);
-      Object.keys(companies).forEach((companyId) => {
-        document.getElementById(`company-${companyId}`).checked = true;
-      });
-    } else {
-      selectedCompanies = [];
-      Object.keys(companies).forEach((companyId) => {
-        document.getElementById(`company-${companyId}`).checked = false;
-      });
-    }
+        if (selectedCompanies.length > 0) {
+          const companyNames = selectedCompanies.map((id) => companies[id]);
+          summary.innerHTML += `<br><small>${companyNames.join(", ")}</small>`;
+          continueBtn.disabled = false;
+        } else {
+          continueBtn.disabled = true;
+        }
+      }
 
-    updateSelectionSummary();
-    savePreferences();
-  }
+      // ====== OAUTH FLOW FUNCTIONS ======
 
-  function updateSelectionSummary() {
-    const summary = document.getElementById("selectionSummary");
-    const continueBtn = document.getElementById("continueBtn");
+      function startOAuthFlow() {
+        if (selectedCompanies.length === 0) {
+          alert("Please select at least one company to continue.");
+          return;
+        }
 
-    summary.innerHTML = `<strong>Selected: ${selectedCompanies.length} companies</strong>`;
+        document.getElementById("step1").style.display = "none";
+        document.getElementById("step2").style.display = "block";
+        document.getElementById("step1Indicator").classList.add("completed");
+        document.getElementById("step1Indicator").classList.remove("active");
+        document.getElementById("step2Indicator").classList.add("active");
 
-    if (selectedCompanies.length > 0) {
-      const companyNames = selectedCompanies.map(id => companies[id]);
-      summary.innerHTML += `<br><small>${companyNames.join(", ")}</small>`;
-      continueBtn.disabled = false;
-    } else {
-      continueBtn.disabled = true;
-    }
-  }
+        oauthProgress = 0;
+        connectedCompanies = [];
+        localStorage.setItem(
+          "oauthCompanies",
+          JSON.stringify(selectedCompanies)
+        );
+        localStorage.setItem("oauthProgress", "0");
+        updateOAuthProgress();
+      }
 
-  // ====== OAUTH FLOW FUNCTIONS ======
+      function updateOAuthProgress() {
+        const currentCompanyName =
+          document.getElementById("currentCompanyName");
+        const progressFill = document.getElementById("progressFill");
+        const progressText = document.getElementById("progressText");
 
-  function startOAuthFlow() {
-    if (selectedCompanies.length === 0) {
-      alert("Please select at least one company to continue.");
-      return;
-    }
+        if (oauthProgress < selectedCompanies.length) {
+          const companyId = selectedCompanies[oauthProgress];
+          const companyName = companies[companyId];
 
-    document.getElementById("step1").style.display = "none";
-    document.getElementById("step2").style.display = "block";
-    document.getElementById("step1Indicator").classList.add("completed");
-    document.getElementById("step1Indicator").classList.remove("active");
-    document.getElementById("step2Indicator").classList.add("active");
+          currentCompanyName.textContent = `Ready to connect: ${companyName} (${
+            oauthProgress + 1
+          }/${selectedCompanies.length})`;
+          const progressPercent =
+            (oauthProgress / selectedCompanies.length) * 100;
+          progressFill.style.width = progressPercent + "%";
+          progressText.textContent = `Step ${oauthProgress + 1} of ${
+            selectedCompanies.length
+          }`;
 
-    oauthProgress = 0;
-    connectedCompanies = [];
-    localStorage.setItem("oauthCompanies", JSON.stringify(selectedCompanies));
-    localStorage.setItem("oauthProgress", "0");
-    updateOAuthProgress();
-  }
-
-  function updateOAuthProgress() {
-    const currentCompanyName = document.getElementById("currentCompanyName");
-    const progressFill = document.getElementById("progressFill");
-    const progressText = document.getElementById("progressText");
-
-    if (oauthProgress < selectedCompanies.length) {
-      const companyId = selectedCompanies[oauthProgress];
-      const companyName = companies[companyId];
-
-      currentCompanyName.textContent = `Ready to connect: ${companyName} (${oauthProgress + 1}/${selectedCompanies.length})`;
-      const progressPercent = (oauthProgress / selectedCompanies.length) * 100;
-      progressFill.style.width = progressPercent + "%";
-      progressText.textContent = `Step ${oauthProgress + 1} of ${selectedCompanies.length}`;
-
-      document.getElementById("oauthInstructions").innerHTML = `
+          document.getElementById("oauthInstructions").innerHTML = `
         <strong>Next Company:</strong> ${companyName}<br>
         <small>When the Xero login opens, select "${companyName}" from the dropdown and authorize access.</small>
       `;
-    }
-  }
+        }
+      }
 
-  function startNextOAuth() {
-    if (oauthProgress >= selectedCompanies.length) {
-      showCompletion();
-      return;
-    }
+      function startNextOAuth() {
+        if (oauthProgress >= selectedCompanies.length) {
+          showCompletion();
+          return;
+        }
 
-    const companyId = selectedCompanies[oauthProgress];
-    const companyName = companies[companyId];
+        const companyId = selectedCompanies[oauthProgress];
+        const companyName = companies[companyId];
 
-    localStorage.setItem("currentOAuthCompany", companyId);
-    localStorage.setItem("currentOAuthCompanyName", companyName);
+        localStorage.setItem("currentOAuthCompany", companyId);
+        localStorage.setItem("currentOAuthCompanyName", companyName);
 
-    isOAuthInProgress = true;
-    document.getElementById("startOAuthBtn").style.display = "none";
-    document.getElementById("waitingMessage").style.display = "block";
+        isOAuthInProgress = true;
+        document.getElementById("startOAuthBtn").style.display = "none";
+        document.getElementById("waitingMessage").style.display = "block";
 
-    window.location.href = "/auth";
-  }
+        window.location.href = "/auth";
+      }
 
-  async function checkOAuthStatus() {
-    try {
-      const response = await fetch("/api/connection-status");
-      const connections = await response.json();
+      async function checkOAuthStatus() {
+        try {
+          const response = await fetch("/api/connection-status");
+          const connections = await response.json();
 
-      const currentCompanyName = localStorage.getItem("currentOAuthCompanyName");
-      const currentCompanyId = localStorage.getItem("currentOAuthCompany");
+          const currentCompanyName = localStorage.getItem(
+            "currentOAuthCompanyName"
+          );
+          const currentCompanyId = localStorage.getItem("currentOAuthCompany");
 
-      const newConnection = connections.find(
-        conn => conn.tenantName === currentCompanyName && conn.connected
-      );
+          const newConnection = connections.find(
+            (conn) => conn.tenantName === currentCompanyName && conn.connected
+          );
 
-      if (newConnection) {
-        connectedCompanies.push({
-          id: currentCompanyId,
-          name: currentCompanyName,
-          tenantId: newConnection.tenantId,
-        });
+          if (newConnection) {
+            connectedCompanies.push({
+              id: currentCompanyId,
+              name: currentCompanyName,
+              tenantId: newConnection.tenantId,
+            });
 
-        oauthProgress++;
-        localStorage.setItem("oauthProgress", oauthProgress.toString());
+            oauthProgress++;
+            localStorage.setItem("oauthProgress", oauthProgress.toString());
 
+            isOAuthInProgress = false;
+            document.getElementById("startOAuthBtn").style.display =
+              "inline-block";
+            document.getElementById("waitingMessage").style.display = "none";
+
+            if (oauthProgress < selectedCompanies.length) {
+              updateOAuthProgress();
+              document.getElementById(
+                "startOAuthBtn"
+              ).textContent = `🔗 Connect Next Company (${oauthProgress + 1}/${
+                selectedCompanies.length
+              })`;
+            } else {
+              showCompletion();
+            }
+          } else {
+            alert(`Failed to connect ${currentCompanyName}. Please try again.`);
+            resetOAuthState();
+          }
+        } catch (error) {
+          console.error("Error checking OAuth status:", error);
+          alert("Error checking connection status. Please try again.");
+          resetOAuthState();
+        }
+      }
+
+      function resetOAuthState() {
         isOAuthInProgress = false;
         document.getElementById("startOAuthBtn").style.display = "inline-block";
         document.getElementById("waitingMessage").style.display = "none";
-
-        if (oauthProgress < selectedCompanies.length) {
-          updateOAuthProgress();
-          document.getElementById("startOAuthBtn").textContent = 
-            `🔗 Connect Next Company (${oauthProgress + 1}/${selectedCompanies.length})`;
-        } else {
-          showCompletion();
-        }
-      } else {
-        alert(`Failed to connect ${currentCompanyName}. Please try again.`);
-        resetOAuthState();
       }
-    } catch (error) {
-      console.error("Error checking OAuth status:", error);
-      alert("Error checking connection status. Please try again.");
-      resetOAuthState();
-    }
-  }
 
-  function resetOAuthState() {
-    isOAuthInProgress = false;
-    document.getElementById("startOAuthBtn").style.display = "inline-block";
-    document.getElementById("waitingMessage").style.display = "none";
-  }
+      function showCompletion() {
+        document.getElementById("step2").style.display = "none";
+        document.getElementById("step3").style.display = "block";
+        document.getElementById("step2Indicator").classList.add("completed");
+        document.getElementById("step2Indicator").classList.remove("active");
+        document.getElementById("step3Indicator").classList.add("active");
 
-  function showCompletion() {
-    document.getElementById("step2").style.display = "none";
-    document.getElementById("step3").style.display = "block";
-    document.getElementById("step2Indicator").classList.add("completed");
-    document.getElementById("step2Indicator").classList.remove("active");
-    document.getElementById("step3Indicator").classList.add("active");
-
-    const connectedList = document.getElementById("connectedCompaniesList");
-    connectedList.innerHTML = connectedCompanies
-      .map(company => `
+        const connectedList = document.getElementById("connectedCompaniesList");
+        connectedList.innerHTML = connectedCompanies
+          .map(
+            (company) => `
         <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; border: 1px solid #28a745; background: #f8fff9; border-radius: 6px; margin-bottom: 0.5rem;">
           <div style="display: flex; align-items: center; gap: 0.5rem;">
             <div style="width: 12px; height: 12px; border-radius: 50%; background: #28a745;"></div>
@@ -934,92 +1053,103 @@
           </div>
           <div style="color: #28a745; font-size: 0.9rem;">✅ Connected</div>
         </div>
-      `).join("");
+      `
+          )
+          .join("");
 
-    setTimeout(() => showMainDashboard(), 3000);
-  }
+        setTimeout(() => showMainDashboard(), 3000);
+      }
 
-  function showMainDashboard() {
-    localStorage.removeItem("oauthCompanies");
-    localStorage.removeItem("oauthProgress");
-    localStorage.removeItem("currentOAuthCompany");
-    localStorage.removeItem("currentOAuthCompanyName");
-    localStorage.setItem("racCompaniesConnected", "true");
+      function showMainDashboard() {
+        localStorage.removeItem("oauthCompanies");
+        localStorage.removeItem("oauthProgress");
+        localStorage.removeItem("currentOAuthCompany");
+        localStorage.removeItem("currentOAuthCompanyName");
+        localStorage.setItem("racCompaniesConnected", "true");
 
-    document.getElementById("connectionManager").style.display = "none";
-    document.getElementById("mainDashboard").style.display = "block";
+        document.getElementById("connectionManager").style.display = "none";
+        document.getElementById("mainDashboard").style.display = "block";
 
-    initializeMainDashboard();
-  }
+        initializeMainDashboard();
+      }
 
-  function handleOAuthReturn() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const isSuccess = urlParams.has("success");
-    const isError = urlParams.has("error");
-    const oauthCompanies = localStorage.getItem("oauthCompanies");
+      function handleOAuthReturn() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const isSuccess = urlParams.has("success");
+        const isError = urlParams.has("error");
+        const oauthCompanies = localStorage.getItem("oauthCompanies");
 
-    if (isSuccess && oauthCompanies) {
-      selectedCompanies = JSON.parse(oauthCompanies);
-      oauthProgress = parseInt(localStorage.getItem("oauthProgress")) || 0;
+        if (isSuccess && oauthCompanies) {
+          selectedCompanies = JSON.parse(oauthCompanies);
+          oauthProgress = parseInt(localStorage.getItem("oauthProgress")) || 0;
 
-      document.getElementById("connectionManager").style.display = "block";
-      document.getElementById("mainDashboard").style.display = "none";
-      document.getElementById("step1").style.display = "none";
-      document.getElementById("step2").style.display = "block";
-      document.getElementById("step1Indicator").classList.add("completed");
-      document.getElementById("step2Indicator").classList.add("active");
+          document.getElementById("connectionManager").style.display = "block";
+          document.getElementById("mainDashboard").style.display = "none";
+          document.getElementById("step1").style.display = "none";
+          document.getElementById("step2").style.display = "block";
+          document.getElementById("step1Indicator").classList.add("completed");
+          document.getElementById("step2Indicator").classList.add("active");
 
-      setTimeout(() => checkOAuthStatus(), 1000);
-    }
+          setTimeout(() => checkOAuthStatus(), 1000);
+        }
 
-    if (isSuccess || isError) {
-      history.replaceState({}, document.title, window.location.pathname);
-    }
-  }
+        if (isSuccess || isError) {
+          history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
 
-  // ====== DASHBOARD INITIALIZATION ======
+      // ====== DASHBOARD INITIALIZATION ======
 
-  async function initializeMainDashboard() {
-    try {
-      await loadConnectedCompanies();
-      setupCompanyFilters();
-      await loadDashboardData();
-    } catch (error) {
-      console.error("Error initializing dashboard:", error);
-    }
-  }
+      async function initializeMainDashboard() {
+        try {
+          await loadConnectedCompanies();
+          setupCompanyFilters();
+          await loadDashboardData();
+        } catch (error) {
+          console.error("Error initializing dashboard:", error);
+        }
+      }
 
-  async function loadConnectedCompanies() {
-    try {
-      const response = await fetch("/api/connection-status");
-      const connections = await response.json();
+      async function loadConnectedCompanies() {
+        try {
+          const response = await fetch("/api/connection-status");
+          const connections = await response.json();
 
-      connectedCompanies = connections.filter(conn => conn.connected);
-      activeCompanyFilters = connectedCompanies.map(conn => conn.tenantId);
+          connectedCompanies = connections.filter((conn) => conn.connected);
+          activeCompanyFilters = connectedCompanies.map(
+            (conn) => conn.tenantId
+          );
 
-      document.getElementById("connectedCount").textContent = connectedCompanies.length;
+          document.getElementById("connectedCount").textContent =
+            connectedCompanies.length;
 
-      const hasConnections = connectedCompanies.length > 0;
-      document.getElementById("dashboardStatus").className = 
-        `status-indicator ${hasConnections ? "balanced" : "imbalanced"}`;
-    } catch (error) {
-      console.error("Error loading connected companies:", error);
-      connectedCompanies = [];
-    }
-  }
+          const hasConnections = connectedCompanies.length > 0;
+          document.getElementById(
+            "dashboardStatus"
+          ).className = `status-indicator ${
+            hasConnections ? "balanced" : "imbalanced"
+          }`;
+        } catch (error) {
+          console.error("Error loading connected companies:", error);
+          connectedCompanies = [];
+        }
+      }
 
-  function setupCompanyFilters() {
-    const filtersContainer = document.getElementById("companyFilters");
+      function setupCompanyFilters() {
+        const filtersContainer = document.getElementById("companyFilters");
 
-    if (connectedCompanies.length === 0) {
-      filtersContainer.innerHTML = '<div style="color: #e74c3c;">No companies connected</div>';
-      return;
-    }
+        if (connectedCompanies.length === 0) {
+          filtersContainer.innerHTML =
+            '<div style="color: #e74c3c;">No companies connected</div>';
+          return;
+        }
 
-    filtersContainer.innerHTML = connectedCompanies
-      .map(company => {
-        const shortName = company.tenantName.replace("Rirratjingu ", "").replace(" Pty Ltd", "");
-        return `
+        filtersContainer.innerHTML = connectedCompanies
+          .map((company) => {
+            const shortName = company.tenantName
+              .replace("Rirratjingu ", "")
+              .replace(" Pty Ltd", "");
+            return `
           <div class="company-checkbox-item balanced">
             <input type="checkbox" id="filter-${company.tenantId}" checked 
                    onchange="handleCompanyFilterChange('${company.tenantId}')">
@@ -1027,177 +1157,198 @@
                    onclick="toggleCompanyFilterByLabel('${company.tenantId}')">${shortName}</label>
           </div>
         `;
-      }).join("");
-  }
-
-  // ====== UTILITY FUNCTIONS ======
-
-  function handleCompanyFilterChange(tenantId) {
-    const checkbox = document.getElementById(`filter-${tenantId}`);
-
-    if (checkbox.checked) {
-      if (!activeCompanyFilters.includes(tenantId)) {
-        activeCompanyFilters.push(tenantId);
+          })
+          .join("");
       }
-    } else {
-      activeCompanyFilters = activeCompanyFilters.filter(id => id !== tenantId);
-    }
 
-    loadDashboardData();
-  }
+      // ====== UTILITY FUNCTIONS ======
 
-  function toggleCompanyFilterByLabel(tenantId) {
-    const checkbox = document.getElementById(`filter-${tenantId}`);
-    checkbox.checked = !checkbox.checked;
-    checkbox.dispatchEvent(new Event("change"));
-  }
+      function handleCompanyFilterChange(tenantId) {
+        const checkbox = document.getElementById(`filter-${tenantId}`);
 
-  function getSelectedCompanyNames() {
-    return activeCompanyFilters.map(tenantId => {
-      const company = connectedCompanies.find(c => c.tenantId === tenantId);
-      return company ? company.tenantName.replace("Rirratjingu ", "").replace(" Pty Ltd", "") : "Unknown";
-    });
-  }
+        if (checkbox.checked) {
+          if (!activeCompanyFilters.includes(tenantId)) {
+            activeCompanyFilters.push(tenantId);
+          }
+        } else {
+          activeCompanyFilters = activeCompanyFilters.filter(
+            (id) => id !== tenantId
+          );
+        }
 
-  function getOrganizationName(tenantName) {
-    if (tenantName.includes("Mining")) return "Mining";
-    if (tenantName.includes("Aboriginal Corporation")) return "Aboriginal Corporation";
-    if (tenantName.includes("Property")) return "Property";
-    if (tenantName.includes("Enterprises")) return "Enterprises";
-    if (tenantName.includes("Invest")) return "Invest";
-    if (tenantName.includes("Ngarrkuwuy")) return "Ngarrkuwuy";
-    if (tenantName.includes("Marrin")) return "Marrin";
-    return "Unknown";
-  }
-
-  function calculateGrowthRate(prior, current) {
-    if (prior === 0 && current === 0) return 0;
-    if (prior === 0) return current > 0 ? 100 : -100;
-    return ((current - prior) / Math.abs(prior)) * 100;
-  }
-
-  function setView(view, button) {
-    currentView = view;
-
-    document.querySelectorAll(".toolbar button").forEach(btn => btn.classList.remove("active"));
-    button.classList.add("active");
-
-    loadDashboardData();
-  }
-
-  function backToConnections() {
-    if (confirm("Return to connection manager? This will allow you to modify your company connections.")) {
-      document.getElementById("mainDashboard").style.display = "none";
-      document.getElementById("connectionManager").style.display = "block";
-
-      document.getElementById("step1").style.display = "block";
-      document.getElementById("step2").style.display = "none";
-      document.getElementById("step3").style.display = "none";
-
-      document.getElementById("step1Indicator").className = "step active";
-      document.getElementById("step2Indicator").className = "step";
-      document.getElementById("step3Indicator").className = "step";
-
-      loadSavedPreferences();
-    }
-  }
-
-  // ====== PAGE INITIALIZATION ======
-
-  async function initializePage() {
-    handleOAuthReturn();
-
-    if (localStorage.getItem("oauthCompanies")) {
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/connection-status");
-      const connections = await response.json();
-      const connectedCount = connections.filter(conn => conn.connected).length;
-
-      if (connectedCount > 0) {
-        document.getElementById("connectionManager").style.display = "none";
-        document.getElementById("mainDashboard").style.display = "block";
-        initializeMainDashboard();
-      } else {
-        document.getElementById("connectionManager").style.display = "block";
-        document.getElementById("mainDashboard").style.display = "none";
-        loadSavedPreferences();
+        loadDashboardData();
       }
-    } catch (error) {
-      document.getElementById("connectionManager").style.display = "block";
-      document.getElementById("mainDashboard").style.display = "none";
-      loadSavedPreferences();
-    }
-  }
 
-  // ====== EVENT LISTENERS ======
+      function toggleCompanyFilterByLabel(tenantId) {
+        const checkbox = document.getElementById(`filter-${tenantId}`);
+        checkbox.checked = !checkbox.checked;
+        checkbox.dispatchEvent(new Event("change"));
+      }
 
-  document.addEventListener("DOMContentLoaded", function () {
-    initializePage();
-  });
+      function getSelectedCompanyNames() {
+        return activeCompanyFilters.map((tenantId) => {
+          const company = connectedCompanies.find(
+            (c) => c.tenantId === tenantId
+          );
+          return company
+            ? company.tenantName
+                .replace("Rirratjingu ", "")
+                .replace(" Pty Ltd", "")
+            : "Unknown";
+        });
+      }
 
-  window.addEventListener("popstate", handleOAuthReturn);
+      function getOrganizationName(tenantName) {
+        if (tenantName.includes("Mining")) return "Mining";
+        if (tenantName.includes("Aboriginal Corporation"))
+          return "Aboriginal Corporation";
+        if (tenantName.includes("Property")) return "Property";
+        if (tenantName.includes("Enterprises")) return "Enterprises";
+        if (tenantName.includes("Invest")) return "Invest";
+        if (tenantName.includes("Ngarrkuwuy")) return "Ngarrkuwuy";
+        if (tenantName.includes("Marrin")) return "Marrin";
+        return "Unknown";
+      }
 
-  /* ====== SECTION 4: DASHBOARD DATA LOADING FUNCTIONS ====== */
-/* MCP API integration and data visualization functions */
+      function calculateGrowthRate(prior, current) {
+        if (prior === 0 && current === 0) return 0;
+        if (prior === 0) return current > 0 ? 100 : -100;
+        return ((current - prior) / Math.abs(prior)) * 100;
+      }
 
-  // ====== MAIN DATA LOADING CONTROLLER ======
+      function setView(view, button) {
+        currentView = view;
 
-  async function loadDashboardData() {
-    const dashboardElement = document.getElementById("dashboardData");
+        document
+          .querySelectorAll(".toolbar button")
+          .forEach((btn) => btn.classList.remove("active"));
+        button.classList.add("active");
 
-    if (activeCompanyFilters.length === 0) {
-      dashboardElement.innerHTML = `
+        loadDashboardData();
+      }
+
+      function backToConnections() {
+        if (
+          confirm(
+            "Return to connection manager? This will allow you to modify your company connections."
+          )
+        ) {
+          document.getElementById("mainDashboard").style.display = "none";
+          document.getElementById("connectionManager").style.display = "block";
+
+          document.getElementById("step1").style.display = "block";
+          document.getElementById("step2").style.display = "none";
+          document.getElementById("step3").style.display = "none";
+
+          document.getElementById("step1Indicator").className = "step active";
+          document.getElementById("step2Indicator").className = "step";
+          document.getElementById("step3Indicator").className = "step";
+
+          loadSavedPreferences();
+        }
+      }
+
+      // ====== PAGE INITIALIZATION ======
+
+      async function initializePage() {
+        handleOAuthReturn();
+
+        if (localStorage.getItem("oauthCompanies")) {
+          return;
+        }
+
+        try {
+          const response = await fetch("/api/connection-status");
+          const connections = await response.json();
+          const connectedCount = connections.filter(
+            (conn) => conn.connected
+          ).length;
+
+          if (connectedCount > 0) {
+            document.getElementById("connectionManager").style.display = "none";
+            document.getElementById("mainDashboard").style.display = "block";
+            initializeMainDashboard();
+          } else {
+            document.getElementById("connectionManager").style.display =
+              "block";
+            document.getElementById("mainDashboard").style.display = "none";
+            loadSavedPreferences();
+          }
+        } catch (error) {
+          document.getElementById("connectionManager").style.display = "block";
+          document.getElementById("mainDashboard").style.display = "none";
+          loadSavedPreferences();
+        }
+      }
+
+      // ====== EVENT LISTENERS ======
+
+      document.addEventListener("DOMContentLoaded", function () {
+        initializePage();
+      });
+
+      window.addEventListener("popstate", handleOAuthReturn);
+
+      /* ====== SECTION 4: DASHBOARD DATA LOADING FUNCTIONS ====== */
+      /* MCP API integration and data visualization functions */
+
+      // ====== MAIN DATA LOADING CONTROLLER ======
+
+      async function loadDashboardData() {
+        const dashboardElement = document.getElementById("dashboardData");
+
+        if (activeCompanyFilters.length === 0) {
+          dashboardElement.innerHTML = `
         <div style="text-align: center; padding: 40px; color: #666;">
           <h3>No Companies Selected</h3>
           <p>Please select companies using the filters above to view financial data.</p>
         </div>
       `;
-      return;
-    }
+          return;
+        }
 
-    const selectedCompanyNames = getSelectedCompanyNames();
-    dashboardElement.innerHTML = `
+        const selectedCompanyNames = getSelectedCompanyNames();
+        dashboardElement.innerHTML = `
       <div class="loading">
         <div class="loading-spinner"></div>
-        Loading ${currentView} data from ${activeCompanyFilters.length} companies:<br>
+        Loading ${currentView} data from ${
+          activeCompanyFilters.length
+        } companies:<br>
         <small>${selectedCompanyNames.join(", ")}</small>
       </div>
     `;
 
-    try {
-      switch (currentView) {
-        case "overview":
-          await loadOverviewDataWithYoY();
-          break;
-        case "trial-balance":
-          await loadTrialBalanceData();
-          break;
-        case "cash-flow":
-          await loadCashFlowData();
-          break;
-        case "p-and-l":
-          await loadProfitLossData();
-          break;
-        case "year-over-year":
-          await loadYearOverYearData();
-          break;
-        case "alerts":
-          await loadAlertsData();
-          break;
-        default:
-          await loadOverviewDataWithYoY();
+        try {
+          switch (currentView) {
+            case "overview":
+              await loadOverviewDataWithYoY();
+              break;
+            case "trial-balance":
+              await loadTrialBalanceData();
+              break;
+            case "cash-flow":
+              await loadCashFlowData();
+              break;
+            case "p-and-l":
+              await loadProfitLossData();
+              break;
+            case "year-over-year":
+              await loadYearOverYearData();
+              break;
+            case "alerts":
+              await loadAlertsData();
+              break;
+            default:
+              await loadOverviewDataWithYoY();
+          }
+        } catch (error) {
+          showErrorState(error);
+        }
       }
-    } catch (error) {
-      showErrorState(error);
-    }
-  }
 
-  function showErrorState(error) {
-    const dashboardElement = document.getElementById("dashboardData");
-    dashboardElement.innerHTML = `
+      function showErrorState(error) {
+        const dashboardElement = document.getElementById("dashboardData");
+        dashboardElement.innerHTML = `
       <div style="text-align: center; padding: 40px; color: #e74c3c;">
         <h3>Error Loading Data</h3>
         <p>Failed to load dashboard data: ${error.message}</p>
@@ -1207,346 +1358,525 @@
         </button>
       </div>
     `;
-  }
+      }
 
-  // ====== ENHANCED OVERVIEW WITH CONSOLIDATED METRICS ======
+      // ====== ENHANCED OVERVIEW WITH CONSOLIDATED METRICS ======
 
-  async function loadOverviewDataWithYoY() {
-    if (activeCompanyFilters.length === 0) {
-      showNoCompaniesSelected();
-      return;
-    }
+      async function loadOverviewDataWithYoY() {
+        if (activeCompanyFilters.length === 0) {
+          showNoCompaniesSelected();
+          return;
+        }
 
-    try {
-      const response = await fetch("/api/consolidated-trial-balance");
-      const data = await response.json();
+        try {
+          const response = await fetch("/api/consolidated-trial-balance");
+          const data = await response.json();
 
-      const enhancedMetrics = [];
-      const selectedCompanies = [];
+          const enhancedMetrics = [];
+          const selectedCompanies = [];
 
-      for (const tenantId of activeCompanyFilters) {
-        const connectedCompany = connectedCompanies.find(c => c.tenantId === tenantId);
-        if (!connectedCompany) continue;
+          for (const tenantId of activeCompanyFilters) {
+            const connectedCompany = connectedCompanies.find(
+              (c) => c.tenantId === tenantId
+            );
+            if (!connectedCompany) continue;
 
-        let matchedCompany = findMatchedCompany(data.companies, tenantId, connectedCompany.tenantName);
-        
-        if (matchedCompany) {
-          selectedCompanies.push(matchedCompany);
+            let matchedCompany = findMatchedCompany(
+              data.companies,
+              tenantId,
+              connectedCompany.tenantName
+            );
 
-          try {
-            const orgName = getOrganizationName(connectedCompany.tenantName);
-            const enhancedData = await loadEnhancedMetrics(orgName, connectedCompany, matchedCompany, tenantId);
-            enhancedMetrics.push(enhancedData);
-          } catch (error) {
-            console.error(`Error loading enhanced metrics for ${connectedCompany.tenantName}:`, error);
-            enhancedMetrics.push(createBasicMetrics(connectedCompany, matchedCompany, tenantId, true));
+            if (matchedCompany) {
+              selectedCompanies.push(matchedCompany);
+
+              try {
+                const orgName = getOrganizationName(
+                  connectedCompany.tenantName
+                );
+                const enhancedData = await loadEnhancedMetrics(
+                  orgName,
+                  connectedCompany,
+                  matchedCompany,
+                  tenantId
+                );
+                enhancedMetrics.push(enhancedData);
+              } catch (error) {
+                console.error(
+                  `Error loading enhanced metrics for ${connectedCompany.tenantName}:`,
+                  error
+                );
+                enhancedMetrics.push(
+                  createBasicMetrics(
+                    connectedCompany,
+                    matchedCompany,
+                    tenantId,
+                    true
+                  )
+                );
+              }
+            }
           }
+
+          const consolidatedTotals =
+            calculateConsolidatedTotals(enhancedMetrics);
+          const balancedCompanies = enhancedMetrics.filter(
+            (c) => !c.error && c.balanced
+          ).length;
+
+          renderEnhancedOverview(
+            consolidatedTotals,
+            enhancedMetrics,
+            balancedCompanies
+          );
+        } catch (error) {
+          console.error("Error in enhanced loadOverviewDataWithYoY:", error);
+          showErrorState(error);
         }
       }
 
-      const consolidatedTotals = calculateConsolidatedTotals(enhancedMetrics);
-      const balancedCompanies = enhancedMetrics.filter(c => !c.error && c.balanced).length;
-
-      renderEnhancedOverview(consolidatedTotals, enhancedMetrics, balancedCompanies);
-
-    } catch (error) {
-      console.error("Error in enhanced loadOverviewDataWithYoY:", error);
-      showErrorState(error);
-    }
-  }
-
-  function findMatchedCompany(companies, tenantId, tenantName) {
-    let matchedCompany = companies?.find(company => company.tenantId === tenantId);
-
-    if (!matchedCompany) {
-      matchedCompany = companies?.find(company => {
-        const companyName = company.tenantName.toLowerCase();
-        const targetName = tenantName.toLowerCase();
-        return (
-          (companyName.includes("mining") && targetName.includes("mining")) ||
-          (companyName.includes("aboriginal") && targetName.includes("aboriginal")) ||
-          (companyName.includes("property") && targetName.includes("property"))
+      function findMatchedCompany(companies, tenantId, tenantName) {
+        let matchedCompany = companies?.find(
+          (company) => company.tenantId === tenantId
         );
-      });
-    }
 
-    return matchedCompany;
-  }
+        if (!matchedCompany) {
+          matchedCompany = companies?.find((company) => {
+            const companyName = company.tenantName.toLowerCase();
+            const targetName = tenantName.toLowerCase();
+            return (
+              (companyName.includes("mining") &&
+                targetName.includes("mining")) ||
+              (companyName.includes("aboriginal") &&
+                targetName.includes("aboriginal")) ||
+              (companyName.includes("property") &&
+                targetName.includes("property"))
+            );
+          });
+        }
 
-  async function loadEnhancedMetrics(orgName, connectedCompany, matchedCompany, tenantId) {
-    const [cashResponse, ratiosResponse, profitLossResponse] = await Promise.all([
-      fetchWithErrorHandling("/api/cash-position", { organizationName: orgName }),
-      fetchWithErrorHandling("/api/financial-ratios", { organizationName: orgName }),
-      fetchWithErrorHandling("/api/profit-loss-summary", { organizationName: orgName })
-    ]);
+        return matchedCompany;
+      }
 
-    const cashData = cashResponse?.ok ? await cashResponse.json() : null;
-    const ratiosData = ratiosResponse?.ok ? await ratiosResponse.json() : null;
-    const profitLossData = profitLossResponse?.ok ? await profitLossResponse.json() : null;
+      async function loadEnhancedMetrics(
+        orgName,
+        connectedCompany,
+        matchedCompany,
+        tenantId
+      ) {
+        const [cashResponse, ratiosResponse, profitLossResponse] =
+          await Promise.all([
+            fetchWithErrorHandling("/api/cash-position", {
+              organizationName: orgName,
+            }),
+            fetchWithErrorHandling("/api/financial-ratios", {
+              organizationName: orgName,
+            }),
+            fetchWithErrorHandling("/api/profit-loss-summary", {
+              organizationName: orgName,
+            }),
+          ]);
 
-    return {
-      tenantId,
-      companyName: connectedCompany.tenantName,
-      totalAssets: matchedCompany.totals?.totalAssets || 0,
-      totalLiabilities: Math.abs(matchedCompany.totals?.totalLiabilities || 0),
-      totalEquity: matchedCompany.totals?.totalEquity || 0,
-      balanced: matchedCompany.balanceCheck?.debitsEqualCredits || false,
-      cashPosition: cashData?.totalCash || 0,
-      currentRatio: ratiosData?.ratios?.liquidity?.currentRatio || 0,
-      debtToEquity: ratiosData?.ratios?.leverage?.debtToEquity || 0,
-      netProfitMargin: ratiosData?.ratios?.profitability?.netProfitMargin || 0,
-      returnOnAssets: ratiosData?.ratios?.profitability?.returnOnAssets || 0,
-      revenue: profitLossData?.summary?.totalRevenue || 0,
-      netProfit: profitLossData?.summary?.netProfit || 0,
-      error: false
-    };
-  }
+        const cashData = cashResponse?.ok ? await cashResponse.json() : null;
+        const ratiosData = ratiosResponse?.ok
+          ? await ratiosResponse.json()
+          : null;
+        const profitLossData = profitLossResponse?.ok
+          ? await profitLossResponse.json()
+          : null;
 
-  function createBasicMetrics(connectedCompany, matchedCompany, tenantId, hasError = false) {
-    return {
-      tenantId,
-      companyName: connectedCompany.tenantName,
-      totalAssets: matchedCompany.totals?.totalAssets || 0,
-      totalLiabilities: Math.abs(matchedCompany.totals?.totalLiabilities || 0),
-      totalEquity: matchedCompany.totals?.totalEquity || 0,
-      balanced: matchedCompany.balanceCheck?.debitsEqualCredits || false,
-      error: hasError
-    };
-  }
+        return {
+          tenantId,
+          companyName: connectedCompany.tenantName,
+          totalAssets: matchedCompany.totals?.totalAssets || 0,
+          totalLiabilities: Math.abs(
+            matchedCompany.totals?.totalLiabilities || 0
+          ),
+          totalEquity: matchedCompany.totals?.totalEquity || 0,
+          balanced: matchedCompany.balanceCheck?.debitsEqualCredits || false,
+          cashPosition: cashData?.totalCash || 0,
+          currentRatio: ratiosData?.ratios?.liquidity?.currentRatio || 0,
+          debtToEquity: ratiosData?.ratios?.leverage?.debtToEquity || 0,
+          netProfitMargin:
+            ratiosData?.ratios?.profitability?.netProfitMargin || 0,
+          returnOnAssets:
+            ratiosData?.ratios?.profitability?.returnOnAssets || 0,
+          revenue: profitLossData?.summary?.totalRevenue || 0,
+          netProfit: profitLossData?.summary?.netProfit || 0,
+          error: false,
+        };
+      }
 
-  function calculateConsolidatedTotals(enhancedMetrics) {
-    return enhancedMetrics.reduce((acc, company) => {
-      if (company.error) return acc;
-      acc.totalAssets += company.totalAssets || 0;
-      acc.totalLiabilities += company.totalLiabilities || 0;
-      acc.totalEquity += company.totalEquity || 0;
-      acc.totalCash += company.cashPosition || 0;
-      acc.totalRevenue += company.revenue || 0;
-      acc.totalProfit += company.netProfit || 0;
-      return acc;
-    }, {
-      totalAssets: 0,
-      totalLiabilities: 0,
-      totalEquity: 0,
-      totalCash: 0,
-      totalRevenue: 0,
-      totalProfit: 0
-    });
-  }
+      function createBasicMetrics(
+        connectedCompany,
+        matchedCompany,
+        tenantId,
+        hasError = false
+      ) {
+        return {
+          tenantId,
+          companyName: connectedCompany.tenantName,
+          totalAssets: matchedCompany.totals?.totalAssets || 0,
+          totalLiabilities: Math.abs(
+            matchedCompany.totals?.totalLiabilities || 0
+          ),
+          totalEquity: matchedCompany.totals?.totalEquity || 0,
+          balanced: matchedCompany.balanceCheck?.debitsEqualCredits || false,
+          error: hasError,
+        };
+      }
 
-  function renderEnhancedOverview(totals, enhancedMetrics, balancedCompanies) {
-    const dashboardElement = document.getElementById("dashboardData");
-    
-    dashboardElement.innerHTML = `
+      function calculateConsolidatedTotals(enhancedMetrics) {
+        return enhancedMetrics.reduce(
+          (acc, company) => {
+            if (company.error) return acc;
+            acc.totalAssets += company.totalAssets || 0;
+            acc.totalLiabilities += company.totalLiabilities || 0;
+            acc.totalEquity += company.totalEquity || 0;
+            acc.totalCash += company.cashPosition || 0;
+            acc.totalRevenue += company.revenue || 0;
+            acc.totalProfit += company.netProfit || 0;
+            return acc;
+          },
+          {
+            totalAssets: 0,
+            totalLiabilities: 0,
+            totalEquity: 0,
+            totalCash: 0,
+            totalRevenue: 0,
+            totalProfit: 0,
+          }
+        );
+      }
+
+      function renderEnhancedOverview(
+        totals,
+        enhancedMetrics,
+        balancedCompanies
+      ) {
+        const dashboardElement = document.getElementById("dashboardData");
+
+        dashboardElement.innerHTML = `
       <!-- ENHANCED FINANCIAL OVERVIEW -->
       <div class="dashboard-grid" style="grid-template-columns: repeat(3, 1fr);">
         <div class="dashboard-card">
           <h3>📊 Financial Position</h3>
-          ${createMetric("Total Assets", `$${totals.totalAssets.toLocaleString()}`)}
-          ${createMetric("Total Liabilities", `$${totals.totalLiabilities.toLocaleString()}`)}
-          ${createMetric("Net Equity", `$${totals.totalEquity.toLocaleString()}`)}
-          ${createMetric("Net Worth", `$${(totals.totalAssets - totals.totalLiabilities).toLocaleString()}`)}
+          ${createMetric(
+            "Total Assets",
+            `$${totals.totalAssets.toLocaleString()}`
+          )}
+          ${createMetric(
+            "Total Liabilities",
+            `$${totals.totalLiabilities.toLocaleString()}`
+          )}
+          ${createMetric(
+            "Net Equity",
+            `$${totals.totalEquity.toLocaleString()}`
+          )}
+          ${createMetric(
+            "Net Worth",
+            `$${(
+              totals.totalAssets - totals.totalLiabilities
+            ).toLocaleString()}`
+          )}
         </div>
 
         <div class="dashboard-card">
           <h3>💰 Cash & Performance</h3>
-          ${createMetric("Total Cash Position", `$${totals.totalCash.toLocaleString()}`)}
-          ${createMetric("Annual Revenue", `$${totals.totalRevenue.toLocaleString()}`)}
-          ${createMetric("Net Profit", `$${totals.totalProfit.toLocaleString()}`, totals.totalProfit < 0)}
-          ${createMetric("Profit Margin", `${totals.totalRevenue > 0 ? ((totals.totalProfit / totals.totalRevenue) * 100).toFixed(1) : 0}%`)}
+          ${createMetric(
+            "Total Cash Position",
+            `$${totals.totalCash.toLocaleString()}`
+          )}
+          ${createMetric(
+            "Annual Revenue",
+            `$${totals.totalRevenue.toLocaleString()}`
+          )}
+          ${createMetric(
+            "Net Profit",
+            `$${totals.totalProfit.toLocaleString()}`,
+            totals.totalProfit < 0
+          )}
+          ${createMetric(
+            "Profit Margin",
+            `${
+              totals.totalRevenue > 0
+                ? ((totals.totalProfit / totals.totalRevenue) * 100).toFixed(1)
+                : 0
+            }%`
+          )}
         </div>
 
         <div class="dashboard-card">
           <h3>⚖️ Health & Risk</h3>
           ${createMetric("Companies", enhancedMetrics.length.toString())}
-          ${createMetric("Balanced Books", `${balancedCompanies}/${enhancedMetrics.length}`, balancedCompanies !== enhancedMetrics.length)}
-          ${createMetric("Debt/Equity Ratio", totals.totalEquity > 0 ? (totals.totalLiabilities / totals.totalEquity).toFixed(2) : "N/A")}
-          ${createMetric("Overall Status", balancedCompanies === enhancedMetrics.length ? "✅ Healthy" : "⚠️ Review Needed", balancedCompanies !== enhancedMetrics.length)}
+          ${createMetric(
+            "Balanced Books",
+            `${balancedCompanies}/${enhancedMetrics.length}`,
+            balancedCompanies !== enhancedMetrics.length
+          )}
+          ${createMetric(
+            "Debt/Equity Ratio",
+            totals.totalEquity > 0
+              ? (totals.totalLiabilities / totals.totalEquity).toFixed(2)
+              : "N/A"
+          )}
+          ${createMetric(
+            "Overall Status",
+            balancedCompanies === enhancedMetrics.length
+              ? "✅ Healthy"
+              : "⚠️ Review Needed",
+            balancedCompanies !== enhancedMetrics.length
+          )}
         </div>
       </div>
 
       <!-- COMPANY BREAKDOWN -->
       <div class="dashboard-card">
         <h3>📈 Company Performance Breakdown</h3>
-        ${enhancedMetrics.map(company => createCompanyCard(company)).join("")}
+        ${enhancedMetrics.map((company) => createCompanyCard(company)).join("")}
       </div>
     `;
-  }
+      }
 
-  function createMetric(label, value, isNegative = false) {
-    return `
+      function createMetric(label, value, isNegative = false) {
+        return `
       <div class="metric">
         <span>${label}</span>
-        <span class="metric-value ${isNegative ? 'negative' : ''}">${value}</span>
+        <span class="metric-value ${
+          isNegative ? "negative" : ""
+        }">${value}</span>
       </div>
     `;
-  }
+      }
 
-  function createCompanyCard(company) {
-    return `
-      <div style="border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px; margin: 10px 0; background: ${company.balanced ? '#f8fff8' : '#fff8f8'};">
+      function createCompanyCard(company) {
+        return `
+      <div style="border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px; margin: 10px 0; background: ${
+        company.balanced ? "#f8fff8" : "#fff8f8"
+      };">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-          <strong style="font-size: 16px;">${company.companyName.replace("Rirratjingu ", "")}</strong>
-          <span class="metric-value ${company.error ? 'negative' : company.balanced ? '' : 'negative'}" style="font-size: 14px;">
-            ${company.error ? "⚠️ Data Error" : company.balanced ? "✅ Balanced" : "❌ Imbalanced"}
+          <strong style="font-size: 16px;">${company.companyName.replace(
+            "Rirratjingu ",
+            ""
+          )}</strong>
+          <span class="metric-value ${
+            company.error ? "negative" : company.balanced ? "" : "negative"
+          }" style="font-size: 14px;">
+            ${
+              company.error
+                ? "⚠️ Data Error"
+                : company.balanced
+                ? "✅ Balanced"
+                : "❌ Imbalanced"
+            }
           </span>
         </div>
 
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; font-size: 13px;">
           ${createCompanyMetric("Assets", company.totalAssets)}
           ${createCompanyMetric("Revenue", company.revenue)}
-          ${createCompanyMetric("Net Profit", company.netProfit, company.netProfit < 0)}
-          ${createCompanyMetric("Profit Margin", `${(company.netProfitMargin || 0).toFixed(1)}%`)}
+          ${createCompanyMetric(
+            "Net Profit",
+            company.netProfit,
+            company.netProfit < 0
+          )}
+          ${createCompanyMetric(
+            "Profit Margin",
+            `${(company.netProfitMargin || 0).toFixed(1)}%`
+          )}
         </div>
 
-        ${!company.error ? `
+        ${
+          !company.error
+            ? `
           <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; font-size: 13px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0f0f0;">
             ${createCompanyMetric("Cash Position", company.cashPosition)}
-            ${createCompanyMetric("Current Ratio", (company.currentRatio || 0).toFixed(2))}
-            ${createCompanyMetric("ROA", `${(company.returnOnAssets || 0).toFixed(1)}%`)}
-            ${createCompanyMetric("D/E Ratio", (company.debtToEquity || 0).toFixed(2))}
+            ${createCompanyMetric(
+              "Current Ratio",
+              (company.currentRatio || 0).toFixed(2)
+            )}
+            ${createCompanyMetric(
+              "ROA",
+              `${(company.returnOnAssets || 0).toFixed(1)}%`
+            )}
+            ${createCompanyMetric(
+              "D/E Ratio",
+              (company.debtToEquity || 0).toFixed(2)
+            )}
           </div>
-        ` : ""}
+        `
+            : ""
+        }
       </div>
     `;
-  }
+      }
 
-  function createCompanyMetric(label, value, isNegative = false) {
-    const displayValue = typeof value === 'number' ? value.toLocaleString() : value;
-    const formattedValue = typeof value === 'number' && value >= 1000 ? `$${displayValue}` : displayValue;
-    
-    return `
+      function createCompanyMetric(label, value, isNegative = false) {
+        const displayValue =
+          typeof value === "number" ? value.toLocaleString() : value;
+        const formattedValue =
+          typeof value === "number" && value >= 1000
+            ? `$${displayValue}`
+            : displayValue;
+
+        return `
       <div>
         <div style="color: #666; margin-bottom: 3px;">${label}</div>
-        <div style="font-weight: 600; color: ${isNegative ? '#e74c3c' : '#27ae60'};">${formattedValue}</div>
+        <div style="font-weight: 600; color: ${
+          isNegative ? "#e74c3c" : "#27ae60"
+        };">${formattedValue}</div>
       </div>
     `;
-  }
+      }
 
-  // ====== TRIAL BALANCE DATA LOADING ======
+      // ====== TRIAL BALANCE DATA LOADING ======
 
-  // ====== TRIAL BALANCE IMPLEMENTATION ======
-  // Replace the placeholder loadTrialBalanceData() function with this complete implementation
+      // ====== TRIAL BALANCE IMPLEMENTATION ======
+      // Replace the placeholder loadTrialBalanceData() function with this complete implementation
 
-  async function loadTrialBalanceData() {
-    if (activeCompanyFilters.length === 0) {
-      showNoCompaniesSelected();
-      return;
-    }
+      async function loadTrialBalanceData() {
+        if (activeCompanyFilters.length === 0) {
+          showNoCompaniesSelected();
+          return;
+        }
 
-    const dashboardElement = document.getElementById("dashboardData");
-    dashboardElement.innerHTML = `
+        const dashboardElement = document.getElementById("dashboardData");
+        dashboardElement.innerHTML = `
       <div class="loading">
         <div class="loading-spinner"></div>
         Loading consolidated trial balance data...
       </div>
     `;
 
-    try {
-      const trialBalanceData = [];
-      const consolidatedAccounts = {
-        assets: {},
-        liabilities: {},
-        equity: {}
-      };
+        try {
+          const trialBalanceData = [];
+          const consolidatedAccounts = {
+            assets: {},
+            liabilities: {},
+            equity: {},
+          };
 
-      let consolidatedTotals = {
-        totalAssets: 0,
-        totalLiabilities: 0,
-        totalEquity: 0
-      };
+          let consolidatedTotals = {
+            totalAssets: 0,
+            totalLiabilities: 0,
+            totalEquity: 0,
+          };
 
-      let balancedCompanies = 0;
-      let totalCompanies = 0;
+          let balancedCompanies = 0;
+          let totalCompanies = 0;
 
-      // Load trial balance for each selected company
-      for (const tenantId of activeCompanyFilters) {
-        const connectedCompany = connectedCompanies.find(c => c.tenantId === tenantId);
-        if (!connectedCompany) continue;
+          // Load trial balance for each selected company
+          for (const tenantId of activeCompanyFilters) {
+            const connectedCompany = connectedCompanies.find(
+              (c) => c.tenantId === tenantId
+            );
+            if (!connectedCompany) continue;
 
-        const orgName = getOrganizationName(connectedCompany.tenantName);
-        const response = await fetchWithErrorHandling("/api/trial-balance", { organizationName: orgName });
+            const orgName = getOrganizationName(connectedCompany.tenantName);
+            const response = await fetchWithErrorHandling(
+              "/api/trial-balance",
+              { organizationName: orgName }
+            );
 
-        if (response && response.ok) {
-          const data = await response.json();
-          totalCompanies++;
+            if (response && response.ok) {
+              const data = await response.json();
+              totalCompanies++;
 
-          trialBalanceData.push({
-            companyName: connectedCompany.tenantName.replace("Rirratjingu ", ""),
-            balanced: data.balanceCheck.debitsEqualCredits,
-            ...data
-          });
-
-          // Aggregate into consolidated accounts
-          ['assets', 'liabilities', 'equity'].forEach(category => {
-            if (data.trialBalance[category]) {
-              data.trialBalance[category].forEach(account => {
-                if (!consolidatedAccounts[category][account.name]) {
-                  consolidatedAccounts[category][account.name] = 0;
-                }
-                consolidatedAccounts[category][account.name] += account.balance;
+              trialBalanceData.push({
+                companyName: connectedCompany.tenantName.replace(
+                  "Rirratjingu ",
+                  ""
+                ),
+                balanced: data.balanceCheck.debitsEqualCredits,
+                ...data,
               });
+
+              // Aggregate into consolidated accounts
+              ["assets", "liabilities", "equity"].forEach((category) => {
+                if (data.trialBalance[category]) {
+                  data.trialBalance[category].forEach((account) => {
+                    if (!consolidatedAccounts[category][account.name]) {
+                      consolidatedAccounts[category][account.name] = 0;
+                    }
+                    consolidatedAccounts[category][account.name] +=
+                      account.balance;
+                  });
+                }
+              });
+
+              // Update consolidated totals
+              consolidatedTotals.totalAssets +=
+                data.trialBalance.totals.totalAssets;
+              consolidatedTotals.totalLiabilities +=
+                data.trialBalance.totals.totalLiabilities;
+              consolidatedTotals.totalEquity +=
+                data.trialBalance.totals.totalEquity;
+
+              if (data.balanceCheck.debitsEqualCredits) {
+                balancedCompanies++;
+              }
             }
-          });
-
-          // Update consolidated totals
-          consolidatedTotals.totalAssets += data.trialBalance.totals.totalAssets;
-          consolidatedTotals.totalLiabilities += data.trialBalance.totals.totalLiabilities;
-          consolidatedTotals.totalEquity += data.trialBalance.totals.totalEquity;
-
-          if (data.balanceCheck.debitsEqualCredits) {
-            balancedCompanies++;
           }
+
+          // Convert consolidated accounts to sorted arrays
+          const consolidatedAssets = Object.entries(consolidatedAccounts.assets)
+            .map(([name, balance]) => ({ name, balance }))
+            .sort((a, b) => b.balance - a.balance);
+
+          const consolidatedLiabilities = Object.entries(
+            consolidatedAccounts.liabilities
+          )
+            .map(([name, balance]) => ({ name, balance }))
+            .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
+
+          const consolidatedEquity = Object.entries(consolidatedAccounts.equity)
+            .map(([name, balance]) => ({ name, balance }))
+            .sort((a, b) => b.balance - a.balance);
+
+          const isConsolidatedBalanced = balancedCompanies === totalCompanies;
+
+          renderTrialBalanceView(
+            consolidatedAssets,
+            consolidatedLiabilities,
+            consolidatedEquity,
+            consolidatedTotals,
+            isConsolidatedBalanced,
+            trialBalanceData,
+            balancedCompanies,
+            totalCompanies
+          );
+        } catch (error) {
+          showErrorState(error);
         }
       }
 
-      // Convert consolidated accounts to sorted arrays
-      const consolidatedAssets = Object.entries(consolidatedAccounts.assets)
-        .map(([name, balance]) => ({ name, balance }))
-        .sort((a, b) => b.balance - a.balance);
+      function renderTrialBalanceView(
+        assets,
+        liabilities,
+        equity,
+        totals,
+        isBalanced,
+        companies,
+        balancedCount,
+        totalCount
+      ) {
+        const dashboardElement = document.getElementById("dashboardData");
 
-      const consolidatedLiabilities = Object.entries(consolidatedAccounts.liabilities)
-        .map(([name, balance]) => ({ name, balance }))
-        .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
-
-      const consolidatedEquity = Object.entries(consolidatedAccounts.equity)
-        .map(([name, balance]) => ({ name, balance }))
-        .sort((a, b) => b.balance - a.balance);
-
-      const isConsolidatedBalanced = balancedCompanies === totalCompanies;
-
-      renderTrialBalanceView(
-        consolidatedAssets,
-        consolidatedLiabilities,
-        consolidatedEquity,
-        consolidatedTotals,
-        isConsolidatedBalanced,
-        trialBalanceData,
-        balancedCompanies,
-        totalCompanies
-      );
-
-    } catch (error) {
-      showErrorState(error);
-    }
-  }
-
-  function renderTrialBalanceView(assets, liabilities, equity, totals, isBalanced, companies, balancedCount, totalCount) {
-    const dashboardElement = document.getElementById("dashboardData");
-    
-    dashboardElement.innerHTML = `
+        dashboardElement.innerHTML = `
       <!-- CONSOLIDATED TRIAL BALANCE HEADER -->
       <div class="dashboard-card" style="margin-bottom: 20px;">
         <h3>Consolidated Trial Balance - All Selected Companies</h3>
         <div style="margin-bottom: 15px;">
           <strong>Status:</strong>
-          <span style="color: ${isBalanced ? '#27ae60' : '#e74c3c'};">
-            ${isBalanced ? '✅ Balanced' : '⚠️ Out of Balance'}
+          <span style="color: ${isBalanced ? "#27ae60" : "#e74c3c"};">
+            ${isBalanced ? "✅ Balanced" : "⚠️ Out of Balance"}
           </span>
           <span style="margin-left: 20px; font-size: 14px; color: #666;">
             Companies: ${totalCount} | 
             Balanced: ${balancedCount}/${totalCount} |
-            Total Accounts: ${assets.length + liabilities.length + equity.length}
+            Total Accounts: ${
+              assets.length + liabilities.length + equity.length
+            }
           </span>
         </div>
 
@@ -1559,14 +1889,24 @@
               Assets (${assets.length} accounts)
             </h4>
             <div style="max-height: 50vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px;">
-              ${assets.length > 0 ? assets.map(account => `
+              ${
+                assets.length > 0
+                  ? assets
+                      .map(
+                        (account) => `
                 <div style="display: flex; justify-content: space-between; padding: 6px 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px;">
-                  <span style="flex: 1; margin-right: 10px;">${account.name}</span>
+                  <span style="flex: 1; margin-right: 10px;">${
+                    account.name
+                  }</span>
                   <span style="font-weight: 600; min-width: 100px; text-align: right;">
                     $${account.balance.toLocaleString()}
                   </span>
                 </div>
-              `).join('') : '<div style="padding: 20px; text-align: center; color: #666;">No asset accounts</div>'}
+              `
+                      )
+                      .join("")
+                  : '<div style="padding: 20px; text-align: center; color: #666;">No asset accounts</div>'
+              }
             </div>
             <div style="border-top: 3px solid #27ae60; padding: 12px; font-weight: bold; color: #27ae60; background: #f8fff8;">
               Total Assets: $${totals.totalAssets.toLocaleString()}
@@ -1579,17 +1919,29 @@
               Liabilities (${liabilities.length} accounts)
             </h4>
             <div style="max-height: 50vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px;">
-              ${liabilities.length > 0 ? liabilities.map(account => `
+              ${
+                liabilities.length > 0
+                  ? liabilities
+                      .map(
+                        (account) => `
                 <div style="display: flex; justify-content: space-between; padding: 6px 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px;">
-                  <span style="flex: 1; margin-right: 10px;">${account.name}</span>
+                  <span style="flex: 1; margin-right: 10px;">${
+                    account.name
+                  }</span>
                   <span style="font-weight: 600; min-width: 100px; text-align: right;">
                     $${Math.abs(account.balance).toLocaleString()}
                   </span>
                 </div>
-              `).join('') : '<div style="padding: 20px; text-align: center; color: #666;">No liability accounts</div>'}
+              `
+                      )
+                      .join("")
+                  : '<div style="padding: 20px; text-align: center; color: #666;">No liability accounts</div>'
+              }
             </div>
             <div style="border-top: 3px solid #e74c3c; padding: 12px; font-weight: bold; color: #e74c3c; background: #fff8f8;">
-              Total Liabilities: $${Math.abs(totals.totalLiabilities).toLocaleString()}
+              Total Liabilities: $${Math.abs(
+                totals.totalLiabilities
+              ).toLocaleString()}
             </div>
           </div>
 
@@ -1599,14 +1951,24 @@
               Equity (${equity.length} accounts)
             </h4>
             <div style="max-height: 50vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px;">
-              ${equity.length > 0 ? equity.map(account => `
+              ${
+                equity.length > 0
+                  ? equity
+                      .map(
+                        (account) => `
                 <div style="display: flex; justify-content: space-between; padding: 6px 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px;">
-                  <span style="flex: 1; margin-right: 10px;">${account.name}</span>
+                  <span style="flex: 1; margin-right: 10px;">${
+                    account.name
+                  }</span>
                   <span style="font-weight: 600; min-width: 100px; text-align: right;">
                     $${account.balance.toLocaleString()}
                   </span>
                 </div>
-              `).join('') : '<div style="padding: 20px; text-align: center; color: #666;">No equity accounts</div>'}
+              `
+                      )
+                      .join("")
+                  : '<div style="padding: 20px; text-align: center; color: #666;">No equity accounts</div>'
+              }
             </div>
             <div style="border-top: 3px solid #3498db; padding: 12px; font-weight: bold; color: #3498db; background: #f8fffe;">
               Total Equity: $${totals.totalEquity.toLocaleString()}
@@ -1615,163 +1977,470 @@
         </div>
 
         <!-- BALANCE CHECK SUMMARY -->
-        <div style="margin-top: 20px; padding: 15px; background: ${isBalanced ? '#f8fff8' : '#fff8f8'}; border-radius: 6px; border: 1px solid ${isBalanced ? '#27ae60' : '#e74c3c'};">
+        <div style="margin-top: 20px; padding: 15px; background: ${
+          isBalanced ? "#f8fff8" : "#fff8f8"
+        }; border-radius: 6px; border: 1px solid ${
+          isBalanced ? "#27ae60" : "#e74c3c"
+        };">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
               <strong>Balance Check:</strong>
-              <span style="color: ${isBalanced ? '#27ae60' : '#e74c3c'}; margin-left: 10px;">
-                ${isBalanced ? 'All companies balanced ✅' : `${balancedCount}/${totalCount} companies balanced ⚠️`}
+              <span style="color: ${
+                isBalanced ? "#27ae60" : "#e74c3c"
+              }; margin-left: 10px;">
+                ${
+                  isBalanced
+                    ? "All companies balanced ✅"
+                    : `${balancedCount}/${totalCount} companies balanced ⚠️`
+                }
               </span>
             </div>
             <div style="font-size: 14px; color: #666;">
-              ${isBalanced ? 'Trial balance is in perfect balance across all selected companies.' : 'Some companies have trial balance discrepancies that need attention.'}
+              ${
+                isBalanced
+                  ? "Trial balance is in perfect balance across all selected companies."
+                  : "Some companies have trial balance discrepancies that need attention."
+              }
             </div>
           </div>
         </div>
       </div>
 
-      <!-- INDIVIDUAL COMPANY STATUS -->
+      <!-- INDIVIDUAL COMPANY STATUS - FIXED SCROLLING -->
       <div class="dashboard-card">
         <h3>Individual Company Trial Balance Status</h3>
-        <div style="max-height: 40vh; overflow-y: auto;">
-          ${companies.map(company => `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid ${company.balanced ? '#27ae60' : '#e74c3c'}; background: ${company.balanced ? '#f8fff8' : '#fff8f8'};">
+        <div style="max-height: 40vh; overflow-y: scroll; border: 1px solid #e0e0e0; border-radius: 6px; padding: 10px;">
+          ${companies
+            .map(
+              (company) => `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid ${
+              company.balanced ? "#27ae60" : "#e74c3c"
+            }; background: ${company.balanced ? "#f8fff8" : "#fff8f8"};">
               <div>
                 <strong style="font-size: 16px;">${company.companyName}</strong>
                 <div style="font-size: 12px; color: #666; margin-top: 4px;">
                   Assets: $${company.trialBalance.totals.totalAssets.toLocaleString()} | 
-                  Liabilities: $${Math.abs(company.trialBalance.totals.totalLiabilities).toLocaleString()} | 
+                  Liabilities: $${Math.abs(
+                    company.trialBalance.totals.totalLiabilities
+                  ).toLocaleString()} | 
                   Equity: $${company.trialBalance.totals.totalEquity.toLocaleString()}
                 </div>
               </div>
               <div style="text-align: right;">
-                <div style="font-weight: bold; color: ${company.balanced ? '#27ae60' : '#e74c3c'};">
-                  ${company.balanced ? '✅ Balanced' : '❌ Out of Balance'}
+                <div style="font-weight: bold; color: ${
+                  company.balanced ? "#27ae60" : "#e74c3c"
+                };">
+                  ${company.balanced ? "✅ Balanced" : "❌ Out of Balance"}
                 </div>
-                ${!company.balanced ? `
+                ${
+                  !company.balanced
+                    ? `
                   <div style="font-size: 11px; color: #e74c3c; margin-top: 2px;">
-                    Difference: $${Math.abs(company.balanceCheck.difference || 0).toLocaleString()}
+                    Difference: $${Math.abs(
+                      company.balanceCheck.difference || 0
+                    ).toLocaleString()}
                   </div>
-                ` : ''}
+                `
+                    : ""
+                }
               </div>
             </div>
-          `).join('')}
+          `
+            )
+            .join("")}
         </div>
-
-        ${balancedCount < totalCount ? `
+        ${
+          balancedCount < totalCount
+            ? `
           <div style="margin-top: 15px; padding: 12px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px;">
             <strong>⚠️ Action Required:</strong> 
-            ${totalCount - balancedCount} ${totalCount - balancedCount === 1 ? 'company has' : 'companies have'} trial balance discrepancies. 
-            Review journal entries and account reconciliations for the affected ${totalCount - balancedCount === 1 ? 'company' : 'companies'}.
+            ${totalCount - balancedCount} ${
+                totalCount - balancedCount === 1
+                  ? "company has"
+                  : "companies have"
+              } trial balance discrepancies. 
+            Review journal entries and account reconciliations for the affected ${
+              totalCount - balancedCount === 1 ? "company" : "companies"
+            }.
           </div>
-        ` : ''}
+        `
+            : ""
+        }
       </div>
     `;
-  }
-
-  async function buildConsolidatedTrialBalance() {
-    const consolidatedData = {
-      companies: [],
-      consolidated: { totals: { totalAssets: 0, totalLiabilities: 0, totalEquity: 0 }, balanceCheck: { debitsEqualCredits: true } },
-      summary: { totalCompanies: 0, totalAccounts: 0, balancedCompanies: 0 }
-    };
-
-    for (const tenantId of activeCompanyFilters) {
-      const connectedCompany = connectedCompanies.find(c => c.tenantId === tenantId);
-      if (!connectedCompany) continue;
-
-      const orgName = getOrganizationName(connectedCompany.tenantName);
-      const response = await fetchWithErrorHandling("/api/trial-balance", { organizationName: orgName });
-
-      if (response && response.ok) {
-        const data = await response.json();
-        
-        consolidatedData.companies.push({
-          companyName: connectedCompany.tenantName.replace("Rirratjingu ", ""),
-          sections: {
-            assets: { accounts: data.trialBalance.assets },
-            liabilities: { accounts: data.trialBalance.liabilities },
-            equity: { accounts: data.trialBalance.equity }
-          }
-        });
-
-        updateConsolidatedTotals(consolidatedData, data);
       }
-    }
 
-    return consolidatedData;
-  }
+      async function buildConsolidatedTrialBalance() {
+        const consolidatedData = {
+          companies: [],
+          consolidated: {
+            totals: { totalAssets: 0, totalLiabilities: 0, totalEquity: 0 },
+            balanceCheck: { debitsEqualCredits: true },
+          },
+          summary: {
+            totalCompanies: 0,
+            totalAccounts: 0,
+            balancedCompanies: 0,
+          },
+        };
 
-  function updateConsolidatedTotals(consolidatedData, data) {
-    consolidatedData.consolidated.totals.totalAssets += data.trialBalance.totals.totalAssets;
-    consolidatedData.consolidated.totals.totalLiabilities += data.trialBalance.totals.totalLiabilities;
-    consolidatedData.consolidated.totals.totalEquity += data.trialBalance.totals.totalEquity;
+        for (const tenantId of activeCompanyFilters) {
+          const connectedCompany = connectedCompanies.find(
+            (c) => c.tenantId === tenantId
+          );
+          if (!connectedCompany) continue;
 
-    consolidatedData.summary.totalCompanies++;
-    consolidatedData.summary.totalAccounts += 
-      data.trialBalance.assets.length + 
-      data.trialBalance.liabilities.length + 
-      data.trialBalance.equity.length;
+          const orgName = getOrganizationName(connectedCompany.tenantName);
+          const response = await fetchWithErrorHandling("/api/trial-balance", {
+            organizationName: orgName,
+          });
 
-    if (data.balanceCheck.debitsEqualCredits) {
-      consolidatedData.summary.balancedCompanies++;
-    } else {
-      consolidatedData.consolidated.balanceCheck.debitsEqualCredits = false;
-    }
-  }
+          if (response && response.ok) {
+            const data = await response.json();
 
-  // ====== UTILITY FUNCTIONS ======
+            consolidatedData.companies.push({
+              companyName: connectedCompany.tenantName.replace(
+                "Rirratjingu ",
+                ""
+              ),
+              sections: {
+                assets: { accounts: data.trialBalance.assets },
+                liabilities: { accounts: data.trialBalance.liabilities },
+                equity: { accounts: data.trialBalance.equity },
+              },
+            });
 
-  async function fetchWithErrorHandling(url, body = null) {
-    try {
-      const options = {
-        method: body ? "POST" : "GET",
-        headers: body ? { "Content-Type": "application/json" } : {},
-        body: body ? JSON.stringify(body) : null
-      };
-      return await fetch(url, options);
-    } catch (error) {
-      console.error(`Fetch error for ${url}:`, error);
-      return null;
-    }
-  }
+            updateConsolidatedTotals(consolidatedData, data);
+          }
+        }
 
-  function showNoCompaniesSelected() {
-    const dashboardElement = document.getElementById("dashboardData");
-    dashboardElement.innerHTML = `
+        return consolidatedData;
+      }
+
+      function updateConsolidatedTotals(consolidatedData, data) {
+        consolidatedData.consolidated.totals.totalAssets +=
+          data.trialBalance.totals.totalAssets;
+        consolidatedData.consolidated.totals.totalLiabilities +=
+          data.trialBalance.totals.totalLiabilities;
+        consolidatedData.consolidated.totals.totalEquity +=
+          data.trialBalance.totals.totalEquity;
+
+        consolidatedData.summary.totalCompanies++;
+        consolidatedData.summary.totalAccounts +=
+          data.trialBalance.assets.length +
+          data.trialBalance.liabilities.length +
+          data.trialBalance.equity.length;
+
+        if (data.balanceCheck.debitsEqualCredits) {
+          consolidatedData.summary.balancedCompanies++;
+        } else {
+          consolidatedData.consolidated.balanceCheck.debitsEqualCredits = false;
+        }
+      }
+
+      // ====== UTILITY FUNCTIONS ======
+
+      async function fetchWithErrorHandling(url, body = null) {
+        try {
+          const options = {
+            method: body ? "POST" : "GET",
+            headers: body ? { "Content-Type": "application/json" } : {},
+            body: body ? JSON.stringify(body) : null,
+          };
+          return await fetch(url, options);
+        } catch (error) {
+          console.error(`Fetch error for ${url}:`, error);
+          return null;
+        }
+      }
+
+      function showNoCompaniesSelected() {
+        const dashboardElement = document.getElementById("dashboardData");
+        dashboardElement.innerHTML = `
       <div style="text-align: center; padding: 40px; color: #666;">
         <h3>No Companies Selected</h3>
         <p>Please select companies using the filters above to view financial data.</p>
       </div>
     `;
-  }
+      }
+      
 
-  // ====== PLACEHOLDER FUNCTIONS FOR OTHER VIEWS ======
-  // These maintain the existing structure while being organized
+  // ====== CASH FLOW IMPLEMENTATION ======
+  // Replace the placeholder loadCashFlowData() function with this complete implementation
 
   async function loadCashFlowData() {
-    // Simplified version - full implementation would follow same pattern as overview
-    showComingSoon("Cash Flow Analysis");
-  }
+    if (activeCompanyFilters.length === 0) {
+      showNoCompaniesSelected();
+      return;
+    }
 
-  async function loadProfitLossData() {
-    // Simplified version - full implementation would follow same pattern as overview  
-    showComingSoon("Profit & Loss Analysis");
-  }
-
-  async function loadYearOverYearData() {
-    // Simplified version - full implementation would follow same pattern as overview
-    showComingSoon("Year-over-Year Analysis");
-  }
-
-  async function loadAlertsData() {
-    // Simplified version - full implementation would follow same pattern as overview
-    showComingSoon("Financial Alerts");
-  }
-
-  function showComingSoon(featureName) {
     const dashboardElement = document.getElementById("dashboardData");
     dashboardElement.innerHTML = `
+      <div class="loading">
+        <div class="loading-spinner"></div>
+        Loading cash flow data from ${activeCompanyFilters.length} companies...
+      </div>
+    `;
+
+    try {
+      const cashData = [];
+      const consolidatedBankAccounts = {};
+      let consolidatedTotals = {
+        totalCash: 0,
+        totalBankAccounts: 0,
+        companiesWithCash: 0,
+        companiesWithZeroCash: 0
+      };
+
+      // Load cash position for each selected company
+      for (const tenantId of activeCompanyFilters) {
+        const connectedCompany = connectedCompanies.find(c => c.tenantId === tenantId);
+        if (!connectedCompany) continue;
+
+        const orgName = getOrganizationName(connectedCompany.tenantName);
+        const response = await fetchWithErrorHandling("/api/cash-position", { organizationName: orgName });
+
+        if (response && response.ok) {
+          const data = await response.json();
+          
+          const companyData = {
+            companyName: connectedCompany.tenantName.replace("Rirratjingu ", ""),
+            tenantName: data.tenantName,
+            totalCash: data.totalCash || 0,
+            bankAccounts: data.bankAccounts || [],
+            error: false
+          };
+
+          cashData.push(companyData);
+
+          // Update consolidated totals
+          consolidatedTotals.totalCash += companyData.totalCash;
+          consolidatedTotals.totalBankAccounts += companyData.bankAccounts.length;
+          
+          if (companyData.totalCash > 0) {
+            consolidatedTotals.companiesWithCash++;
+          } else {
+            consolidatedTotals.companiesWithZeroCash++;
+          }
+
+          // Consolidate bank accounts by name across companies
+          if (companyData.bankAccounts.length > 0) {
+            companyData.bankAccounts.forEach(account => {
+              const accountKey = account.name || 'Unnamed Account';
+              
+              if (!consolidatedBankAccounts[accountKey]) {
+                consolidatedBankAccounts[accountKey] = {
+                  name: accountKey,
+                  totalBalance: 0,
+                  companies: [],
+                  accountCount: 0
+                };
+              }
+
+              consolidatedBankAccounts[accountKey].totalBalance += account.balance;
+              consolidatedBankAccounts[accountKey].accountCount++;
+              consolidatedBankAccounts[accountKey].companies.push({
+                company: companyData.companyName,
+                balance: account.balance,
+                code: account.code
+              });
+            });
+          }
+        } else {
+          // Add error entry for failed companies
+          cashData.push({
+            companyName: connectedCompany.tenantName.replace("Rirratjingu ", ""),
+            error: true,
+            errorMessage: "Failed to load cash position data"
+          });
+        }
+      }
+
+      // Convert consolidated bank accounts to sorted array
+      const sortedBankAccounts = Object.values(consolidatedBankAccounts)
+        .sort((a, b) => b.totalBalance - a.totalBalance);
+
+      renderCashFlowView(cashData, sortedBankAccounts, consolidatedTotals);
+
+    } catch (error) {
+      showErrorState(error);
+    }
+  }
+
+  function renderCashFlowView(companies, consolidatedBankAccounts, totals) {
+    const dashboardElement = document.getElementById("dashboardData");
+    
+    const cashHealthStatus = totals.companiesWithZeroCash === 0 ? 'healthy' : 
+                           totals.companiesWithZeroCash >= totals.companiesWithCash ? 'critical' : 'warning';
+    
+    dashboardElement.innerHTML = `
+      <!-- CONSOLIDATED CASH POSITION HEADER -->
+      <div class="dashboard-card" style="margin-bottom: 20px;">
+        <h3>Consolidated Cash Position - All Selected Companies</h3>
+        <div style="margin-bottom: 15px;">
+          <strong>Total Cash:</strong> 
+          <span style="font-size: 18px; font-weight: bold; color: ${totals.totalCash > 0 ? '#27ae60' : '#e74c3c'};">
+            $${totals.totalCash.toLocaleString()}
+          </span>
+          <span style="margin-left: 20px; font-size: 14px; color: #666;">
+            Companies: ${companies.length} | 
+            Bank Accounts: ${totals.totalBankAccounts} |
+            Cash Status: <span style="color: ${
+              cashHealthStatus === 'healthy' ? '#27ae60' : 
+              cashHealthStatus === 'warning' ? '#f39c12' : '#e74c3c'
+            };">
+              ${cashHealthStatus === 'healthy' ? '✅ Healthy' : 
+                cashHealthStatus === 'warning' ? '⚠️ Mixed' : '❌ Critical'}
+            </span>
+          </span>
+        </div>
+
+        <!-- CASH FLOW SUMMARY METRICS -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px;">
+          <div style="text-align: center; padding: 15px; background: #f8fff8; border-radius: 6px; border: 1px solid #27ae60;">
+            <div style="font-size: 24px; font-weight: bold; color: #27ae60;">
+              $${totals.totalCash.toLocaleString()}
+            </div>
+            <div style="font-size: 12px; color: #666; margin-top: 4px;">Total Cash Across All Companies</div>
+          </div>
+          
+          <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 6px; border: 1px solid #dee2e6;">
+            <div style="font-size: 24px; font-weight: bold; color: #495057;">
+              ${totals.totalBankAccounts}
+            </div>
+            <div style="font-size: 12px; color: #666; margin-top: 4px;">Total Bank Accounts</div>
+          </div>
+
+          <div style="text-align: center; padding: 15px; background: #f8fff8; border-radius: 6px; border: 1px solid #27ae60;">
+            <div style="font-size: 24px; font-weight: bold; color: #27ae60;">
+              ${totals.companiesWithCash}
+            </div>
+            <div style="font-size: 12px; color: #666; margin-top: 4px;">Companies with Positive Cash</div>
+          </div>
+
+          <div style="text-align: center; padding: 15px; background: ${totals.companiesWithZeroCash > 0 ? '#fff8f8' : '#f8f9fa'}; border-radius: 6px; border: 1px solid ${totals.companiesWithZeroCash > 0 ? '#e74c3c' : '#dee2e6'};">
+            <div style="font-size: 24px; font-weight: bold; color: ${totals.companiesWithZeroCash > 0 ? '#e74c3c' : '#495057'};">
+              ${totals.companiesWithZeroCash}
+            </div>
+            <div style="font-size: 12px; color: #666; margin-top: 4px;">Companies with Zero/Low Cash</div>
+          </div>
+        </div>
+
+        <!-- CONSOLIDATED BANK ACCOUNTS -->
+        ${consolidatedBankAccounts.length > 0 ? `
+          <h4 style="margin-bottom: 10px;">Bank Accounts Summary (${consolidatedBankAccounts.length} account types)</h4>
+          <div style="max-height: 50vh; overflow-y: scroll; border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px;">
+            ${consolidatedBankAccounts.map(account => `
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; margin: 8px 0; border-radius: 6px; background: ${account.totalBalance > 0 ? '#f8fff8' : '#fff8f8'}; border: 1px solid ${account.totalBalance > 0 ? '#27ae60' : '#e74c3c'};">
+                <div style="flex: 1;">
+                  <div style="font-weight: 600; font-size: 16px;">${account.name}</div>
+                  <div style="font-size: 12px; color: #666; margin-top: 4px;">
+                    Found in ${account.companies.length} ${account.companies.length === 1 ? 'company' : 'companies'}: 
+                    ${account.companies.map(comp => 
+                      `${comp.company} ($${comp.balance.toLocaleString()})`
+                    ).join(' | ')}
+                  </div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-weight: bold; font-size: 18px; color: ${account.totalBalance > 0 ? '#27ae60' : '#e74c3c'};">
+                    $${account.totalBalance.toLocaleString()}
+                  </div>
+                  <div style="font-size: 11px; color: #666;">
+                    ${account.accountCount} ${account.accountCount === 1 ? 'account' : 'accounts'}
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        ` : `
+          <div style="text-align: center; padding: 40px; color: #666; background: #f8f9fa; border-radius: 6px;">
+            <h4>No Bank Accounts Found</h4>
+            <p>No bank account data was retrieved from the selected companies.</p>
+          </div>
+        `}
+      </div>
+
+      <!-- INDIVIDUAL COMPANY CASH POSITIONS -->
+      <div class="dashboard-card">
+        <h3>Individual Company Cash Positions</h3>
+        <div style="max-height: 50vh; overflow-y: scroll; border: 1px solid #e0e0e0; border-radius: 6px; padding: 10px;">
+          ${companies.map(company => {
+            if (company.error) {
+              return `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; margin: 10px 0; border-radius: 6px; border: 1px solid #e74c3c; background: #fff8f8;">
+                  <div>
+                    <strong style="font-size: 16px; color: #e74c3c;">${company.companyName}</strong>
+                    <div style="font-size: 12px; color: #e74c3c; margin-top: 4px;">
+                      ${company.errorMessage}
+                    </div>
+                  </div>
+                  <div style="color: #e74c3c; font-weight: bold;">❌ Error</div>
+                </div>
+              `;
+            }
+
+            return `
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; margin: 10px 0; border-radius: 6px; border: 1px solid ${company.totalCash > 0 ? '#27ae60' : '#e74c3c'}; background: ${company.totalCash > 0 ? '#f8fff8' : '#fff8f8'};">
+                <div style="flex: 1;">
+                  <strong style="font-size: 16px;">${company.companyName}</strong>
+                  <div style="font-size: 12px; color: #666; margin-top: 4px;">
+                    ${company.bankAccounts.length} ${company.bankAccounts.length === 1 ? 'bank account' : 'bank accounts'}
+                    ${company.bankAccounts.length > 0 ? ': ' + company.bankAccounts.map(acc => acc.name).join(', ') : ''}
+                  </div>
+                  ${company.bankAccounts.length > 3 ? `
+                    <div style="font-size: 11px; color: #999; margin-top: 2px;">
+                      ${company.bankAccounts.length - 3} additional accounts...
+                    </div>
+                  ` : ''}
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-weight: bold; font-size: 20px; color: ${company.totalCash > 0 ? '#27ae60' : '#e74c3c'};">
+                    $${company.totalCash.toLocaleString()}
+                  </div>
+                  <div style="font-size: 12px; color: ${company.totalCash > 0 ? '#27ae60' : '#e74c3c'};">
+                    ${company.totalCash > 0 ? '✅ Positive Cash' : '⚠️ No Cash'}
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+        <!-- CASH FLOW INSIGHTS -->
+        ${totals.companiesWithZeroCash > 0 ? `
+          <div style="margin-top: 15px; padding: 15px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px;">
+            <strong>⚠️ Cash Flow Alert:</strong> 
+            ${totals.companiesWithZeroCash} ${totals.companiesWithZeroCash === 1 ? 'company has' : 'companies have'} zero or minimal cash positions. 
+            Consider reviewing cash flow management and bank account connectivity for these entities.
+          </div>
+        ` : `
+          <div style="margin-top: 15px; padding: 15px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 6px;">
+            <strong>✅ Cash Position Healthy:</strong> 
+            All selected companies maintain positive cash balances across ${totals.totalBankAccounts} bank accounts.
+          </div>
+        `}
+      </div>
+    `;
+  }
+
+      async function loadProfitLossData() {
+        // Simplified version - full implementation would follow same pattern as overview
+        showComingSoon("Profit & Loss Analysis");
+      }
+
+      async function loadYearOverYearData() {
+        // Simplified version - full implementation would follow same pattern as overview
+        showComingSoon("Year-over-Year Analysis");
+      }
+
+      async function loadAlertsData() {
+        // Simplified version - full implementation would follow same pattern as overview
+        showComingSoon("Financial Alerts");
+      }
+
+      function showComingSoon(featureName) {
+        const dashboardElement = document.getElementById("dashboardData");
+        dashboardElement.innerHTML = `
       <div style="text-align: center; padding: 60px; color: #666;">
         <h3>${featureName}</h3>
         <p>This feature is being optimized and will be available in the next update.</p>
@@ -1780,12 +2449,12 @@
         </p>
       </div>
     `;
-  }
+      }
 
-  function renderTrialBalanceWithConsolidated(consolidatedData) {
-    // Simplified version - maintains existing structure
-    const dashboardElement = document.getElementById("dashboardData");
-    dashboardElement.innerHTML = `
+      function renderTrialBalanceWithConsolidated(consolidatedData) {
+        // Simplified version - maintains existing structure
+        const dashboardElement = document.getElementById("dashboardData");
+        dashboardElement.innerHTML = `
       <div class="dashboard-card">
         <h3>Consolidated Trial Balance - ${consolidatedData.summary.totalCompanies} Companies</h3>
         <div style="text-align: center; padding: 40px; color: #666;">
@@ -1794,7 +2463,7 @@
         </div>
       </div>
     `;
-  }
-</script>
-</body>
+      }
+    </script>
+  </body>
 </html>
