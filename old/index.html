@@ -423,6 +423,9 @@
         flex: 1;
         overflow-y: auto;
         padding: 20px;
+        height: calc(
+          100vh - 120px
+        ); /* Use almost full screen height minus header space */
       }
 
       .chat-messages {
@@ -491,8 +494,8 @@
 
       .dashboard-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
+        grid-template-columns: repeat(5, minmax(200px, 1fr)) !important;
+        gap: 10px;
         margin-bottom: 20px;
       }
 
@@ -502,6 +505,7 @@
         padding: 20px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         border: 1px solid #e0e0e0;
+        min-width: 250px; /* Add this line */
       }
 
       .dashboard-card h3 {
@@ -619,7 +623,7 @@
       }
 
       /* Responsive design */
-      @media (max-width: 768px) {
+      @media (max-width: 480) {
         .main-container {
           flex-direction: column;
         }
@@ -634,10 +638,6 @@
           display: none;
         }
 
-        .dashboard-grid {
-          grid-template-columns: 1fr;
-        }
-
         .company-checkboxes {
           flex-direction: column;
           gap: 6px;
@@ -648,7 +648,6 @@
         display: none !important;
       }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
   </head>
   <body>
     <!-- CONNECTION MANAGER SECTION -->
@@ -904,21 +903,13 @@
               </button>
               <button onclick="setView('cash-flow', this)">Cash Flow</button>
               <button onclick="setView('p-and-l', this)">P&L</button>
-              <button onclick="setView('year-over-year', this)">
+              <button onclick="setView('year-over-year', this)" id="yoyButton">
                 YoY Analysis
-              </button>
-              <button onclick="setView('monthly-analysis', this)">
-                Monthly Analysis
+                <span id="yoyStatus" style="font-size: 11px; color: #999"
+                  >●</span
+                >
               </button>
               <button onclick="setView('alerts', this)">Alerts</button>
-
-              <select id="periodSelect" onchange="updateGlobalDates()">
-                <option value="CURRENT_MONTH">Current Month</option>
-                <option value="PREVIOUS_MONTH">Previous Month</option>
-                <option value="CYTD" selected>CYTD</option>
-                <option value="PYTD">PYTD</option>
-                <option value="CUSTOM">Custom Dates</option>
-              </select>
             </div>
 
             <div id="dashboardData">
@@ -950,11 +941,6 @@
       let isOAuthInProgress = false;
       let activeCompanyFilters = [];
       let currentView = "overview";
-      // Global variables for monthly analysis
-      let monthlyData = null;
-      let monthlyViewMode = "fy"; // 'fy' or 'monthly'
-      let selectedMonth = "";
-      let selectedYear = new Date().getFullYear();
 
       // ====== CONNECTION MANAGER FUNCTIONS ======
 
@@ -1080,9 +1066,9 @@
           }`;
 
           document.getElementById("oauthInstructions").innerHTML = `
-                          <strong>Next Company:</strong> ${companyName}<br>
-                          <small>When the Xero login opens, select "${companyName}" from the dropdown and authorize access.</small>
-                      `;
+                                      <strong>Next Company:</strong> ${companyName}<br>
+                                      <small>When the Xero login opens, select "${companyName}" from the dropdown and authorize access.</small>
+                                  `;
         }
       }
 
@@ -1174,14 +1160,14 @@
         connectedList.innerHTML = connectedCompanies
           .map(
             (company) => `
-                      <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; border: 1px solid #28a745; background: #f8fff9; border-radius: 6px; margin-bottom: 0.5rem;">
-                          <div style="display: flex; align-items: center; gap: 0.5rem;">
-                              <div style="width: 12px; height: 12px; border-radius: 50%; background: #28a745;"></div>
-                              <strong>${company.name}</strong>
-                          </div>
-                          <div style="color: #28a745; font-size: 0.9rem;">✅ Connected</div>
-                      </div>
-                  `
+                                  <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; border: 1px solid #28a745; background: #f8fff9; border-radius: 6px; margin-bottom: 0.5rem;">
+                                      <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                          <div style="width: 12px; height: 12px; border-radius: 50%; background: #28a745;"></div>
+                                          <strong>${company.name}</strong>
+                                      </div>
+                                      <div style="color: #28a745; font-size: 0.9rem;">✅ Connected</div>
+                                  </div>
+                              `
           )
           .join("");
 
@@ -1233,9 +1219,10 @@
         try {
           await loadConnectedCompanies();
           setupCompanyFilters();
-          await loadDashboardData();
-          initializeChat();
-          initializeResizer();
+          loadYearOverYearDataInBackground();
+          await loadOverviewDataWithYoY();
+          //initializeChat();// Removed
+          //initializeResizer();//Removed
         } catch (error) {
           console.error("Error initializing dashboard:", error);
         }
@@ -1293,63 +1280,20 @@
               .replace("Rirratjingu ", "")
               .replace(" Pty Ltd", "");
             return `
-              <div class="company-checkbox-item balanced">
-                <input type="checkbox"
-                       id="filter-${company.tenantId}"
-                       checked
-                       onchange="handleCompanyFilterChange('${company.tenantId}')">
-                <label for="filter-${company.tenantId}"
-                       onclick="toggleCompanyFilterByLabel('${company.tenantId}')">${shortName}</label>
-              </div>
-            `;
+                          <div class="company-checkbox-item balanced">
+                            <input type="checkbox"
+                                   id="filter-${company.tenantId}"
+                                   checked
+                                   onchange="handleCompanyFilterChange('${company.tenantId}')">
+                            <label for="filter-${company.tenantId}"
+                                   onclick="toggleCompanyFilterByLabel('${company.tenantId}')">${shortName}</label>
+                          </div>
+                        `;
           })
           .join("");
 
         //updateFilterSummary();
         //updateChatAnalysisStatus();
-      }
-
-      function updateGlobalDates() {
-        const period = document.getElementById("periodSelect").value;
-        const now = new Date();
-
-        // Australian Financial Year logic (July 1 - June 30)
-        const currentMonth = now.getMonth(); // 0-based
-        const ausFinancialYear =
-          currentMonth >= 6 ? now.getFullYear() : now.getFullYear() - 1;
-
-        let fromDate, toDate;
-
-        if (period === "CURRENT_MONTH") {
-          fromDate = new Date(now.getFullYear(), now.getMonth(), 1);
-          toDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        } else if (period === "PREVIOUS_MONTH") {
-          fromDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-          toDate = new Date(now.getFullYear(), now.getMonth(), 0);
-        } else if (period === "CYTD") {
-          fromDate = new Date(ausFinancialYear, 6, 1); // July 1
-          toDate = now;
-        } else if (period === "PYTD") {
-          fromDate = new Date(ausFinancialYear - 1, 6, 1);
-          toDate = now;
-        }
-
-        // Send to server to update global variables
-        console.log(
-          `Sending dates: FROM=${fromDate.toISOString().split("T")[0]}, TO=${
-            toDate.toISOString().split("T")[0]
-          }, PERIOD=${period}`
-        );
-
-        fetch("/update-dates", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            fromDate: fromDate.toISOString().split("T")[0],
-            toDate: toDate.toISOString().split("T")[0],
-            period: period,
-          }),
-        });
       }
 
       // Add these functions after the setupCompanyFilters() function:
@@ -1373,12 +1317,6 @@
 
         // Add chat message about filter change
         const selectedCompanies = getSelectedCompanyNames();
-        addMessage(
-          "assistant",
-          `Analysis scope updated: Now analyzing ${
-            selectedCompanies.length
-          } companies: ${selectedCompanies.join(", ")}`
-        );
       }
 
       function toggleCompanyFilterByLabel(tenantId) {
@@ -1415,10 +1353,6 @@
         //updateFilterSummary();
         //updateChatAnalysisStatus();
         loadDashboardData();
-        addMessage(
-          "assistant",
-          "Analysis scope updated: Now analyzing all connected companies"
-        );
       }
 
       function selectNoCompanies() {
@@ -1432,10 +1366,6 @@
         //updateFilterSummary();
         //updateChatAnalysisStatus();
         loadDashboardData();
-        addMessage(
-          "assistant",
-          "Analysis scope cleared: No companies selected. Choose companies above to begin analysis."
-        );
       }
 
       function selectMainEntities() {
@@ -1460,172 +1390,32 @@
         loadDashboardData();
 
         const selectedNames = getSelectedCompanyNames();
-        addMessage(
-          "assistant",
-          `Analysis scope updated: Focusing on main entities - ${selectedNames.join(
-            ", "
-          )}`
-        );
       }
-
-      // ====== QUICK ANALYSIS FUNCTIONS ======
-      function quickAnalysis(type) {
-        const selectedCompanies = getSelectedCompanyNames();
-
-        if (selectedCompanies.length === 0) {
-          addMessage(
-            "assistant",
-            "Please select companies using the filters above before requesting analysis."
-          );
-          return;
-        }
-
-        let query = "";
-        let analysisType = "";
-
-        switch (type) {
-          case "trial-balance":
-            query = "Show me the trial balance";
-            analysisType = "Trial Balance Analysis";
-            break;
-          case "cash-position":
-            query = "What is the current cash position?";
-            analysisType = "Cash Position Analysis";
-            break;
-          case "profit-loss":
-            query = "Show me the profit and loss summary";
-            analysisType = "Profit & Loss Analysis";
-            break;
-          case "financial-ratios":
-            query = "Calculate key financial ratios";
-            analysisType = "Financial Ratios Analysis";
-            break;
-          case "outstanding-invoices":
-            query = "Show me outstanding invoices";
-            analysisType = "Outstanding Invoices Analysis";
-            break;
-          case "consolidate-all":
-            query = "Show me consolidated financial summary";
-            analysisType = "Consolidated Analysis";
-            break;
-        }
-
-        addMessage("user", query);
-
-        // Show analysis in progress
-        setTimeout(() => {
-          addMessage(
-            "assistant",
-            `Processing ${analysisType} for: ${selectedCompanies.join(", ")}...`
-          );
-
-          // Simulate actual MCP analysis - replace with real MCP calls
-          setTimeout(() => {
-            addMessage(
-              "assistant",
-              `${analysisType} completed for ${selectedCompanies.length} companies. Here's the summary: [This would contain actual financial data from your MCP server tools]`
-            );
-          }, 2000);
-        }, 500);
-      }
-
-      // ====== CHAT FUNCTIONS ======
-
-      function initializeChat() {
-        const chatInput = document.getElementById("chatInput");
-        if (!chatInput) return; // Add this line to prevent the error
-
-        chatInput.addEventListener("keydown", function (e) {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-          }
-        });
-      }
-
-      function sendMessage() {
-        const chatInput = document.getElementById("chatInput");
-        const message = chatInput.value.trim();
-
-        if (!message) return;
-
-        const selectedCompanies = getSelectedCompanyNames();
-
-        if (selectedCompanies.length === 0) {
-          addMessage(
-            "assistant",
-            "Please select companies using the filters above before asking questions."
-          );
-          return;
-        }
-
-        addMessage("user", message);
-        chatInput.value = "";
-
-        // Show analysis scope and processing message
-        setTimeout(() => {
-          const scope =
-            selectedCompanies.length === connectedCompanies.length
-              ? `all ${connectedCompanies.length} connected companies`
-              : `${
-                  selectedCompanies.length
-                } selected companies: ${selectedCompanies.join(", ")}`;
-
-          addMessage(
-            "assistant",
-            `I'll analyze ${scope} for your query: "${message}". Accessing RAC Xero MCP system with ${selectedCompanies.length} company scope...`
-          );
-
-          // Here you would integrate with your actual MCP server
-          // For now, showing example of what the integration would look like
-          setTimeout(() => {
-            addMessage(
-              "assistant",
-              `Analysis complete for ${selectedCompanies.join(
-                ", "
-              )}. [This response would contain actual financial data from your MCP server based on the selected companies and query type.]`
-            );
-          }, 2000);
-        }, 500);
-      }
-
-      function addMessage(type, content) {
-        const messagesContainer = document.getElementById("chatMessages");
-        const messageDiv = document.createElement("div");
-        messageDiv.className = `message ${type}`;
-        messageDiv.innerHTML = `<strong>${
-          type === "user" ? "You" : "Claude"
-        }:</strong> ${content}`;
-        messagesContainer.appendChild(messageDiv);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-      }
-
-      // ====== DASHBOARD DATA LOADING FUNCTIONS ======
 
       async function loadDashboardData() {
         const dashboardElement = document.getElementById("dashboardData");
 
         if (activeCompanyFilters.length === 0) {
           dashboardElement.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: #666;">
-        <h3>No Companies Selected</h3>
-        <p>Please select companies using the filters above to view financial data.</p>
-      </div>
-    `;
+                  <div style="text-align: center; padding: 40px; color: #666;">
+                    <h3>No Companies Selected</h3>
+                    <p>Please select companies using the filters above to view financial data.</p>
+                  </div>
+                `;
           return;
         }
 
         // Show loading with specific company count
         const selectedCompanyNames = getSelectedCompanyNames();
         dashboardElement.innerHTML = `
-    <div class="loading">
-      <div class="loading-spinner"></div>
-      Loading ${currentView} data from ${
+                <div class="loading">
+                  <div class="loading-spinner"></div>
+                  Loading ${currentView} data from ${
           activeCompanyFilters.length
         } companies:<br>
-      <small>${selectedCompanyNames.join(", ")}</small>
-    </div>
-  `;
+                  <small>${selectedCompanyNames.join(", ")}</small>
+                </div>
+              `;
 
         try {
           if (currentView === "overview") {
@@ -1638,22 +1428,78 @@
             await loadProfitLossData();
           } else if (currentView === "year-over-year") {
             await loadYearOverYearData(); // <- Add this line
-          } else if (currentView === "monthly-analysis") {
-            await loadMonthlyAnalysisData();
           } else if (currentView === "alerts") {
             await loadAlertsData();
           }
         } catch (error) {
           dashboardElement.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: #e74c3c;">
-        <h3>Error Loading Data</h3>
-        <p>Failed to load dashboard data: ${error.message}</p>
-        <button onclick="loadDashboardData()" style="margin-top: 10px; padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">
-          Retry
-        </button>
-      </div>
-    `;
+                  <div style="text-align: center; padding: 40px; color: #e74c3c;">
+                    <h3>Error Loading Data</h3>
+                    <p>Failed to load dashboard data: ${error.message}</p>
+                    <button onclick="loadDashboardData()" style="margin-top: 10px; padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                      Retry
+                    </button>
+                  </div>
+                `;
         }
+      }
+
+      // Helper function for calculating consolidated metrics
+      function calculateConsolidatedFromNewEndpoint(validData) {
+        const consolidated = {
+          current: { revenue: 0, expenses: 0, profit: 0, assets: 0, equity: 0 },
+          previous: {
+            revenue: 0,
+            expenses: 0,
+            profit: 0,
+            assets: 0,
+            equity: 0,
+          },
+          growth: { revenue: 0, expenses: 0, profit: 0, assets: 0, equity: 0 },
+        };
+
+        validData.forEach((company) => {
+          const current = company.analysis.periods.current;
+          const previous = company.analysis.periods.previous;
+
+          consolidated.current.revenue += current.revenue;
+          consolidated.current.expenses += current.expenses;
+          consolidated.current.profit += current.profit;
+          consolidated.current.assets += current.assets;
+          consolidated.current.equity += current.equity;
+
+          consolidated.previous.revenue += previous.revenue;
+          consolidated.previous.expenses += previous.expenses;
+          consolidated.previous.profit += previous.profit;
+          consolidated.previous.assets += previous.assets;
+          consolidated.previous.equity += previous.equity;
+        });
+
+        // Calculate consolidated growth rates
+        consolidated.growth.revenue = calculateGrowthRate(
+          consolidated.previous.revenue,
+          consolidated.current.revenue
+        );
+
+        consolidated.growth.expenses = calculateGrowthRate(
+          consolidated.previous.expenses,
+          consolidated.current.expenses
+        );
+
+        consolidated.growth.profit = calculateGrowthRate(
+          consolidated.previous.profit,
+          consolidated.current.profit
+        );
+        consolidated.growth.assets = calculateGrowthRate(
+          consolidated.previous.assets,
+          consolidated.current.assets
+        );
+        consolidated.growth.equity = calculateGrowthRate(
+          consolidated.previous.equity,
+          consolidated.current.equity
+        );
+
+        return consolidated;
       }
 
       // ====== ENHANCED loadOverviewDataWithYoY() WITH MORE BUSINESS METRICS ======
@@ -1663,11 +1509,11 @@
         if (activeCompanyFilters.length === 0) {
           const dashboardElement = document.getElementById("dashboardData");
           dashboardElement.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: #666;">
-        <h3>No Companies Selected</h3>
-        <p>Please select companies using the filters above to view financial data.</p>
-      </div>
-    `;
+                  <div style="text-align: center; padding: 40px; color: #666;">
+                    <h3>No Companies Selected</h3>
+                    <p>Please select companies using the filters above to view financial data.</p>
+                  </div>
+                `;
           return;
         }
 
@@ -1865,200 +1711,221 @@
 
           const dashboardElement = document.getElementById("dashboardData");
           dashboardElement.innerHTML = `
-      <!-- ENHANCED FINANCIAL OVERVIEW -->
-      <div class="dashboard-grid" style="grid-template-columns: repeat(3, 1fr);">
-        
-        <div class="dashboard-card">
-          <h3>📊 Financial Position</h3>
-          <div class="metric">
-            <span>Total Assets</span>
-            <span class="metric-value">$${totals.totalAssets.toLocaleString()}</span>
-          </div>
-          <div class="metric">
-            <span>Total Liabilities</span>
-            <span class="metric-value">$${totals.totalLiabilities.toLocaleString()}</span>
-          </div>
-          <div class="metric">
-            <span>Net Equity</span>
-            <span class="metric-value">$${totals.totalEquity.toLocaleString()}</span>
-          </div>
-          <div class="metric">
-            <span>Net Worth</span>
-            <span class="metric-value">$${(
-              totals.totalAssets - totals.totalLiabilities
-            ).toLocaleString()}</span>
-          </div>
-        </div>
+                  <!-- ENHANCED FINANCIAL OVERVIEW -->
+                  <div class="dashboard-grid" style="grid-template-columns: repeat(3, 1fr);">
 
-        <div class="dashboard-card">
-          <h3>💰 Cash & Performance</h3>
-          <div class="metric">
-            <span>Total Cash Position</span>
-            <span class="metric-value">$${totals.totalCash.toLocaleString()}</span>
-          </div>
-          <div class="metric">
-            <span>Annual Revenue</span>
-            <span class="metric-value">$${totals.totalRevenue.toLocaleString()}</span>
-          </div>
-          <div class="metric">
-            <span>Net Profit</span>
-            <span class="metric-value ${
-              totals.totalProfit > 0 ? "" : "negative"
-            }">$${totals.totalProfit.toLocaleString()}</span>
-          </div>
-          <div class="metric">
-            <span>Profit Margin</span>
-            <span class="metric-value">${
-              totals.totalRevenue > 0
-                ? ((totals.totalProfit / totals.totalRevenue) * 100).toFixed(1)
-                : 0
-            }%</span>
-          </div>
-        </div>
+                    <div class="dashboard-card">
+                      <h3>📊 Financial Position</h3>
+                      <div class="metric">
+                        <span>Total Assets</span>
+                        <span class="metric-value">$${totals.totalAssets.toLocaleString()}</span>
+                      </div>
+                      <div class="metric">
+                        <span>Total Liabilities</span>
+                        <span class="metric-value">$${totals.totalLiabilities.toLocaleString()}</span>
+                      </div>
+                      <div class="metric">
+                        <span>Net Equity</span>
+                        <span class="metric-value">$${totals.totalEquity.toLocaleString()}</span>
+                      </div>
+                      <div class="metric">
+                        <span>Net Worth</span>
+                        <span class="metric-value">$${(
+                          totals.totalAssets - totals.totalLiabilities
+                        ).toLocaleString()}</span>
+                      </div>
+                    </div>
 
-        <div class="dashboard-card">
-          <h3>⚖️ Health & Risk</h3>
-          <div class="metric">
-            <span>Companies</span>
-            <span class="metric-value">${enhancedMetrics.length}</span>
-          </div>
-          <div class="metric">
-            <span>Balanced Books</span>
-            <span class="metric-value ${
-              balancedCompanies === enhancedMetrics.length ? "" : "negative"
-            }">${balancedCompanies}/${enhancedMetrics.length}</span>
-          </div>
-          <div class="metric">
-            <span>Debt/Equity Ratio</span>
-            <span class="metric-value">${
-              totals.totalEquity > 0
-                ? (totals.totalLiabilities / totals.totalEquity).toFixed(2)
-                : "N/A"
-            }</span>
-          </div>
-          <div class="metric">
-            <span>Overall Status</span>
-            <span class="metric-value ${
-              balancedCompanies === enhancedMetrics.length ? "" : "negative"
-            }">
-              ${
-                balancedCompanies === enhancedMetrics.length
-                  ? "✅ Healthy"
-                  : "⚠️ Review Needed"
-              }
-            </span>
-          </div>
-        </div>
-      </div>
+                    <div class="dashboard-card">
+                      <h3>💰 Cash & Performance</h3>
+                      <div class="metric">
+                        <span>Total Cash Position</span>
+                        <span class="metric-value">$${totals.totalCash.toLocaleString()}</span>
+                      </div>
+                      <div class="metric">
+                        <span>Annual Revenue</span>
+                        <span class="metric-value">$${totals.totalRevenue.toLocaleString()}</span>
+                      </div>
+                      <div class="metric">
+                        <span>Net Profit</span>
+                        <span class="metric-value ${
+                          totals.totalProfit > 0 ? "" : "negative"
+                        }">$${totals.totalProfit.toLocaleString()}</span>
+                      </div>
+                      <div class="metric">
+                        <span>Profit Margin</span>
+                        <span class="metric-value">${
+                          totals.totalRevenue > 0
+                            ? (
+                                (totals.totalProfit / totals.totalRevenue) *
+                                100
+                              ).toFixed(1)
+                            : 0
+                        }%</span>
+                      </div>
+                    </div>
 
-      <!-- COMPANY BREAKDOWN WITH ENHANCED METRICS -->
-      <div class="dashboard-card">
-        <h3>📈 Company Performance Breakdown</h3>
-        ${enhancedMetrics
-          .map(
-            (company) => `
-          <div style="border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px; margin: 10px 0; background: ${
-            company.balanced ? "#f8fff8" : "#fff8f8"
-          };">
-            
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-              <strong style="font-size: 16px;">${company.companyName.replace(
-                "Rirratjingu ",
-                ""
-              )}</strong>
-              <span class="metric-value ${
-                company.error ? "negative" : company.balanced ? "" : "negative"
-              }" style="font-size: 14px;">
-                ${
-                  company.error
-                    ? "⚠️ Data Error"
-                    : company.balanced
-                    ? "✅ Balanced"
-                    : "❌ Imbalanced"
-                }
-              </span>
-            </div>
+                    <div class="dashboard-card">
+                      <h3>⚖️ Health & Risk</h3>
+                      <div class="metric">
+                        <span>Companies</span>
+                        <span class="metric-value">${
+                          enhancedMetrics.length
+                        }</span>
+                      </div>
+                      <div class="metric">
+                        <span>Balanced Books</span>
+                        <span class="metric-value ${
+                          balancedCompanies === enhancedMetrics.length
+                            ? ""
+                            : "negative"
+                        }">${balancedCompanies}/${enhancedMetrics.length}</span>
+                      </div>
+                      <div class="metric">
+                        <span>Debt/Equity Ratio</span>
+                        <span class="metric-value">${
+                          totals.totalEquity > 0
+                            ? (
+                                totals.totalLiabilities / totals.totalEquity
+                              ).toFixed(2)
+                            : "N/A"
+                        }</span>
+                      </div>
+                      <div class="metric">
+                        <span>Overall Status</span>
+                        <span class="metric-value ${
+                          balancedCompanies === enhancedMetrics.length
+                            ? ""
+                            : "negative"
+                        }">
+                          ${
+                            balancedCompanies === enhancedMetrics.length
+                              ? "✅ Healthy"
+                              : "⚠️ Review Needed"
+                          }
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; font-size: 13px;">
-              <div>
-                <div style="color: #666; margin-bottom: 3px;">Assets</div>
-                <div style="font-weight: 600;">$${(
-                  company.totalAssets || 0
-                ).toLocaleString()}</div>
-              </div>
-              <div>
-                <div style="color: #666; margin-bottom: 3px;">Revenue</div>
-                <div style="font-weight: 600;">$${(
-                  company.revenue || 0
-                ).toLocaleString()}</div>
-              </div>
-              <div>
-                <div style="color: #666; margin-bottom: 3px;">Net Profit</div>
-                <div style="font-weight: 600; color: ${
-                  (company.netProfit || 0) > 0 ? "#27ae60" : "#e74c3c"
-                };">$${(company.netProfit || 0).toLocaleString()}</div>
-              </div>
-              <div>
-                <div style="color: #666; margin-bottom: 3px;">Profit Margin</div>
-                <div style="font-weight: 600;">${(
-                  company.netProfitMargin || 0
-                ).toFixed(1)}%</div>
-              </div>
-            </div>
+                  <!-- COMPANY BREAKDOWN WITH ENHANCED METRICS -->
+                  <div class="dashboard-card">
+                    <h3>📈 Company Performance Breakdown</h3>
+                    ${enhancedMetrics
+                      .map(
+                        (company) => `
+                      <div style="border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px; margin: 10px 0; background: ${
+                        company.balanced ? "#f8fff8" : "#fff8f8"
+                      };">
 
-            ${
-              !company.error
-                ? `
-              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; font-size: 13px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0f0f0;">
-                <div>
-                  <div style="color: #666; margin-bottom: 3px;">Cash Position</div>
-                  <div style="font-weight: 600;">$${(
-                    company.cashPosition || 0
-                  ).toLocaleString()}</div>
-                </div>
-                <div>
-                  <div style="color: #666; margin-bottom: 3px;">Current Ratio</div>
-                  <div style="font-weight: 600;">${(
-                    company.currentRatio || 0
-                  ).toFixed(2)}</div>
-                </div>
-                <div>
-                  <div style="color: #666; margin-bottom: 3px;">ROA</div>
-                  <div style="font-weight: 600;">${(
-                    company.returnOnAssets || 0
-                  ).toFixed(1)}%</div>
-                </div>
-                <div>
-                  <div style="color: #666; margin-bottom: 3px;">D/E Ratio</div>
-                  <div style="font-weight: 600;">${(
-                    company.debtToEquity || 0
-                  ).toFixed(2)}</div>
-                </div>
-              </div>
-            `
-                : ""
-            }
-          </div>
-        `
-          )
-          .join("")}
-      </div>
-    `;
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                          <strong style="font-size: 16px;">${company.companyName.replace(
+                            "Rirratjingu ",
+                            ""
+                          )}</strong>
+                          <span class="metric-value ${
+                            company.error
+                              ? "negative"
+                              : company.balanced
+                              ? ""
+                              : "negative"
+                          }" style="font-size: 14px;">
+                            ${
+                              company.error
+                                ? "⚠️ Data Error"
+                                : company.balanced
+                                ? "✅ Balanced"
+                                : "❌ Imbalanced"
+                            }
+                          </span>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; font-size: 13px;">
+                          <div>
+                            <div style="color: #666; margin-bottom: 3px;">Assets</div>
+                            <div style="font-weight: 600;">$${(
+                              company.totalAssets || 0
+                            ).toLocaleString()}</div>
+                          </div>
+                          <div>
+                            <div style="color: #666; margin-bottom: 3px;">Revenue</div>
+                            <div style="font-weight: 600;">$${(
+                              company.revenue || 0
+                            ).toLocaleString()}</div>
+                          </div>
+                          <div>
+                            <div style="color: #666; margin-bottom: 3px;">Net Profit</div>
+                            <div style="font-weight: 600; color: ${
+                              (company.netProfit || 0) > 0
+                                ? "#27ae60"
+                                : "#e74c3c"
+                            };">$${(
+                          company.netProfit || 0
+                        ).toLocaleString()}</div>
+                          </div>
+                          <div>
+                            <div style="color: #666; margin-bottom: 3px;">Profit Margin</div>
+                            <div style="font-weight: 600;">${(
+                              company.netProfitMargin || 0
+                            ).toFixed(1)}%</div>
+                          </div>
+                        </div>
+
+                        ${
+                          !company.error
+                            ? `
+                          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; font-size: 13px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0f0f0;">
+                            <div>
+                              <div style="color: #666; margin-bottom: 3px;">Cash Position</div>
+                              <div style="font-weight: 600;">$${(
+                                company.cashPosition || 0
+                              ).toLocaleString()}</div>
+                            </div>
+                            <div>
+                              <div style="color: #666; margin-bottom: 3px;">Current Ratio</div>
+                              <div style="font-weight: 600;">${(
+                                company.currentRatio || 0
+                              ).toFixed(2)}</div>
+                            </div>
+                            <div>
+                              <div style="color: #666; margin-bottom: 3px;">ROA</div>
+                              <div style="font-weight: 600;">${(
+                                company.returnOnAssets || 0
+                              ).toFixed(1)}%</div>
+                            </div>
+                            <div>
+                              <div style="color: #666; margin-bottom: 3px;">D/E Ratio</div>
+                              <div style="font-weight: 600;">${(
+                                company.debtToEquity || 0
+                              ).toFixed(2)}</div>
+                            </div>
+                          </div>
+                        `
+                            : ""
+                        }
+                      </div>
+                    `
+                      )
+                      .join("")}
+                  </div>
+                `;
         } catch (error) {
           console.error("Error in enhanced loadOverviewDataWithYoY:", error);
           const dashboardElement = document.getElementById("dashboardData");
           dashboardElement.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: #e74c3c;">
-        <h3>Error Loading Enhanced Data</h3>
-        <p>Failed to load dashboard data: ${error.message}</p>
-        <button onclick="loadDashboardData()" style="margin-top: 10px; padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">
-          Retry
-        </button>
-      </div>
-    `;
+                  <div style="text-align: center; padding: 40px; color: #e74c3c;">
+                    <h3>Error Loading Enhanced Data</h3>
+                    <p>Failed to load dashboard data: ${error.message}</p>
+                    <button onclick="loadDashboardData()" style="margin-top: 10px; padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                      Retry
+                    </button>
+                  </div>
+                `;
         }
       }
 
+      // ====== YoY Card ======
+      // Replace the existing loadYearOverYearData() function with this corrected version
       async function loadYearOverYearData() {
         if (activeCompanyFilters.length === 0) {
           const dashboardElement = document.getElementById("dashboardData");
@@ -2072,29 +1939,42 @@
         }
 
         const dashboardElement = document.getElementById("dashboardData");
-        const selectedCompanyNames = getSelectedCompanyNames();
-
         dashboardElement.innerHTML = `
     <div class="loading">
       <div class="loading-spinner"></div>
-      Loading year-over-year analysis for ${
-        activeCompanyFilters.length
-      } companies:<br>
-      <small>${selectedCompanyNames.join(", ")}</small>
+      Loading consolidated year-over-year analysis...
     </div>
   `;
 
         try {
-          // Calculate date ranges
-          const currentYear = new Date().getFullYear();
-          const priorYear = currentYear - 1;
-          const currentYearEnd = `${currentYear}-12-31`;
-          const priorYearEnd = `${priorYear}-12-31`;
-          const currentDate = new Date().toISOString().split("T")[0];
-
-          // Load YoY data for each selected company
           const yoyData = [];
+          const monthlyData = [];
+          let consolidatedYoY = {
+            current: {
+              revenue: 0,
+              expenses: 0,
+              profit: 0,
+              assets: 0,
+              equity: 0,
+            },
+            previous: {
+              revenue: 0,
+              expenses: 0,
+              profit: 0,
+              assets: 0,
+              equity: 0,
+            },
+            growth: {
+              revenue: 0,
+              expenses: 0,
+              profit: 0,
+              assets: 0,
+              equity: 0,
+            },
+            companies: [],
+          };
 
+          // Load both YoY and Monthly data for each selected company
           for (const tenantId of activeCompanyFilters) {
             const connectedCompany = connectedCompanies.find(
               (c) => c.tenantId === tenantId
@@ -2104,483 +1984,346 @@
             try {
               const orgName = getOrganizationName(connectedCompany.tenantName);
 
-              // Get current year data
-              const [currentTB, currentPL, currentCash] = await Promise.all([
-                fetch("/api/trial-balance", {
+              // Load YoY and Monthly data in parallel
+              const [yoyResponse, monthlyResponse] = await Promise.all([
+                fetch("/api/yoy-analysis", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    organizationName: orgName,
-                    reportDate: currentDate,
-                  }),
+                  body: JSON.stringify({ organizationName: orgName }),
                 }),
-                fetch("/api/profit-loss-summary", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    organizationName: orgName,
-                    periodMonths: 12,
-                  }),
-                }),
-                fetch("/api/cash-position", {
+                fetch("/api/monthly-breakdown", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ organizationName: orgName }),
                 }),
               ]);
 
-              // Get prior year data
-              const [priorTB, priorPL] = await Promise.all([
-                fetch("/api/trial-balance", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    organizationName: orgName,
-                    reportDate: priorYearEnd,
-                  }),
-                }),
-                fetch("/api/profit-loss-summary", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    organizationName: orgName,
-                    date: priorYearEnd,
-                    periodMonths: 12,
-                  }),
-                }),
-              ]);
+              if (yoyResponse.ok) {
+                const data = await yoyResponse.json();
+                const companyYoyData = {
+                  companyName: connectedCompany.tenantName.replace(
+                    "Rirratjingu ",
+                    ""
+                  ),
+                  tenantName: data.tenantName,
+                  analysis: data.analysis,
+                  error: false,
+                };
+                yoyData.push(companyYoyData);
 
-              // Parse responses
-              const currentYearData = {
-                tb: currentTB.ok ? await currentTB.json() : null,
-                pl: currentPL.ok ? await currentPL.json() : null,
-                cash: currentCash.ok ? await currentCash.json() : null,
-              };
+                // Add to consolidated totals
+                const current = data.analysis.periods.current;
+                const previous = data.analysis.periods.previous;
 
-              const priorYearData = {
-                tb: priorTB.ok ? await priorTB.json() : null,
-                pl: priorPL.ok ? await priorPL.json() : null,
-              };
+                consolidatedYoY.current.revenue += current.revenue || 0;
+                consolidatedYoY.current.expenses +=
+                  current.revenue - current.profit || 0;
+                consolidatedYoY.current.profit += current.profit || 0;
+                consolidatedYoY.current.assets += current.assets || 0;
+                consolidatedYoY.current.equity += current.equity || 0;
 
-              // Calculate YoY metrics
-              const yoyMetrics = calculateYoYMetrics(
-                currentYearData,
-                priorYearData,
-                connectedCompany.tenantName
-              );
-              yoyData.push(yoyMetrics);
+                consolidatedYoY.previous.revenue += previous.revenue || 0;
+                consolidatedYoY.previous.expenses +=
+                  previous.revenue - previous.profit || 0;
+                consolidatedYoY.previous.profit += previous.profit || 0;
+                consolidatedYoY.previous.assets += previous.assets || 0;
+                consolidatedYoY.previous.equity += previous.equity || 0;
+
+                consolidatedYoY.companies.push(companyYoyData);
+              }
+
+              if (monthlyResponse.ok) {
+                const monthlyResult = await monthlyResponse.json();
+                monthlyData.push({
+                  companyName: connectedCompany.tenantName.replace(
+                    "Rirratjingu ",
+                    ""
+                  ),
+                  tenantName: monthlyResult.tenantName,
+                  monthlyBreakdown: monthlyResult.monthlyBreakdown,
+                  totals: monthlyResult.totals,
+                  error: false,
+                });
+              }
             } catch (error) {
               console.error(
-                `Error loading YoY data for ${connectedCompany.tenantName}:`,
+                `Error loading data for ${connectedCompany.tenantName}:`,
                 error
               );
-              yoyData.push({
-                companyName: connectedCompany.tenantName,
-                error: true,
-                errorMessage: error.message,
-              });
             }
           }
 
-          // Calculate consolidated YoY metrics
-          const consolidatedYoY = calculateConsolidatedYoY(yoyData);
+          // Calculate consolidated growth rates
+          consolidatedYoY.growth.revenue = calculateGrowthRate(
+            consolidatedYoY.previous.revenue,
+            consolidatedYoY.current.revenue
+          );
+          consolidatedYoY.growth.expenses = calculateGrowthRate(
+            consolidatedYoY.previous.expenses,
+            consolidatedYoY.current.expenses
+          );
+          consolidatedYoY.growth.profit = calculateGrowthRate(
+            consolidatedYoY.previous.profit,
+            consolidatedYoY.current.profit
+          );
+          consolidatedYoY.growth.assets = calculateGrowthRate(
+            consolidatedYoY.previous.assets,
+            consolidatedYoY.current.assets
+          );
+          consolidatedYoY.growth.equity = calculateGrowthRate(
+            consolidatedYoY.previous.equity,
+            consolidatedYoY.current.equity
+          );
 
-          // Render YoY dashboard
-          renderYoYDashboard(yoyData, consolidatedYoY, currentYear, priorYear);
+          // Render consolidated YoY + individual companies with scroll
+          renderConsolidatedYoYAnalysis(consolidatedYoY, yoyData, monthlyData);
         } catch (error) {
           console.error("Error in YoY analysis:", error);
           dashboardElement.innerHTML = `
       <div style="text-align: center; padding: 40px; color: #e74c3c;">
         <h3>Error Loading YoY Data</h3>
         <p>Failed to load year-over-year analysis: ${error.message}</p>
-        <button onclick="loadDashboardData()" style="margin-top: 10px; padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">
-          Retry
-        </button>
       </div>
     `;
         }
       }
 
-      // 3. Calculate YoY metrics for individual company
-      function calculateYoYMetrics(currentData, priorData, companyName) {
-        const current = {
-          assets: currentData.tb?.trialBalance?.totals?.totalAssets || 0,
-          liabilities:
-            currentData.tb?.trialBalance?.totals?.totalLiabilities || 0,
-          equity: currentData.tb?.trialBalance?.totals?.totalEquity || 0,
-          revenue: currentData.pl?.summary?.totalRevenue || 0,
-          expenses: currentData.pl?.summary?.totalExpenses || 0,
-          netProfit: currentData.pl?.summary?.netProfit || 0,
-          cashPosition: currentData.cash?.totalCash || 0,
-        };
-
-        const prior = {
-          assets: priorData.tb?.trialBalance?.totals?.totalAssets || 0,
-          liabilities:
-            priorData.tb?.trialBalance?.totals?.totalLiabilities || 0,
-          equity: priorData.tb?.trialBalance?.totals?.totalEquity || 0,
-          revenue: priorData.pl?.summary?.totalRevenue || 0,
-          expenses: priorData.pl?.summary?.totalExpenses || 0,
-          netProfit: priorData.pl?.summary?.netProfit || 0,
-        };
-
-        // Calculate growth rates
-        const growth = {
-          assets: calculateGrowthRate(prior.assets, current.assets),
-          liabilities: calculateGrowthRate(
-            prior.liabilities,
-            current.liabilities
-          ),
-          equity: calculateGrowthRate(prior.equity, current.equity),
-          revenue: calculateGrowthRate(prior.revenue, current.revenue),
-          expenses: calculateGrowthRate(prior.expenses, current.expenses),
-          netProfit: calculateGrowthRate(prior.netProfit, current.netProfit),
-        };
-
-        return {
-          companyName: companyName.replace("Rirratjingu ", ""),
-          current,
-          prior,
-          growth,
-          profitMarginCurrent:
-            current.revenue > 0
-              ? (current.netProfit / current.revenue) * 100
-              : 0,
-          profitMarginPrior:
-            prior.revenue > 0 ? (prior.netProfit / prior.revenue) * 100 : 0,
-        };
-      }
-
-      // 4. Calculate growth rate with proper handling of negative numbers
-      function calculateGrowthRate(prior, current) {
-        if (prior === 0 && current === 0) return 0;
-        if (prior === 0) return current > 0 ? 100 : -100;
-        return ((current - prior) / Math.abs(prior)) * 100;
-      }
-
-      // 5. Calculate consolidated YoY metrics
-      function calculateConsolidatedYoY(yoyData) {
-        const validData = yoyData.filter((d) => !d.error);
-
-        const consolidatedCurrent = validData.reduce(
-          (acc, company) => {
-            acc.assets += company.current.assets;
-            acc.liabilities += company.current.liabilities;
-            acc.equity += company.current.equity;
-            acc.revenue += company.current.revenue;
-            acc.expenses += company.current.expenses;
-            acc.netProfit += company.current.netProfit;
-            acc.cashPosition += company.current.cashPosition;
-            return acc;
-          },
-          {
-            assets: 0,
-            liabilities: 0,
-            equity: 0,
-            revenue: 0,
-            expenses: 0,
-            netProfit: 0,
-            cashPosition: 0,
-          }
-        );
-
-        const consolidatedPrior = validData.reduce(
-          (acc, company) => {
-            acc.assets += company.prior.assets;
-            acc.liabilities += company.prior.liabilities;
-            acc.equity += company.prior.equity;
-            acc.revenue += company.prior.revenue;
-            acc.expenses += company.prior.expenses;
-            acc.netProfit += company.prior.netProfit;
-            return acc;
-          },
-          {
-            assets: 0,
-            liabilities: 0,
-            equity: 0,
-            revenue: 0,
-            expenses: 0,
-            netProfit: 0,
-          }
-        );
-
-        return {
-          current: consolidatedCurrent,
-          prior: consolidatedPrior,
-          growth: {
-            assets: calculateGrowthRate(
-              consolidatedPrior.assets,
-              consolidatedCurrent.assets
-            ),
-            liabilities: calculateGrowthRate(
-              consolidatedPrior.liabilities,
-              consolidatedCurrent.liabilities
-            ),
-            equity: calculateGrowthRate(
-              consolidatedPrior.equity,
-              consolidatedCurrent.equity
-            ),
-            revenue: calculateGrowthRate(
-              consolidatedPrior.revenue,
-              consolidatedCurrent.revenue
-            ),
-            expenses: calculateGrowthRate(
-              consolidatedPrior.expenses,
-              consolidatedCurrent.expenses
-            ),
-            netProfit: calculateGrowthRate(
-              consolidatedPrior.netProfit,
-              consolidatedCurrent.netProfit
-            ),
-          },
-        };
-      }
-
-      // 6. Render YoY dashboard
-      function renderYoYDashboard(
-        yoyData,
+      function renderConsolidatedYoYAnalysis(
         consolidatedYoY,
-        currentYear,
-        priorYear
+        yoyData,
+        monthlyData
       ) {
         const dashboardElement = document.getElementById("dashboardData");
 
-        dashboardElement.innerHTML = `
-    <!-- CONSOLIDATED YoY SUMMARY -->
-    <div class="dashboard-grid" style="grid-template-columns: repeat(3, 1fr);">
-      
-      <div class="dashboard-card">
-        <h3>📊 Asset Growth Analysis</h3>
-        <div class="metric">
-          <span>${currentYear} Assets</span>
-          <span class="metric-value">$${consolidatedYoY.current.assets.toLocaleString()}</span>
-        </div>
-        <div class="metric">
-          <span>${priorYear} Assets</span>
-          <span class="metric-value">$${consolidatedYoY.prior.assets.toLocaleString()}</span>
-        </div>
-        <div class="metric">
-          <span>Asset Growth</span>
-          <span class="metric-value ${
-            consolidatedYoY.growth.assets >= 0 ? "" : "negative"
-          }">
-            ${
-              consolidatedYoY.growth.assets >= 0 ? "+" : ""
-            }${consolidatedYoY.growth.assets.toFixed(1)}%
-          </span>
-        </div>
-        <div class="metric">
-          <span>Net Worth Change</span>
-          <span class="metric-value ${
-            consolidatedYoY.growth.equity >= 0 ? "" : "negative"
-          }">
-            ${
-              consolidatedYoY.growth.equity >= 0 ? "+" : ""
-            }${consolidatedYoY.growth.equity.toFixed(1)}%
-          </span>
-        </div>
+        // Get period labels from first valid company
+        const firstValidCompany = yoyData.find((d) => !d.error);
+        const currentLabel = firstValidCompany
+          ? firstValidCompany.analysis.periods.current.label
+          : "Current Year";
+        const previousLabel = firstValidCompany
+          ? firstValidCompany.analysis.periods.previous.label
+          : "Previous Year";
+
+        const consolidatedHtml = `
+    <div class="dashboard-card" style="margin-bottom: 20px;">
+      <h3>Consolidated Year-over-Year Analysis - All Selected Companies</h3>
+      <div style="margin-bottom: 15px;">
+        <span style="font-size: 14px; color: #666;">
+          Companies: ${consolidatedYoY.companies.length} | 
+          Period: ${currentLabel} vs ${previousLabel}
+        </span>
       </div>
 
-      <div class="dashboard-card">
-        <h3>💰 Revenue Performance</h3>
-        <div class="metric">
-          <span>${currentYear} Revenue</span>
-          <span class="metric-value">$${consolidatedYoY.current.revenue.toLocaleString()}</span>
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 20px;">
+        <div class="dashboard-card" style="padding: 15px;">
+          <h4>Revenue Performance</h4>
+          <div class="metric">
+            <span>${currentLabel}</span>
+            <span class="metric-value">$${consolidatedYoY.current.revenue.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>${previousLabel}</span>
+            <span class="metric-value">$${consolidatedYoY.previous.revenue.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>Growth</span>
+            <span class="metric-value ${
+              consolidatedYoY.growth.revenue >= 0 ? "" : "negative"
+            }">
+              ${
+                consolidatedYoY.growth.revenue >= 0 ? "+" : ""
+              }${consolidatedYoY.growth.revenue.toFixed(1)}%
+            </span>
+          </div>
         </div>
-        <div class="metric">
-          <span>${priorYear} Revenue</span>
-          <span class="metric-value">$${consolidatedYoY.prior.revenue.toLocaleString()}</span>
-        </div>
-        <div class="metric">
-          <span>Revenue Growth</span>
-          <span class="metric-value ${
-            consolidatedYoY.growth.revenue >= 0 ? "" : "negative"
-          }">
-            ${
-              consolidatedYoY.growth.revenue >= 0 ? "+" : ""
-            }${consolidatedYoY.growth.revenue.toFixed(1)}%
-          </span>
-        </div>
-        <div class="metric">
-          <span>Profit Growth</span>
-          <span class="metric-value ${
-            consolidatedYoY.growth.netProfit >= 0 ? "" : "negative"
-          }">
-            ${
-              consolidatedYoY.growth.netProfit >= 0 ? "+" : ""
-            }${consolidatedYoY.growth.netProfit.toFixed(1)}%
-          </span>
-        </div>
-      </div>
 
-      <div class="dashboard-card">
-        <h3>⚖️ Financial Health Trends</h3>
-        <div class="metric">
-          <span>Companies Analyzed</span>
-          <span class="metric-value">${
-            yoyData.filter((d) => !d.error).length
-          }</span>
+        <div class="dashboard-card" style="padding: 15px;">
+          <h4>Expense Performance</h4>
+          <div class="metric">
+            <span>${currentLabel}</span>
+            <span class="metric-value">$${consolidatedYoY.current.expenses.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>${previousLabel}</span>
+            <span class="metric-value">$${consolidatedYoY.previous.expenses.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>Growth</span>
+            <span class="metric-value ${
+              consolidatedYoY.growth.expenses >= 0 ? "negative" : ""
+            }">
+              ${
+                consolidatedYoY.growth.expenses >= 0 ? "+" : ""
+              }${consolidatedYoY.growth.expenses.toFixed(1)}%
+            </span>
+          </div>
         </div>
-        <div class="metric">
-          <span>Current Profit Margin</span>
-          <span class="metric-value">
-            ${
-              consolidatedYoY.current.revenue > 0
-                ? (
-                    (consolidatedYoY.current.netProfit /
-                      consolidatedYoY.current.revenue) *
-                    100
-                  ).toFixed(1)
-                : 0
-            }%
-          </span>
+
+        <div class="dashboard-card" style="padding: 15px;">
+          <h4>Profit Performance</h4>
+          <div class="metric">
+            <span>${currentLabel}</span>
+            <span class="metric-value ${
+              consolidatedYoY.current.profit >= 0 ? "" : "negative"
+            }">$${consolidatedYoY.current.profit.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>${previousLabel}</span>
+            <span class="metric-value ${
+              consolidatedYoY.previous.profit >= 0 ? "" : "negative"
+            }">$${consolidatedYoY.previous.profit.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>Growth</span>
+            <span class="metric-value ${
+              consolidatedYoY.growth.profit >= 0 ? "" : "negative"
+            }">
+              ${
+                consolidatedYoY.growth.profit >= 0 ? "+" : ""
+              }${consolidatedYoY.growth.profit.toFixed(1)}%
+            </span>
+          </div>
         </div>
-        <div class="metric">
-          <span>Prior Profit Margin</span>
-          <span class="metric-value">
-            ${
-              consolidatedYoY.prior.revenue > 0
-                ? (
-                    (consolidatedYoY.prior.netProfit /
-                      consolidatedYoY.prior.revenue) *
-                    100
-                  ).toFixed(1)
-                : 0
-            }%
-          </span>
+
+        <div class="dashboard-card" style="padding: 15px;">
+          <h4>Asset Growth</h4>
+          <div class="metric">
+            <span>${currentLabel}</span>
+            <span class="metric-value">$${consolidatedYoY.current.assets.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>${previousLabel}</span>
+            <span class="metric-value">$${consolidatedYoY.previous.assets.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>Growth</span>
+            <span class="metric-value ${
+              consolidatedYoY.growth.assets >= 0 ? "" : "negative"
+            }">
+              ${
+                consolidatedYoY.growth.assets >= 0 ? "+" : ""
+              }${consolidatedYoY.growth.assets.toFixed(1)}%
+            </span>
+          </div>
         </div>
-        <div class="metric">
-          <span>Overall Trend</span>
-          <span class="metric-value ${
-            consolidatedYoY.growth.revenue > 0 &&
-            consolidatedYoY.growth.netProfit > 0
-              ? ""
-              : "negative"
-          }">
-            ${
+
+        <div class="dashboard-card" style="padding: 15px;">
+          <h4>Financial Health</h4>
+          <div class="metric">
+            <span>Current Margin</span>
+            <span class="metric-value">
+              ${
+                consolidatedYoY.current.revenue > 0
+                  ? (
+                      (consolidatedYoY.current.profit /
+                        consolidatedYoY.current.revenue) *
+                      100
+                    ).toFixed(1)
+                  : 0
+              }%
+            </span>
+          </div>
+          <div class="metric">
+            <span>Prior Margin</span>
+            <span class="metric-value">
+              ${
+                consolidatedYoY.previous.revenue > 0
+                  ? (
+                      (consolidatedYoY.previous.profit /
+                        consolidatedYoY.previous.revenue) *
+                      100
+                    ).toFixed(1)
+                  : 0
+              }%
+            </span>
+          </div>
+          <div class="metric">
+            <span>Trend</span>
+            <span class="metric-value ${
               consolidatedYoY.growth.revenue > 0 &&
-              consolidatedYoY.growth.netProfit > 0
-                ? "✅ Growing"
-                : "⚠️ Declining"
-            }
-          </span>
+              consolidatedYoY.growth.profit > 0
+                ? ""
+                : "negative"
+            }">
+              ${
+                consolidatedYoY.growth.revenue > 0 &&
+                consolidatedYoY.growth.profit > 0
+                  ? "Positive"
+                  : "Declining"
+              }
+            </span>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- COMPANY-BY-COMPANY YoY ANALYSIS -->
-    <div class="dashboard-card">
-      <h3>📈 Company Performance Comparison (${currentYear} vs ${priorYear})</h3>
+      <!-- Monthly Performance Breakdown for first company as sample -->
+      ${monthlyData.length > 0 ? renderMonthlyCard(monthlyData) : ""}
+    </div>
+  `;
+
+        const individualHtml = `
+    <div style="height: 50vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px;">
+      <h3>Individual Company Performance</h3>
       ${yoyData
         .map((company) => {
           if (company.error) {
             return `
             <div style="border: 1px solid #e74c3c; border-radius: 6px; padding: 15px; margin: 10px 0; background: #fff5f5;">
               <strong style="color: #e74c3c;">${company.companyName}</strong>
-              <div style="color: #666; margin-top: 5px;">Error loading YoY data: ${company.errorMessage}</div>
+              <div style="color: #666; margin-top: 5px;">Error loading YoY data</div>
             </div>
           `;
           }
 
+          const current = company.analysis.periods.current;
+          const previous = company.analysis.periods.previous;
+          const growth = company.analysis.growth;
+
           return `
           <div style="border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px; margin: 10px 0; background: #fafafa;">
-            
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
               <strong style="font-size: 16px;">${company.companyName}</strong>
               <div style="display: flex; gap: 15px; font-size: 14px;">
                 <span style="color: ${
-                  company.growth.revenue >= 0 ? "#27ae60" : "#e74c3c"
+                  growth.revenue >= 0 ? "#27ae60" : "#e74c3c"
                 };">
                   Revenue: ${
-                    company.growth.revenue >= 0 ? "+" : ""
-                  }${company.growth.revenue.toFixed(1)}%
+                    growth.revenue >= 0 ? "+" : ""
+                  }${growth.revenue.toFixed(1)}%
                 </span>
                 <span style="color: ${
-                  company.growth.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+                  growth.profit >= 0 ? "#27ae60" : "#e74c3c"
                 };">
                   Profit: ${
-                    company.growth.netProfit >= 0 ? "+" : ""
-                  }${company.growth.netProfit.toFixed(1)}%
+                    growth.profit >= 0 ? "+" : ""
+                  }${growth.profit.toFixed(1)}%
                 </span>
               </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px; font-size: 13px;">
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; font-size: 13px;">
               <div>
-                <div style="color: #666; margin-bottom: 3px;">${currentYear} Revenue</div>
-                <div style="font-weight: 600;">$${company.current.revenue.toLocaleString()}</div>
+                <div style="color: #666; margin-bottom: 3px;">${currentLabel} Revenue</div>
+                <div style="font-weight: 600;">$${current.revenue.toLocaleString()}</div>
               </div>
               <div>
-                <div style="color: #666; margin-bottom: 3px;">${priorYear} Revenue</div>
-                <div style="font-weight: 600;">$${company.prior.revenue.toLocaleString()}</div>
+                <div style="color: #666; margin-bottom: 3px;">${previousLabel} Revenue</div>
+                <div style="font-weight: 600;">$${previous.revenue.toLocaleString()}</div>
               </div>
               <div>
-                <div style="color: #666; margin-bottom: 3px;">${currentYear} Profit</div>
+                <div style="color: #666; margin-bottom: 3px;">${currentLabel} Profit</div>
                 <div style="font-weight: 600; color: ${
-                  company.current.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+                  current.profit >= 0 ? "#27ae60" : "#e74c3c"
                 };">
-                  $${company.current.netProfit.toLocaleString()}
+                  $${current.profit.toLocaleString()}
                 </div>
               </div>
               <div>
-                <div style="color: #666; margin-bottom: 3px;">${priorYear} Profit</div>
+                <div style="color: #666; margin-bottom: 3px;">${previousLabel} Profit</div>
                 <div style="font-weight: 600; color: ${
-                  company.prior.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+                  previous.profit >= 0 ? "#27ae60" : "#e74c3c"
                 };">
-                  $${company.prior.netProfit.toLocaleString()}
-                </div>
-              </div>
-              <div>
-                <div style="color: #666; margin-bottom: 3px;">Margin ${currentYear}</div>
-                <div style="font-weight: 600;">${company.profitMarginCurrent.toFixed(
-                  1
-                )}%</div>
-              </div>
-              <div>
-                <div style="color: #666; margin-bottom: 3px;">Margin ${priorYear}</div>
-                <div style="font-weight: 600;">${company.profitMarginPrior.toFixed(
-                  1
-                )}%</div>
-              </div>
-            </div>
-
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; font-size: 13px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0e0e0;">
-              <div>
-                <div style="color: #666; margin-bottom: 3px;">Asset Growth</div>
-                <div style="font-weight: 600; color: ${
-                  company.growth.assets >= 0 ? "#27ae60" : "#e74c3c"
-                };">
-                  ${
-                    company.growth.assets >= 0 ? "+" : ""
-                  }${company.growth.assets.toFixed(1)}%
-                </div>
-              </div>
-              <div>
-                <div style="color: #666; margin-bottom: 3px;">Equity Growth</div>
-                <div style="font-weight: 600; color: ${
-                  company.growth.equity >= 0 ? "#27ae60" : "#e74c3c"
-                };">
-                  ${
-                    company.growth.equity >= 0 ? "+" : ""
-                  }${company.growth.equity.toFixed(1)}%
-                </div>
-              </div>
-              <div>
-                <div style="color: #666; margin-bottom: 3px;">Overall Status</div>
-                <div style="font-weight: 600; color: ${
-                  company.growth.revenue > 0 && company.growth.netProfit > 0
-                    ? "#27ae60"
-                    : company.growth.revenue > 0
-                    ? "#f39c12"
-                    : "#e74c3c"
-                };">
-                  ${
-                    company.growth.revenue > 0 && company.growth.netProfit > 0
-                      ? "Strong Growth"
-                      : company.growth.revenue > 0
-                      ? "Mixed Results"
-                      : "Declining"
-                  }
+                  $${previous.profit.toLocaleString()}
                 </div>
               </div>
             </div>
@@ -2589,25 +2332,105 @@
         })
         .join("")}
     </div>
-
-    <!-- YoY INSIGHTS -->
-    <div class="dashboard-card">
-      <h3>💡 Key Year-over-Year Insights</h3>
-      <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin: 10px 0;">
-        ${generateYoYInsights(consolidatedYoY, yoyData)}
-      </div>
-    </div>
   `;
+
+        dashboardElement.innerHTML = consolidatedHtml;
       }
 
-      function debugDropdown() {
-        const select = document.getElementById("yearSelect");
-        console.log("All dropdown options:");
-        for (let i = 0; i < select.options.length; i++) {
-          console.log(
-            `Option ${i}: value="${select.options[i].value}" text="${select.options[i].text}"`
-          );
+      // Monthly Card component
+      function renderMonthlyCard(monthlyData) {
+        if (!monthlyData || monthlyData.length === 0) {
+          return `
+                  <div class="dashboard-card">
+                    <h3>Monthly Breakdown</h3>
+                    <div style="text-align: center; padding: 20px; color: #666;">
+                      No monthly data available
+                    </div>
+                  </div>
+                `;
         }
+
+        // Use first company's data for display (extend later for multi-company)
+        const companyData = monthlyData[0];
+        const months = companyData.monthlyBreakdown;
+
+        // Calculate totals
+        const totals = {
+          revenue: months.reduce((sum, month) => sum + month.revenue, 0),
+          expenses: months.reduce((sum, month) => sum + month.expenses, 0),
+          profit: months.reduce((sum, month) => sum + month.netProfit, 0),
+        };
+
+        return `
+                <div class="dashboard-card">
+                  <h3>Monthly Performance Breakdown (${
+                    companyData.companyName
+                  })</h3>
+
+                  <!-- Monthly Grid -->
+                  <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;">
+                    ${months
+                      .map(
+                        (month, index) => `
+                      <div style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 8px; background: ${
+                        month.netProfit >= 0 ? "#f8fff8" : "#fff8f8"
+                      }; font-size: 12px;">
+                        <div style="font-weight: 600; margin-bottom: 4px; color: #2c3e50;">${
+                          month.label
+                        }</div>
+                        <div class="metric" style="padding: 2px 0; border: none;">
+                          <span style="font-size: 11px; color: #666;">Revenue</span>
+                          <span style="font-weight: 600; font-size: 11px;">$${(
+                            month.revenue / 1000
+                          ).toFixed(0)}K</span>
+                        </div>
+                        <div class="metric" style="padding: 2px 0; border: none;">
+                          <span style="font-size: 11px; color: #666;">Expenses</span>
+                          <span style="font-weight: 600; font-size: 11px;">$${(
+                            month.expenses / 1000
+                          ).toFixed(0)}K</span>
+                        </div>
+                        <div class="metric" style="padding: 2px 0; border: none;">
+                          <span style="font-size: 11px; color: #666;">Profit</span>
+                          <span style="font-weight: 600; font-size: 11px; color: ${
+                            month.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+                          };">
+                            $${(month.netProfit / 1000).toFixed(0)}K
+                          </span>
+                        </div>
+                      </div>
+                    `
+                      )
+                      .join("")}
+                  </div>
+
+                  <!-- Totals Summary -->
+                  <div style="border-top: 2px solid #2c3e50; padding-top: 15px;">
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+                      <div class="metric">
+                        <span>Total Revenue (12 months)</span>
+                        <span class="metric-value">$${totals.revenue.toLocaleString()}</span>
+                      </div>
+                      <div class="metric">
+                        <span>Total Expenses (12 months)</span>
+                        <span class="metric-value">$${totals.expenses.toLocaleString()}</span>
+                      </div>
+                      <div class="metric">
+                        <span>Net Profit (12 months)</span>
+                        <span class="metric-value ${
+                          totals.profit >= 0 ? "" : "negative"
+                        }">$${totals.profit.toLocaleString()}</span>
+                      </div>
+                      <div class="metric">
+                        <span>Average Monthly Profit</span>
+                        <span class="metric-value ${
+                          totals.profit >= 0 ? "" : "negative"
+                        }">$${(totals.profit / 12).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `;
       }
 
       // 7. Generate insights based on YoY data
@@ -2631,13 +2454,13 @@
         }
 
         // Profit insights
-        if (consolidatedYoY.growth.netProfit > 15) {
+        if (consolidatedYoY.growth.profit > 15) {
           insights.push(
-            `<strong>Excellent Profitability:</strong> Net profit growth of ${consolidatedYoY.growth.netProfit.toFixed(
+            `<strong>Excellent Profitability:</strong> Net profit growth of ${consolidatedYoY.growth.profit.toFixed(
               1
             )}% demonstrates strong operational efficiency.`
           );
-        } else if (consolidatedYoY.growth.netProfit < -10) {
+        } else if (consolidatedYoY.growth.profit < -10) {
           insights.push(
             `<strong>Profitability Concerns:</strong> Net profit declined by ${Math.abs(
               consolidatedYoY.growth.netProfit
@@ -2683,519 +2506,302 @@
           : "Analyzing year-over-year trends...";
       }
 
-      // Monthly Analysis Functions
-      async function loadMonthlyAnalysisData() {
-        if (activeCompanyFilters.length === 0) {
-          const dashboardElement = document.getElementById("dashboardData");
-          dashboardElement.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: #666;">
-        <h3>No Companies Selected</h3>
-        <p>Please select companies using the filters above to view monthly analysis.</p>
-      </div>
-    `;
+      async function loadYearOverYearDataForBackground() {
+        try {
+          const yoyData = [];
+          const monthlyData = [];
+          let consolidatedYoY = {
+            current: {
+              revenue: 0,
+              expenses: 0,
+              profit: 0,
+              assets: 0,
+              equity: 0,
+            },
+            previous: {
+              revenue: 0,
+              expenses: 0,
+              profit: 0,
+              assets: 0,
+              equity: 0,
+            },
+            growth: {
+              revenue: 0,
+              expenses: 0,
+              profit: 0,
+              assets: 0,
+              equity: 0,
+            },
+            companies: [],
+          };
+
+          // Use ALL connected companies for background loading (not filtered)
+          for (const connectedCompany of connectedCompanies) {
+            try {
+              const orgName = getOrganizationName(connectedCompany.tenantName);
+
+              const [yoyResponse, monthlyResponse] = await Promise.all([
+                fetch("/api/yoy-analysis", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ organizationName: orgName }),
+                }),
+                fetch("/api/monthly-breakdown", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ organizationName: orgName }),
+                }),
+              ]);
+
+              if (yoyResponse.ok) {
+                const data = await yoyResponse.json();
+                const companyYoyData = {
+                  companyName: connectedCompany.tenantName.replace(
+                    "Rirratjingu ",
+                    ""
+                  ),
+                  tenantName: data.tenantName,
+                  analysis: data.analysis,
+                  error: false,
+                };
+                yoyData.push(companyYoyData);
+
+                const current = data.analysis.periods.current;
+                const previous = data.analysis.periods.previous;
+
+                consolidatedYoY.current.revenue += current.revenue || 0;
+                consolidatedYoY.current.expenses +=
+                  current.revenue - current.profit || 0;
+                consolidatedYoY.current.profit += current.profit || 0;
+                consolidatedYoY.current.assets += current.assets || 0;
+                consolidatedYoY.current.equity += current.equity || 0;
+
+                consolidatedYoY.previous.revenue += previous.revenue || 0;
+                consolidatedYoY.previous.expenses +=
+                  previous.revenue - previous.profit || 0;
+                consolidatedYoY.previous.profit += previous.profit || 0;
+                consolidatedYoY.previous.assets += previous.assets || 0;
+                consolidatedYoY.previous.equity += previous.equity || 0;
+
+                consolidatedYoY.companies.push(companyYoyData);
+              }
+
+              if (monthlyResponse.ok) {
+                const monthlyResult = await monthlyResponse.json();
+                monthlyData.push({
+                  companyName: connectedCompany.tenantName.replace(
+                    "Rirratjingu ",
+                    ""
+                  ),
+                  tenantName: monthlyResult.tenantName,
+                  monthlyBreakdown: monthlyResult.monthlyBreakdown,
+                  totals: monthlyResult.totals,
+                  error: false,
+                });
+              }
+            } catch (error) {
+              console.error(
+                `Background YoY loading error for ${connectedCompany.tenantName}:`,
+                error
+              );
+            }
+          }
+
+          // Calculate growth rates
+          consolidatedYoY.growth.revenue = calculateGrowthRate(
+            consolidatedYoY.previous.revenue,
+            consolidatedYoY.current.revenue
+          );
+          consolidatedYoY.growth.expenses = calculateGrowthRate(
+            consolidatedYoY.previous.expenses,
+            consolidatedYoY.current.expenses
+          );
+          consolidatedYoY.growth.profit = calculateGrowthRate(
+            consolidatedYoY.previous.profit,
+            consolidatedYoY.current.profit
+          );
+          consolidatedYoY.growth.assets = calculateGrowthRate(
+            consolidatedYoY.previous.assets,
+            consolidatedYoY.current.assets
+          );
+          consolidatedYoY.growth.equity = calculateGrowthRate(
+            consolidatedYoY.previous.equity,
+            consolidatedYoY.current.equity
+          );
+
+          // Store all the data for filtering later
+          return {
+            consolidatedYoY,
+            yoyData,
+            monthlyData,
+          };
+        } catch (error) {
+          console.error("Background YoY loading failed:", error);
+          throw error;
+        }
+      }
+
+      async function loadYearOverYearDataInBackground() {
+        updateYoYStatus("loading", "Loading...");
+
+        try {
+          console.log("Starting background YoY data loading...");
+          const startTime = Date.now();
+
+          const yoyData = await loadYearOverYearDataForBackground();
+          window.cachedYoYData = yoyData;
+
+          const loadTime = Date.now() - startTime;
+          console.log(`YoY data loaded in background: ${loadTime}ms`);
+
+          updateYoYStatus("ready", "Ready");
+        } catch (error) {
+          console.error("Background YoY loading failed:", error);
+          updateYoYStatus("error", "Error");
+        }
+      }
+
+      function updateYoYStatus(state, text) {
+        const statusElement = document.getElementById("yoyStatus");
+
+        if (!statusElement) return;
+
+        switch (state) {
+          case "loading":
+            statusElement.textContent = "⏳";
+            statusElement.style.color = "#f39c12";
+            statusElement.title = "Loading YoY data in background...";
+            break;
+          case "ready":
+            statusElement.textContent = "✓";
+            statusElement.style.color = "#27ae60";
+            statusElement.title = "YoY data ready - will load instantly";
+            break;
+          case "error":
+            statusElement.textContent = "⚠";
+            statusElement.style.color = "#e74c3c";
+            statusElement.title =
+              "YoY data loading failed - will load on demand";
+            break;
+          default:
+            statusElement.textContent = "●";
+            statusElement.style.color = "#999";
+        }
+      }
+
+      function renderYoYFromCachedData() {
+        const cached = window.cachedYoYData;
+
+        if (!cached) {
+          console.log(
+            "No cached YoY data available, falling back to normal loading"
+          );
+          loadYearOverYearData();
           return;
         }
 
-        const dashboardElement = document.getElementById("dashboardData");
-        const selectedCompanyNames = getSelectedCompanyNames();
-
-        dashboardElement.innerHTML = `
-    <div class="loading">
-      <div class="loading-spinner"></div>
-      Loading monthly analysis for ${activeCompanyFilters.length} companies:<br>
-      <small>${selectedCompanyNames.join(", ")}</small>
-    </div>
-  `;
-
-        try {
-          // Load monthly data for each selected company
-          const monthlyDataResults = [];
-
-          for (const tenantId of activeCompanyFilters) {
-            const connectedCompany = connectedCompanies.find(
-              (c) => c.tenantId === tenantId
-            );
-            if (!connectedCompany) continue;
-
-            const orgName = getOrganizationName(connectedCompany.tenantName);
-
-            const response = await fetch("/api/monthly-pl-report", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                organizationName: orgName,
-                year: selectedYear - 1, // Request previous calendar year for FY data
-              }),
-            });
-
-            if (response.ok) {
-              const data = await response.json();
-              monthlyDataResults.push({
-                companyName: connectedCompany.tenantName.replace(
-                  "Rirratjingu ",
-                  ""
-                ),
-                ...data.data,
-              });
-            }
-          }
-
-          if (monthlyDataResults.length === 0) {
-            throw new Error("No monthly data available for selected companies");
-          }
-
-          // Render monthly analysis dashboard
-          renderSimpleMonthlyAnalysis(monthlyDataResults);
-        } catch (error) {
-          console.error("Error loading monthly analysis:", error);
-          dashboardElement.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: #e74c3c;">
-        <h3>Error Loading Monthly Analysis</h3>
-        <p>Failed to load monthly data: ${error.message}</p>
-        <button onclick="loadDashboardData()" style="margin-top: 10px; padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">
-          Retry
-        </button>
-      </div>
-    `;
-        }
-      }
-
-      // Replace your complex renderMonthlyAnalysisDashboard function with this simple version
-      function renderSimpleMonthlyAnalysis(monthlyDataResults) {
-        const dashboardElement = document.getElementById("dashboardData");
-
-        // Process each company separately
-        let html = "";
-
-        monthlyDataResults.forEach((companyData) => {
-          // Calculate totals from monthly data for verification
-          let calculatedRevenue = 0;
-          let calculatedExpenses = 0;
-          let calculatedProfit = 0;
-
-          companyData.months.forEach((month) => {
-            calculatedRevenue += month.revenue.total;
-            calculatedExpenses += month.expenses.total;
-            calculatedProfit += month.netProfit;
-          });
-
-          html += `
-      <div style="background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-        <h3 style="color: #2c3e50; margin-bottom: 15px;">${
-          companyData.organization
-        } - ${companyData.year}</h3>
-        
-        <!-- YTD Summary Box -->
-        <div style="background: #f8f9fa; padding: 15px; margin-bottom: 20px; border-radius: 6px;">
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: center;">
-            <div>
-              <div style="font-size: 1.4em; font-weight: bold; color: #27ae60;">$${companyData.cytd.totalRevenue.toLocaleString()}</div>
-              <div style="color: #666;">YTD Revenue</div>
-            </div>
-            <div>
-              <div style="font-size: 1.4em; font-weight: bold; color: #e74c3c;">$${companyData.cytd.totalExpenses.toLocaleString()}</div>
-              <div style="color: #666;">YTD Expenses</div>
-            </div>
-            <div>
-              <div style="font-size: 1.4em; font-weight: bold; color: ${
-                companyData.cytd.netProfit >= 0 ? "#27ae60" : "#e74c3c"
-              };">$${companyData.cytd.netProfit.toLocaleString()}</div>
-              <div style="color: #666;">YTD Net Profit</div>
-            </div>
-          </div>
-          <div style="text-align: center; margin-top: 10px; color: #666;">
-            Profit Margin: ${companyData.cytd.profitMargin.toFixed(
-              1
-            )}% | Months with Data: ${companyData.cytd.monthsIncluded}
-          </div>
-        </div>
-        
-        <!-- Monthly Breakdown Table -->
-        <div style="overflow-x: auto;">
-          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-            <thead>
-              <tr style="background: #f8f9fa;">
-                <th style="padding: 10px; text-align: left; border: 1px solid #dee2e6; font-weight: 600;">Month</th>
-                <th style="padding: 10px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">Revenue</th>
-                <th style="padding: 10px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">Expenses</th>
-                <th style="padding: 10px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">Net Profit</th>
-                <th style="padding: 10px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">Margin %</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${companyData.months
-                .map(
-                  (month) => `
-                <tr style="border-bottom: 1px solid #f0f0f0;">
-                  <td style="padding: 8px 10px; border: 1px solid #f0f0f0;">${
-                    month.monthName
-                  }</td>
-                  <td style="padding: 8px 10px; text-align: right; border: 1px solid #f0f0f0;">$${month.revenue.total.toLocaleString()}</td>
-                  <td style="padding: 8px 10px; text-align: right; border: 1px solid #f0f0f0;">$${month.expenses.total.toLocaleString()}</td>
-                  <td style="padding: 8px 10px; text-align: right; border: 1px solid #f0f0f0; color: ${
-                    month.netProfit >= 0 ? "#27ae60" : "#e74c3c"
-                  }; font-weight: 600;">
-                    $${month.netProfit.toLocaleString()}
-                  </td>
-                  <td style="padding: 8px 10px; text-align: right; border: 1px solid #f0f0f0;">
-                    ${
-                      month.revenue.total > 0
-                        ? (
-                            (month.netProfit / month.revenue.total) *
-                            100
-                          ).toFixed(1)
-                        : "0.0"
-                    }%
-                  </td>
-                </tr>
-              `
-                )
-                .join("")}
-              
-              <!-- TOTALS ROW FOR RECONCILIATION -->
-              <tr style="background: #e8f4f8; border-top: 2px solid #3498db; font-weight: bold;">
-                <td style="padding: 10px; border: 1px solid #3498db;">CALCULATED TOTALS</td>
-                <td style="padding: 10px; text-align: right; border: 1px solid #3498db; color: #27ae60;">
-                  $${calculatedRevenue.toLocaleString()}
-                </td>
-                <td style="padding: 10px; text-align: right; border: 1px solid #3498db; color: #e74c3c;">
-                  $${calculatedExpenses.toLocaleString()}
-                </td>
-                <td style="padding: 10px; text-align: right; border: 1px solid #3498db; color: ${
-                  calculatedProfit >= 0 ? "#27ae60" : "#e74c3c"
-                };">
-                  $${calculatedProfit.toLocaleString()}
-                </td>
-                <td style="padding: 10px; text-align: right; border: 1px solid #3498db;">
-                  ${
-                    calculatedRevenue > 0
-                      ? ((calculatedProfit / calculatedRevenue) * 100).toFixed(
-                          1
-                        )
-                      : "0.0"
-                  }%
-                </td>
-              </tr>
-              
-              <!-- RECONCILIATION CHECK -->
-              <tr style="background: ${
-                Math.abs(calculatedRevenue - companyData.cytd.totalRevenue) <
-                  1 &&
-                Math.abs(calculatedExpenses - companyData.cytd.totalExpenses) <
-                  1 &&
-                Math.abs(calculatedProfit - companyData.cytd.netProfit) < 1
-                  ? "#d4edda"
-                  : "#f8d7da"
-              };">
-                <td style="padding: 10px; font-weight: bold;">RECONCILIATION</td>
-                <td style="padding: 10px; text-align: right; font-size: 12px;">
-                  ${
-                    Math.abs(
-                      calculatedRevenue - companyData.cytd.totalRevenue
-                    ) < 1
-                      ? "✅ Match"
-                      : `❌ Diff: $${(
-                          calculatedRevenue - companyData.cytd.totalRevenue
-                        ).toLocaleString()}`
-                  }
-                </td>
-                <td style="padding: 10px; text-align: right; font-size: 12px;">
-                  ${
-                    Math.abs(
-                      calculatedExpenses - companyData.cytd.totalExpenses
-                    ) < 1
-                      ? "✅ Match"
-                      : `❌ Diff: $${(
-                          calculatedExpenses - companyData.cytd.totalExpenses
-                        ).toLocaleString()}`
-                  }
-                </td>
-                <td style="padding: 10px; text-align: right; font-size: 12px;">
-                  ${
-                    Math.abs(calculatedProfit - companyData.cytd.netProfit) < 1
-                      ? "✅ Match"
-                      : `❌ Diff: $${(
-                          calculatedProfit - companyData.cytd.netProfit
-                        ).toLocaleString()}`
-                  }
-                </td>
-                <td style="padding: 10px; text-align: right; font-size: 12px;">
-                  ${
-                    Math.abs(
-                      calculatedRevenue - companyData.cytd.totalRevenue
-                    ) < 1
-                      ? "✅"
-                      : "❌"
-                  }
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
-        });
-
-        dashboardElement.innerHTML = html;
-      }
-
-      // Update your loadMonthlyAnalysisData function to call this simpler version:
-      // Replace the call to renderMonthlyAnalysisDashboard(monthlyDataResults);
-      // With: renderSimpleMonthlyAnalysis(monthlyDataResults);
-
-      function calculateConsolidatedMonthlyData(monthlyDataResults) {
-        if (monthlyDataResults.length === 0) return null;
-
-        // Initialize consolidated data structure
-        const consolidated = {
-          year: monthlyDataResults[0].year,
-          totalRevenue: 0,
-          totalExpenses: 0,
-          netProfit: 0,
-          profitMargin: 0,
-          monthsIncluded: 0,
-          months: [],
-        };
-
-        // Initialize Financial Year months (July to June)
-        const fyMonthNames = [
-          "July",
-          "August",
-          "September",
-          "October",
-          "November",
-          "December",
-          "January",
-          "February",
-          "March",
-          "April",
-          "May",
-          "June",
-        ];
-
-        for (let i = 0; i < 12; i++) {
-          // For FY 2025: July-Dec 2024, Jan-June 2025
-          const isFirstHalf = i < 6; // July-December
-          const calendarYear = isFirstHalf
-            ? consolidated.year - 1
-            : consolidated.year;
-          const calendarMonth = isFirstHalf ? i + 7 : i - 5; // Map FY index to calendar month
-
-          consolidated.months.push({
-            month: `${calendarYear}-${calendarMonth
-              .toString()
-              .padStart(2, "0")}`,
-            monthName: fyMonthNames[i],
-            fyIndex: i, // Track FY position
+        // Filter cached data based on current company filters
+        const filteredYoY = {
+          current: { revenue: 0, expenses: 0, profit: 0, assets: 0, equity: 0 },
+          previous: {
             revenue: 0,
             expenses: 0,
-            netProfit: 0,
-            profitMargin: 0,
-          });
+            profit: 0,
+            assets: 0,
+            equity: 0,
+          },
+          growth: { revenue: 0, expenses: 0, profit: 0, assets: 0, equity: 0 },
+          companies: [],
+        };
+
+        const filteredYoyData = [];
+        const filteredMonthlyData = [];
+
+        // Filter based on activeCompanyFilters
+        for (const company of cached.yoyData) {
+          const matchingConnection = connectedCompanies.find(
+            (c) =>
+              c.tenantName.includes(company.companyName) ||
+              company.companyName.includes(
+                c.tenantName.replace("Rirratjingu ", "")
+              )
+          );
+
+          if (
+            matchingConnection &&
+            activeCompanyFilters.includes(matchingConnection.tenantId)
+          ) {
+            filteredYoyData.push(company);
+
+            // Add to totals
+            const current = company.analysis.periods.current;
+            const previous = company.analysis.periods.previous;
+
+            filteredYoY.current.revenue += current.revenue || 0;
+            filteredYoY.current.expenses +=
+              current.revenue - current.profit || 0;
+            filteredYoY.current.profit += current.profit || 0;
+            filteredYoY.current.assets += current.assets || 0;
+            filteredYoY.current.equity += current.equity || 0;
+
+            filteredYoY.previous.revenue += previous.revenue || 0;
+            filteredYoY.previous.expenses +=
+              previous.revenue - previous.profit || 0;
+            filteredYoY.previous.profit += previous.profit || 0;
+            filteredYoY.previous.assets += previous.assets || 0;
+            filteredYoY.previous.equity += previous.equity || 0;
+
+            filteredYoY.companies.push(company);
+          }
         }
 
-        // Aggregate data from all companies
-        monthlyDataResults.forEach((company) => {
-          consolidated.totalRevenue += company.cytd.totalRevenue;
-          consolidated.totalExpenses += company.cytd.totalExpenses;
-          consolidated.netProfit += company.cytd.netProfit;
+        // Filter monthly data similarly
+        for (const monthly of cached.monthlyData) {
+          const matchingConnection = connectedCompanies.find(
+            (c) =>
+              c.tenantName.includes(monthly.companyName) ||
+              monthly.companyName.includes(
+                c.tenantName.replace("Rirratjingu ", "")
+              )
+          );
 
-          // Map calendar year data to financial year structure
-          company.months.forEach((monthData) => {
-            // Extract calendar month from monthData (e.g., "2024-07" = July 2024)
-            const [dataYear, dataMonth] = monthData.month
-              .split("-")
-              .map(Number);
-
-            // Find corresponding FY index
-            let fyIndex = -1;
-            if (dataMonth >= 7) {
-              // July-December (first half of FY)
-              fyIndex = dataMonth - 7;
-            } else {
-              // January-June (second half of FY)
-              fyIndex = dataMonth + 5;
-            }
-
-            // Add to consolidated data if we have a valid FY index
-            if (fyIndex >= 0 && fyIndex < 12) {
-              consolidated.months[fyIndex].revenue += monthData.revenue.total;
-              consolidated.months[fyIndex].expenses += monthData.expenses.total;
-              consolidated.months[fyIndex].netProfit += monthData.netProfit;
-            }
-          });
-        });
-
-        // Calculate consolidated profit margin
-        consolidated.profitMargin =
-          consolidated.totalRevenue > 0
-            ? (consolidated.netProfit / consolidated.totalRevenue) * 100
-            : 0;
-
-        // Calculate month profit margins and count months with data
-        consolidated.months.forEach((month) => {
-          month.profitMargin =
-            month.revenue > 0 ? (month.netProfit / month.revenue) * 100 : 0;
-        });
-
-        // Count months with data
-        consolidated.monthsIncluded = consolidated.months.filter(
-          (m) => m.revenue > 0
-        ).length;
-
-        return consolidated;
-      }
-
-      // Event handlers for monthly analysis
-      function handleMonthlyViewChange() {
-        const viewMode = document.getElementById("monthlyViewMode").value;
-        const monthSelector = document.getElementById("monthSelector");
-
-        if (viewMode === "monthly") {
-          monthSelector.style.display = "block";
-        } else {
-          monthSelector.style.display = "none";
-          document.getElementById("monthSelect").value = "";
-          // Show full year view
-        }
-        // Add this line to refresh the display
-        loadDashboardData();
-      }
-
-      function handleMonthSelection() {
-        const selectedMonth = document.getElementById("monthSelect").value;
-        if (selectedMonth) {
-          // Show specific month detail
-          showMonthDetailView(selectedMonth);
-        }
-      }
-
-      function handleYearChange() {
-        const year = document.getElementById("yearSelect").value;
-        selectedYear = parseInt(year);
-        console.log("Year changed to:", selectedYear); // Add this
-        // Update the dropdown display to match the selected value
-        document.getElementById("yearSelect").value = year;
-        loadDashboardData(); // This should reload with new year
-      }
-
-      function showMonthDetail(monthCode, monthName) {
-        // Switch to monthly view mode
-        document.getElementById("monthlyViewMode").value = "monthly";
-        document.getElementById("monthSelector").style.display = "block";
-        document.getElementById("monthSelect").value = monthCode.split("-")[1];
-
-        showMonthDetailView(monthCode.split("-")[1]);
-      }
-
-      function showMonthDetailView(monthNumber) {
-        // Update metrics to show single month
-        // This would filter the display to show only the selected month's data
-        console.log("Showing detail for month:", monthNumber);
-        // Implementation would update the metrics display to show single month
-      }
-
-      function createMonthlyTrendChart(consolidatedData) {
-        const canvas = document.getElementById("monthlyTrendChart");
-        if (!canvas) return;
-
-        const ctx = canvas.getContext("2d");
-
-        // Destroy existing chart if it exists
-        if (window.monthlyChart) {
-          window.monthlyChart.destroy();
+          if (
+            matchingConnection &&
+            activeCompanyFilters.includes(matchingConnection.tenantId)
+          ) {
+            filteredMonthlyData.push(monthly);
+          }
         }
 
-        const labels = consolidatedData.months.map((m) =>
-          m.monthName.substring(0, 3)
+        // Calculate growth rates for filtered data
+        filteredYoY.growth.revenue = calculateGrowthRate(
+          filteredYoY.previous.revenue,
+          filteredYoY.current.revenue
         );
-        const revenue = consolidatedData.months.map((m) => m.revenue);
-        const expenses = consolidatedData.months.map((m) => m.expenses);
-        const profit = consolidatedData.months.map((m) => m.netProfit);
+        filteredYoY.growth.expenses = calculateGrowthRate(
+          filteredYoY.previous.expenses,
+          filteredYoY.current.expenses
+        );
+        filteredYoY.growth.profit = calculateGrowthRate(
+          filteredYoY.previous.profit,
+          filteredYoY.current.profit
+        );
+        filteredYoY.growth.assets = calculateGrowthRate(
+          filteredYoY.previous.assets,
+          filteredYoY.current.assets
+        );
+        filteredYoY.growth.equity = calculateGrowthRate(
+          filteredYoY.previous.equity,
+          filteredYoY.current.equity
+        );
 
-        window.monthlyChart = new Chart(ctx, {
-          type: "line",
-          data: {
-            labels: labels,
-            datasets: [
-              {
-                label: "Revenue",
-                data: revenue,
-                borderColor: "#3498db",
-                backgroundColor: "rgba(52, 152, 219, 0.1)",
-                fill: false,
-                tension: 0.4,
-                pointBackgroundColor: "#3498db",
-                pointBorderColor: "#2980b9",
-                pointBorderWidth: 2,
-                pointRadius: 4,
-              },
-              {
-                label: "Expenses",
-                data: expenses,
-                borderColor: "#e74c3c",
-                backgroundColor: "rgba(231, 76, 60, 0.1)",
-                fill: false,
-                tension: 0.4,
-                pointBackgroundColor: "#e74c3c",
-                pointBorderColor: "#c0392b",
-                pointBorderWidth: 2,
-                pointRadius: 4,
-              },
-              {
-                label: "Net Profit",
-                data: profit,
-                borderColor: "#27ae60",
-                backgroundColor: "rgba(39, 174, 96, 0.1)",
-                fill: false,
-                tension: 0.4,
-                pointBackgroundColor: "#27ae60",
-                pointBorderColor: "#229954",
-                pointBorderWidth: 2,
-                pointRadius: 4,
-              },
-            ],
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              title: {
-                display: false,
-              },
-              tooltip: {
-                callbacks: {
-                  label: function (context) {
-                    return (
-                      context.dataset.label +
-                      ": $" +
-                      context.parsed.y.toLocaleString()
-                    );
-                  },
-                },
-              },
-              legend: {
-                position: "top",
-              },
-            },
-            scales: {
-              y: {
-                beginAtZero: false,
-                ticks: {
-                  callback: function (value) {
-                    return "$" + (value / 1000000).toFixed(1) + "M";
-                  },
-                },
-              },
-            },
-            interaction: {
-              intersect: false,
-              mode: "index",
-            },
-          },
-        });
+        // Use existing render function
+        renderConsolidatedYoYAnalysis(
+          filteredYoY,
+          filteredYoyData,
+          filteredMonthlyData
+        );
       }
-
       // ====== HELPER FUNCTIONS FOR PARSING MCP RESPONSES ======
 
       function getOrganizationName(tenantName) {
@@ -3210,29 +2816,53 @@
         return "Unknown";
       }
 
+      // Add this helper function (around line 1400 in your frontend)
+      function calculateGrowthRate(prior, current) {
+        if (prior === 0 && current === 0) return 0;
+        if (prior === 0) return current > 0 ? 100 : -100;
+        return ((current - prior) / Math.abs(prior)) * 100;
+      }
+
       async function loadTrialBalanceData() {
         if (activeCompanyFilters.length === 0) {
           const dashboardElement = document.getElementById("dashboardData");
           dashboardElement.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: #666;">
-        <h3>No Companies Selected</h3>
-        <p>Please select companies using the filters above to view trial balance.</p>
-      </div>
-    `;
+                  <div style="text-align: center; padding: 40px; color: #666;">
+                    <h3>No Companies Selected</h3>
+                    <p>Please select companies using the filters above to view trial balance.</p>
+                  </div>
+                `;
           return;
         }
 
         const dashboardElement = document.getElementById("dashboardData");
         dashboardElement.innerHTML = `
-    <div class="loading">
-      <div class="loading-spinner"></div>
-      Loading detailed trial balance data...
-    </div>
-  `;
+                <div class="loading">
+                  <div class="loading-spinner"></div>
+                  Loading consolidated trial balance data...
+                </div>
+              `;
 
         try {
-          const trialBalanceData = [];
+          // Build consolidated data from selected companies only
+          let consolidatedData = null;
+          if (activeCompanyFilters.length > 0) {
+            consolidatedData = {
+              companies: [],
+              consolidated: {
+                totals: { totalAssets: 0, totalLiabilities: 0, totalEquity: 0 },
+                balanceCheck: { debitsEqualCredits: true },
+              },
+              summary: {
+                totalCompanies: 0,
+                totalAccounts: 0,
+                balancedCompanies: 0,
+              },
+            };
+          }
 
+          // Get individual trial balances for selected companies
+          const trialBalanceData = [];
           for (const tenantId of activeCompanyFilters) {
             const connectedCompany = connectedCompanies.find(
               (c) => c.tenantId === tenantId
@@ -3240,7 +2870,6 @@
             if (!connectedCompany) continue;
 
             const orgName = getOrganizationName(connectedCompany.tenantName);
-
             const response = await fetch("/api/trial-balance", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -3256,115 +2885,193 @@
                 ),
                 ...data,
               });
+
+              // Add to consolidated data
+              if (consolidatedData) {
+                consolidatedData.companies.push({
+                  sections: {
+                    assets: { accounts: data.trialBalance.assets },
+                    liabilities: { accounts: data.trialBalance.liabilities },
+                    equity: { accounts: data.trialBalance.equity },
+                  },
+                });
+
+                // Update consolidated totals
+                consolidatedData.consolidated.totals.totalAssets +=
+                  data.trialBalance.totals.totalAssets;
+                consolidatedData.consolidated.totals.totalLiabilities +=
+                  data.trialBalance.totals.totalLiabilities;
+                consolidatedData.consolidated.totals.totalEquity +=
+                  data.trialBalance.totals.totalEquity;
+
+                consolidatedData.summary.totalCompanies++;
+                consolidatedData.summary.totalAccounts +=
+                  data.trialBalance.assets.length +
+                  data.trialBalance.liabilities.length +
+                  data.trialBalance.equity.length;
+
+                if (data.balanceCheck.debitsEqualCredits) {
+                  consolidatedData.summary.balancedCompanies++;
+                } else {
+                  consolidatedData.consolidated.balanceCheck.debitsEqualCredits = false;
+                }
+              }
             }
           }
-
-          // Render detailed trial balance
-          dashboardElement.innerHTML = `
-      ${trialBalanceData
-        .map(
-          (company) => `
-        <div class="dashboard-card">
-          <h3>${company.companyName} - Trial Balance</h3>
-          <div style="margin-bottom: 15px;">
-            <strong>Status:</strong> 
-            <span style="color: ${
-              company.balanceCheck.debitsEqualCredits ? "#27ae60" : "#e74c3c"
-            };">
-              ${
-                company.balanceCheck.debitsEqualCredits
-                  ? "✅ Balanced"
-                  : "⚠️ Out of Balance"
-              }
-            </span>
-            ${
-              !company.balanceCheck.debitsEqualCredits
-                ? `<span style="margin-left: 10px; color: #e74c3c;">
-                Difference: $${company.balanceCheck.difference.toLocaleString()}
-              </span>`
-                : ""
-            }
-          </div>
-
-          <div style="display: grid; grid-template-columns: repeat(3, minmax(300px, 1fr)); gap: 20px; align-items: start;">
-            <div>
-              <h4>Assets (${company.trialBalance.assets.length} accounts)</h4>
-              <div style="overflow: visible;">
-                ${company.trialBalance.assets
-                  .map(
-                    (account) => `
-                  <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
-  <span style="font-size: 13px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 10px;">${
-    account.name
-  }</span>
-  <span style="font-weight: 600; white-space: nowrap;">$${account.balance.toLocaleString()}</span>
-</div>
-                `
-                  )
-                  .join("")}
-                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-top: 2px solid #27ae60; font-weight: bold; color: #27ae60;">
-                  <span>Total Assets</span>
-                  <span>$${company.trialBalance.totals.totalAssets.toLocaleString()}</span>
-                </div>
-              </div>
-            </div>
-
-            <div>
-  <h4>Liabilities (${company.trialBalance.liabilities.length} accounts)</h4>
-  <div style="overflow: visible;">
-    ${company.trialBalance.liabilities
-      .map(
-        (account) => `
-      <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
-        <span style="font-size: 13px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 10px;">${
-          account.name
-        }</span>
-        <span style="font-weight: 600; white-space: nowrap;">$${account.balance.toLocaleString()}</span>
-      </div>
-    `
-      )
-      .join("")}
-    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-top: 2px solid #e74c3c; font-weight: bold; color: #e74c3c;">
-      <span>Total Liabilities</span>
-      <span>$${company.trialBalance.totals.totalLiabilities.toLocaleString()}</span>
-    </div>
-  </div>
-</div>
-            <div>
-              <h4>Equity (${company.trialBalance.equity.length} accounts)</h4>
-              <div style="overflow: visible;">
-                ${company.trialBalance.equity
-                  .map(
-                    (account) => `
-                  <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
-        <span style="font-size: 13px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 10px;">${
-          account.name
-        }</span>
-        <span style="font-weight: 600; white-space: nowrap;">$${account.balance.toLocaleString()}</span>
-      </div>
-                `
-                  )
-                  .join("")}
-                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-top: 2px solid #3498db; font-weight: bold; color: #3498db;">
-                  <span>Total Equity</span>
-                  <span>$${company.trialBalance.totals.totalEquity.toLocaleString()}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      `
-        )
-        .join("")}
-    `;
+          // Render consolidated + individual trial balances with scroll
+          renderTrialBalanceWithConsolidated(
+            consolidatedData,
+            trialBalanceData
+          );
         } catch (error) {
           dashboardElement.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: #e74c3c;">
-        <h3>Error Loading Trial Balance</h3>
-        <p>${error.message}</p>
-      </div>
-    `;
+                  <div style="text-align: center; padding: 40px; color: #e74c3c;">
+                    <h3>Error Loading Trial Balance</h3>
+                    <p>${error.message}</p>
+                  </div>
+                `;
         }
+      }
+
+      function renderTrialBalanceWithConsolidated(
+        consolidatedData,
+        individualData
+      ) {
+        const dashboardElement = document.getElementById("dashboardData");
+
+        let consolidatedHtml = "";
+        if (consolidatedData && consolidatedData.companies) {
+          // Build consolidated accounts by combining all companies
+          const consolidatedAccounts = {
+            assets: {},
+            liabilities: {},
+            equity: {},
+          };
+
+          // Aggregate accounts across all companies
+          consolidatedData.companies.forEach((company) => {
+            ["assets", "liabilities", "equity"].forEach((category) => {
+              if (company.sections && company.sections[category]) {
+                company.sections[category].accounts.forEach((account) => {
+                  if (!consolidatedAccounts[category][account.name]) {
+                    consolidatedAccounts[category][account.name] = 0;
+                  }
+                  consolidatedAccounts[category][account.name] +=
+                    account.balance;
+                });
+              }
+            });
+          });
+
+          // Convert to arrays and sort
+          const assetAccounts = Object.entries(consolidatedAccounts.assets)
+            .map(([name, balance]) => ({ name, balance }))
+            .sort((a, b) => a.name.localeCompare(b.name));
+          const liabilityAccounts = Object.entries(
+            consolidatedAccounts.liabilities
+          )
+            .map(([name, balance]) => ({ name, balance }))
+            .sort((a, b) => a.name.localeCompare(b.name));
+          const equityAccounts = Object.entries(consolidatedAccounts.equity)
+            .map(([name, balance]) => ({ name, balance }))
+            .sort((a, b) => a.name.localeCompare(b.name));
+
+          const totals = consolidatedData.consolidated.totals;
+          const balanceCheck = consolidatedData.consolidated.balanceCheck;
+
+          consolidatedHtml = `
+            <div class="dashboard-card" style="margin-bottom: 20px;">
+              <h3>Consolidated Trial Balance - All Selected Companies</h3>
+              <div style="margin-bottom: 15px;">
+                <strong>Status:</strong>
+                <span style="color: ${
+                  balanceCheck.debitsEqualCredits ? "#27ae60" : "#e74c3c"
+                };">
+                  ${
+                    balanceCheck.debitsEqualCredits
+                      ? "✅ Balanced"
+                      : "⚠️ Out of Balance"
+                  }
+                </span>
+                <span style="margin-left: 20px; font-size: 14px; color: #666;">
+                  Companies: ${consolidatedData.summary?.totalCompanies || 0} |
+                  Total Accounts: ${
+                    consolidatedData.summary?.totalAccounts || 0
+                  }
+                </span>
+              </div>
+
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                <div>
+                  <h4>Assets (${assetAccounts.length} accounts)</h4>
+                  <div style="max-height: 60vh; overflow-y: auto;">
+                    ${assetAccounts
+                      .map(
+                        (account) => `
+                      <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                        <span style="font-size: 13px; flex: 1; margin-right: 10px;">${
+                          account.name
+                        }</span>
+                        <span style="font-weight: 600;">$${account.balance.toLocaleString()}</span>
+                      </div>
+                    `
+                      )
+                      .join("")}
+                  </div>
+                  <div style="border-top: 2px solid #27ae60; padding: 8px 0; font-weight: bold; color: #27ae60;">
+                    Total Assets: $${totals.totalAssets.toLocaleString()}
+                  </div>
+                </div>
+
+                <div>
+                  <h4>Liabilities (${liabilityAccounts.length} accounts)</h4>
+                  <div style="max-height: 60vh; overflow-y: auto;">
+                    ${liabilityAccounts
+                      .map(
+                        (account) => `
+                      <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                        <span style="font-size: 13px; flex: 1; margin-right: 10px;">${
+                          account.name
+                        }</span>
+                        <span style="font-weight: 600;">$${account.balance.toLocaleString()}</span>
+                      </div>
+                    `
+                      )
+                      .join("")}
+                  </div>
+                  <div style="border-top: 2px solid #e74c3c; padding: 8px 0; font-weight: bold; color: #e74c3c;">
+                    Total Liabilities: $${Math.abs(
+                      totals.totalLiabilities
+                    ).toLocaleString()}
+                  </div>
+                </div>
+
+                <div>
+                  <h4>Equity (${equityAccounts.length} accounts)</h4>
+                  <div style="max-height: 60vh; overflow-y: auto;">
+                    ${equityAccounts
+                      .map(
+                        (account) => `
+                      <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                        <span style="font-size: 13px; flex: 1; margin-right: 10px;">${
+                          account.name
+                        }</span>
+                        <span style="font-weight: 600;">$${account.balance.toLocaleString()}</span>
+                      </div>
+                    `
+                      )
+                      .join("")}
+                  </div>
+                  <div style="border-top: 2px solid #3498db; padding: 8px 0; font-weight: bold; color: #3498db;">
+                    Total Equity: $${totals.totalEquity.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
+        dashboardElement.innerHTML = consolidatedHtml;
       }
 
       async function loadCashFlowData() {
@@ -3389,6 +3096,11 @@
 
         try {
           const cashData = [];
+          let consolidatedCash = {
+            totalCash: 0,
+            bankAccounts: {},
+            companies: [],
+          };
 
           for (const tenantId of activeCompanyFilters) {
             const connectedCompany = connectedCompanies.find(
@@ -3397,7 +3109,6 @@
             if (!connectedCompany) continue;
 
             const orgName = getOrganizationName(connectedCompany.tenantName);
-
             const response = await fetch("/api/cash-position", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -3406,79 +3117,53 @@
 
             if (response.ok) {
               const data = await response.json();
-              cashData.push({
+              const companyData = {
                 companyName: connectedCompany.tenantName.replace(
                   "Rirratjingu ",
                   ""
                 ),
                 ...data,
-              });
+              };
+
+              cashData.push(companyData);
+
+              // Build consolidated data
+              consolidatedCash.totalCash += data.totalCash || 0;
+              consolidatedCash.companies.push(companyData);
+
+              // Aggregate bank accounts (combine accounts with same name)
+              if (data.bankAccounts) {
+                data.bankAccounts.forEach((account) => {
+                  const accountKey = account.name;
+                  if (!consolidatedCash.bankAccounts[accountKey]) {
+                    consolidatedCash.bankAccounts[accountKey] = {
+                      name: account.name,
+                      balance: 0,
+                      code: account.code,
+                      companies: [],
+                    };
+                  }
+                  consolidatedCash.bankAccounts[accountKey].balance +=
+                    account.balance;
+                  consolidatedCash.bankAccounts[accountKey].companies.push({
+                    company: companyData.companyName,
+                    balance: account.balance,
+                  });
+                });
+              }
             }
           }
 
-          const totalCash = cashData.reduce(
-            (sum, company) => sum + company.totalCash,
-            0
+          // Convert consolidated bank accounts to array
+          const consolidatedBankAccounts = Object.values(
+            consolidatedCash.bankAccounts
+          ).sort((a, b) => b.balance - a.balance);
+
+          renderCashFlowWithConsolidated(
+            consolidatedCash,
+            consolidatedBankAccounts,
+            cashData
           );
-
-          dashboardElement.innerHTML = `
-      <div class="dashboard-grid">
-        <div class="dashboard-card">
-          <h3>Consolidated Cash Position</h3>
-          <div class="metric">
-            <span>Total Cash Across All Entities</span>
-            <span class="metric-value">$${totalCash.toLocaleString()}</span>
-          </div>
-          <div class="metric">
-            <span>Companies Analyzed</span>
-            <span class="metric-value">${cashData.length}</span>
-          </div>
-        </div>
-      </div>
-
-      ${cashData
-        .map(
-          (company) => `
-        <div class="dashboard-card">
-          <h3>${company.companyName} - Bank Accounts</h3>
-          <div style="margin-bottom: 15px;">
-            <strong>Total Cash:</strong> $${company.totalCash.toLocaleString()}
-          </div>
-          
-          ${
-            company.bankAccounts.length > 0
-              ? `
-            <div style="max-height: 400px; overflow-y: auto;">
-              ${company.bankAccounts
-                .map(
-                  (account) => `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
-                  <div>
-                    <div style="font-weight: 600;">${account.name}</div>
-                    <div style="font-size: 12px; color: #666;">Code: ${
-                      account.code
-                    }</div>
-                  </div>
-                  <div style="font-weight: 600; text-align: right;">
-                    $${account.balance.toLocaleString()}
-                  </div>
-                </div>
-              `
-                )
-                .join("")}
-            </div>
-          `
-              : `
-            <div style="text-align: center; padding: 20px; color: #666;">
-              No bank accounts found
-            </div>
-          `
-          }
-        </div>
-      `
-        )
-        .join("")}
-    `;
         } catch (error) {
           dashboardElement.innerHTML = `
       <div style="text-align: center; padding: 40px; color: #e74c3c;">
@@ -3487,6 +3172,64 @@
       </div>
     `;
         }
+      }
+
+      function renderCashFlowWithConsolidated(
+        consolidatedCash,
+        consolidatedBankAccounts,
+        individualData
+      ) {
+        const dashboardElement = document.getElementById("dashboardData");
+
+        const consolidatedHtml = `
+    <div class="dashboard-card" style="margin-bottom: 20px;">
+      <h3>Consolidated Cash Position - All Selected Companies</h3>
+      <div style="margin-bottom: 15px;">
+        <strong>Total Cash:</strong> $${consolidatedCash.totalCash.toLocaleString()}
+        <span style="margin-left: 20px; font-size: 14px; color: #666;">
+          Companies: ${consolidatedCash.companies.length} | 
+          Bank Accounts: ${consolidatedBankAccounts.length}
+        </span>
+      </div>
+      
+      ${
+        consolidatedBankAccounts.length > 0
+          ? `
+        <div style="max-height: 60vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px;">
+          ${consolidatedBankAccounts
+            .map(
+              (account) => `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
+              <div>
+                <div style="font-weight: 600;">${account.name}</div>
+                <div style="font-size: 12px; color: #666;">
+                  ${account.companies
+                    .map(
+                      (comp) =>
+                        `${comp.company}: $${comp.balance.toLocaleString()}`
+                    )
+                    .join(" | ")}
+                </div>
+              </div>
+              <div style="font-weight: 600; text-align: right;">
+                $${account.balance.toLocaleString()}
+              </div>
+            </div>
+          `
+            )
+            .join("")}
+        </div>
+      `
+          : `
+        <div style="text-align: center; padding: 20px; color: #666;">
+          No bank accounts found
+        </div>
+      `
+      }
+    </div>
+  `;
+
+        dashboardElement.innerHTML = consolidatedHtml;
       }
 
       async function loadProfitLossData() {
@@ -3505,12 +3248,20 @@
         dashboardElement.innerHTML = `
     <div class="loading">
       <div class="loading-spinner"></div>
-      Loading profit & loss data...
+      Loading consolidated profit & loss data...
     </div>
   `;
 
         try {
           const plData = [];
+          let consolidatedPL = {
+            totalRevenue: 0,
+            totalExpenses: 0,
+            netProfit: 0,
+            revenueAccounts: {},
+            expenseAccounts: {},
+            companies: [],
+          };
 
           for (const tenantId of activeCompanyFilters) {
             const connectedCompany = connectedCompanies.find(
@@ -3519,7 +3270,6 @@
             if (!connectedCompany) continue;
 
             const orgName = getOrganizationName(connectedCompany.tenantName);
-
             const response = await fetch("/api/profit-loss-summary", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -3528,138 +3278,64 @@
 
             if (response.ok) {
               const data = await response.json();
-              plData.push({
+              const companyData = {
                 companyName: connectedCompany.tenantName.replace(
                   "Rirratjingu ",
                   ""
                 ),
                 ...data,
-              });
+              };
+
+              plData.push(companyData);
+              consolidatedPL.companies.push(companyData);
+
+              // Aggregate P&L totals
+              consolidatedPL.totalRevenue += data.summary.totalRevenue || 0;
+              consolidatedPL.totalExpenses += data.summary.totalExpenses || 0;
+              consolidatedPL.netProfit += data.summary.netProfit || 0;
+
+              // Aggregate revenue accounts
+              if (data.summary.revenueAccounts) {
+                data.summary.revenueAccounts.forEach((account) => {
+                  if (!consolidatedPL.revenueAccounts[account.name]) {
+                    consolidatedPL.revenueAccounts[account.name] = 0;
+                  }
+                  consolidatedPL.revenueAccounts[account.name] +=
+                    account.amount;
+                });
+              }
+
+              // Aggregate expense accounts
+              if (data.summary.expenseAccounts) {
+                data.summary.expenseAccounts.forEach((account) => {
+                  if (!consolidatedPL.expenseAccounts[account.name]) {
+                    consolidatedPL.expenseAccounts[account.name] = 0;
+                  }
+                  consolidatedPL.expenseAccounts[account.name] +=
+                    account.amount;
+                });
+              }
             }
           }
 
-          const consolidated = plData.reduce(
-            (acc, company) => {
-              acc.totalRevenue += company.summary.totalRevenue;
-              acc.totalExpenses += company.summary.totalExpenses;
-              acc.netProfit += company.summary.netProfit;
-              return acc;
-            },
-            { totalRevenue: 0, totalExpenses: 0, netProfit: 0 }
+          // Convert account objects to sorted arrays
+          const consolidatedRevenueAccounts = Object.entries(
+            consolidatedPL.revenueAccounts
+          )
+            .map(([name, amount]) => ({ name, amount }))
+            .sort((a, b) => b.amount - a.amount);
+
+          const consolidatedExpenseAccounts = Object.entries(
+            consolidatedPL.expenseAccounts
+          )
+            .map(([name, amount]) => ({ name, amount }))
+            .sort((a, b) => b.amount - a.amount);
+
+          renderConsolidatedProfitLoss(
+            consolidatedPL,
+            consolidatedRevenueAccounts,
+            consolidatedExpenseAccounts
           );
-
-          dashboardElement.innerHTML = `
-      <div class="dashboard-grid">
-        <div class="dashboard-card">
-          <h3>Consolidated P&L Summary</h3>
-          <div class="metric">
-            <span>Total Revenue</span>
-            <span class="metric-value">$${consolidated.totalRevenue.toLocaleString()}</span>
-          </div>
-          <div class="metric">
-            <span>Total Expenses</span>
-            <span class="metric-value">$${consolidated.totalExpenses.toLocaleString()}</span>
-          </div>
-          <div class="metric">
-            <span>Net Profit</span>
-            <span class="metric-value ${
-              consolidated.netProfit >= 0 ? "" : "negative"
-            }">
-              $${consolidated.netProfit.toLocaleString()}
-            </span>
-          </div>
-          <div class="metric">
-            <span>Profit Margin</span>
-            <span class="metric-value">
-              ${
-                consolidated.totalRevenue > 0
-                  ? (
-                      (consolidated.netProfit / consolidated.totalRevenue) *
-                      100
-                    ).toFixed(1)
-                  : 0
-              }%
-            </span>
-          </div>
-        </div>
-      </div>
-
-      ${plData
-        .map(
-          (company) => `
-        <div class="dashboard-card">
-          <h3>${company.companyName} - Profit & Loss</h3>
-          <div style="margin-bottom: 15px;">
-            <strong>Period:</strong> ${company.period.from} to ${
-            company.period.to
-          }
-          </div>
-          
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-            <div>
-              <h4>Revenue (${
-                company.summary.revenueAccounts.length
-              } accounts)</h4>
-              ${company.summary.revenueAccounts
-                .slice(0, 10)
-                .map(
-                  (account) => `
-                <div style="display: flex; justify-content: space-between; padding: 4px 0;">
-                  <span style="font-size: 13px;">${account.name}</span>
-                  <span style="font-weight: 600;">$${account.amount.toLocaleString()}</span>
-                </div>
-              `
-                )
-                .join("")}
-              <div style="border-top: 2px solid #27ae60; padding: 8px 0; font-weight: bold; color: #27ae60;">
-                Total Revenue: $${company.summary.totalRevenue.toLocaleString()}
-              </div>
-            </div>
-
-            <div>
-              <h4>Expenses (${
-                company.summary.expenseAccounts.length
-              } accounts)</h4>
-              ${company.summary.expenseAccounts
-                .slice(0, 10)
-                .map(
-                  (account) => `
-                <div style="display: flex; justify-content: space-between; padding: 4px 0;">
-                  <span style="font-size: 13px;">${account.name}</span>
-                  <span style="font-weight: 600;">$${account.amount.toLocaleString()}</span>
-                </div>
-              `
-                )
-                .join("")}
-              <div style="border-top: 2px solid #e74c3c; padding: 8px 0; font-weight: bold; color: #e74c3c;">
-                Total Expenses: $${company.summary.totalExpenses.toLocaleString()}
-              </div>
-            </div>
-          </div>
-
-          <div style="margin-top: 15px; padding: 15px; background: ${
-            company.summary.netProfit >= 0 ? "#f8fff8" : "#fff8f8"
-          }; border-radius: 6px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-weight: bold; font-size: 16px;">Net Profit:</span>
-              <span style="font-weight: bold; font-size: 18px; color: ${
-                company.summary.netProfit >= 0 ? "#27ae60" : "#e74c3c"
-              };">
-                $${company.summary.netProfit.toLocaleString()}
-              </span>
-            </div>
-            <div style="margin-top: 5px;">
-              <span>Profit Margin: ${(
-                (company.summary.netProfit / company.summary.totalRevenue) *
-                100
-              ).toFixed(1)}%</span>
-            </div>
-          </div>
-        </div>
-      `
-        )
-        .join("")}
-    `;
         } catch (error) {
           dashboardElement.innerHTML = `
       <div style="text-align: center; padding: 40px; color: #e74c3c;">
@@ -3670,25 +3346,117 @@
         }
       }
 
+      function renderConsolidatedProfitLoss(
+        consolidatedPL,
+        revenueAccounts,
+        expenseAccounts
+      ) {
+        const dashboardElement = document.getElementById("dashboardData");
+
+        const profitMargin =
+          consolidatedPL.totalRevenue > 0
+            ? (
+                (consolidatedPL.netProfit / consolidatedPL.totalRevenue) *
+                100
+              ).toFixed(1)
+            : 0;
+
+        const consolidatedHtml = `
+    <div class="dashboard-card" style="margin-bottom: 20px;">
+      <h3>Consolidated Profit & Loss - All Selected Companies</h3>
+      <div style="margin-bottom: 15px;">
+        <span style="margin-right: 20px; font-size: 14px; color: #666;">
+          Companies: ${consolidatedPL.companies.length} | 
+          Revenue Accounts: ${revenueAccounts.length} | 
+          Expense Accounts: ${expenseAccounts.length}
+        </span>
+      </div>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div>
+          <h4>Revenue (${revenueAccounts.length} accounts)</h4>
+          <div style="max-height: 50vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px;">
+            ${revenueAccounts
+              .map(
+                (account) => `
+              <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                <span style="font-size: 13px; flex: 1; margin-right: 10px;">${
+                  account.name
+                }</span>
+                <span style="font-weight: 600;">$${account.amount.toLocaleString()}</span>
+              </div>
+            `
+              )
+              .join("")}
+          </div>
+          <div style="border-top: 2px solid #27ae60; padding: 8px 0; font-weight: bold; color: #27ae60; margin-top: 10px;">
+            Total Revenue: $${consolidatedPL.totalRevenue.toLocaleString()}
+          </div>
+        </div>
+
+        <div>
+          <h4>Expenses (${expenseAccounts.length} accounts)</h4>
+          <div style="max-height: 50vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px;">
+            ${expenseAccounts
+              .map(
+                (account) => `
+              <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                <span style="font-size: 13px; flex: 1; margin-right: 10px;">${
+                  account.name
+                }</span>
+                <span style="font-weight: 600;">$${account.amount.toLocaleString()}</span>
+              </div>
+            `
+              )
+              .join("")}
+          </div>
+          <div style="border-top: 2px solid #e74c3c; padding: 8px 0; font-weight: bold; color: #e74c3c; margin-top: 10px;">
+            Total Expenses: $${consolidatedPL.totalExpenses.toLocaleString()}
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px; padding: 15px; background: ${
+        consolidatedPL.netProfit >= 0 ? "#f8fff8" : "#fff8f8"
+      }; border-radius: 6px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-weight: bold; font-size: 18px;">Net Profit:</span>
+          <span style="font-weight: bold; font-size: 20px; color: ${
+            consolidatedPL.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+          };">
+            $${consolidatedPL.netProfit.toLocaleString()}
+          </span>
+        </div>
+        <div style="margin-top: 8px; display: flex; justify-content: space-between;">
+          <span>Profit Margin: ${profitMargin}%</span>
+          <span>Period: August 2025 (Testing)</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+        dashboardElement.innerHTML = consolidatedHtml;
+      }
+
       async function loadAlertsData() {
         if (activeCompanyFilters.length === 0) {
           const dashboardElement = document.getElementById("dashboardData");
           dashboardElement.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: #666;">
-        <h3>No Companies Selected</h3>
-        <p>Please select companies using the filters above to view alerts.</p>
-      </div>
-    `;
+                  <div style="text-align: center; padding: 40px; color: #666;">
+                    <h3>No Companies Selected</h3>
+                    <p>Please select companies using the filters above to view alerts.</p>
+                  </div>
+                `;
           return;
         }
 
         const dashboardElement = document.getElementById("dashboardData");
         dashboardElement.innerHTML = `
-    <div class="loading">
-      <div class="loading-spinner"></div>
-      Analyzing financial data for alerts...
-    </div>
-  `;
+                <div class="loading">
+                  <div class="loading-spinner"></div>
+                  Analyzing financial data for alerts...
+                </div>
+              `;
 
         try {
           const alerts = [];
@@ -3858,124 +3626,128 @@
           const infoAlerts = alerts.filter((a) => a.type === "info");
 
           dashboardElement.innerHTML = `
-      <div class="dashboard-grid">
-        <div class="dashboard-card">
-          <h3>Alert Summary</h3>
-          <div class="metric">
-            <span>Critical Issues</span>
-            <span class="metric-value ${
-              criticalAlerts.length > 0 ? "negative" : ""
-            }">${criticalAlerts.length}</span>
-          </div>
-          <div class="metric">
-            <span>Warnings</span>
-            <span class="metric-value">${warningAlerts.length}</span>
-          </div>
-          <div class="metric">
-            <span>Information</span>
-            <span class="metric-value">${infoAlerts.length}</span>
-          </div>
-          <div class="metric">
-            <span>Overall Status</span>
-            <span class="metric-value ${
-              criticalAlerts.length > 0
-                ? "negative"
-                : warningAlerts.length > 0
-                ? ""
-                : ""
-            }">
-              ${
-                criticalAlerts.length > 0
-                  ? "🔴 Critical"
-                  : warningAlerts.length > 0
-                  ? "🟡 Caution"
-                  : "🟢 Healthy"
-              }
-            </span>
-          </div>
-        </div>
-      </div>
+                  <div class="dashboard-grid">
+                    <div class="dashboard-card">
+                      <h3>Alert Summary</h3>
+                      <div class="metric">
+                        <span>Critical Issues</span>
+                        <span class="metric-value ${
+                          criticalAlerts.length > 0 ? "negative" : ""
+                        }">${criticalAlerts.length}</span>
+                      </div>
+                      <div class="metric">
+                        <span>Warnings</span>
+                        <span class="metric-value">${
+                          warningAlerts.length
+                        }</span>
+                      </div>
+                      <div class="metric">
+                        <span>Information</span>
+                        <span class="metric-value">${infoAlerts.length}</span>
+                      </div>
+                      <div class="metric">
+                        <span>Overall Status</span>
+                        <span class="metric-value ${
+                          criticalAlerts.length > 0
+                            ? "negative"
+                            : warningAlerts.length > 0
+                            ? ""
+                            : ""
+                        }">
+                          ${
+                            criticalAlerts.length > 0
+                              ? "🔴 Critical"
+                              : warningAlerts.length > 0
+                              ? "🟡 Caution"
+                              : "🟢 Healthy"
+                          }
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
-      <div class="dashboard-card">
-        <h3>Financial Alerts & Recommendations</h3>
-        
-        ${
-          alerts.length === 0
-            ? `
-          <div style="text-align: center; padding: 40px; color: #27ae60;">
-            <h4>🟢 All Systems Healthy</h4>
-            <p>No financial alerts detected for the selected companies.</p>
-          </div>
-        `
-            : alerts
-                .map(
-                  (alert) => `
-          <div style="padding: 15px; margin: 10px 0; border-radius: 6px; border-left: 4px solid ${
-            alert.type === "critical"
-              ? "#e74c3c"
-              : alert.type === "warning"
-              ? "#f39c12"
-              : "#3498db"
-          }; background: ${
-                    alert.type === "critical"
-                      ? "#fff5f5"
-                      : alert.type === "warning"
-                      ? "#fffdf5"
-                      : "#f8fffe"
-                  };">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-              <div>
-                <strong style="color: ${
-                  alert.type === "critical"
-                    ? "#c0392b"
-                    : alert.type === "warning"
-                    ? "#d68910"
-                    : "#2471a3"
-                };">
-                  ${
-                    alert.type === "critical"
-                      ? "🔴"
-                      : alert.type === "warning"
-                      ? "🟡"
-                      : "🔵"
-                  } 
-                  ${alert.title}
-                </strong>
-                <div style="font-size: 12px; color: #666; margin-top: 2px;">${
-                  alert.company
-                }</div>
-              </div>
-              <span style="background: ${
-                alert.type === "critical"
-                  ? "#e74c3c"
-                  : alert.type === "warning"
-                  ? "#f39c12"
-                  : "#3498db"
-              }; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; text-transform: uppercase;">
-                ${alert.type}
-              </span>
-            </div>
-            <div style="color: #333; margin-bottom: 8px;">${alert.message}</div>
-            <div style="color: #666; font-size: 13px; font-style: italic;">
-              <strong>Recommended Action:</strong> ${alert.action}
-            </div>
-          </div>
-        `
-                )
-                .join("")
-        }
-      </div>
-    `;
+                  <div class="dashboard-card">
+                    <h3>Financial Alerts & Recommendations</h3>
+
+                    ${
+                      alerts.length === 0
+                        ? `
+                      <div style="text-align: center; padding: 40px; color: #27ae60;">
+                        <h4>🟢 All Systems Healthy</h4>
+                        <p>No financial alerts detected for the selected companies.</p>
+                      </div>
+                    `
+                        : alerts
+                            .map(
+                              (alert) => `
+                      <div style="padding: 15px; margin: 10px 0; border-radius: 6px; border-left: 4px solid ${
+                        alert.type === "critical"
+                          ? "#e74c3c"
+                          : alert.type === "warning"
+                          ? "#f39c12"
+                          : "#3498db"
+                      }; background: ${
+                                alert.type === "critical"
+                                  ? "#fff5f5"
+                                  : alert.type === "warning"
+                                  ? "#fffdf5"
+                                  : "#f8fffe"
+                              };">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                          <div>
+                            <strong style="color: ${
+                              alert.type === "critical"
+                                ? "#c0392b"
+                                : alert.type === "warning"
+                                ? "#d68910"
+                                : "#2471a3"
+                            };">
+                              ${
+                                alert.type === "critical"
+                                  ? "🔴"
+                                  : alert.type === "warning"
+                                  ? "🟡"
+                                  : "🔵"
+                              }
+                              ${alert.title}
+                            </strong>
+                            <div style="font-size: 12px; color: #666; margin-top: 2px;">${
+                              alert.company
+                            }</div>
+                          </div>
+                          <span style="background: ${
+                            alert.type === "critical"
+                              ? "#e74c3c"
+                              : alert.type === "warning"
+                              ? "#f39c12"
+                              : "#3498db"
+                          }; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; text-transform: uppercase;">
+                            ${alert.type}
+                          </span>
+                        </div>
+                        <div style="color: #333; margin-bottom: 8px;">${
+                          alert.message
+                        }</div>
+                        <div style="color: #666; font-size: 13px; font-style: italic;">
+                          <strong>Recommended Action:</strong> ${alert.action}
+                        </div>
+                      </div>
+                    `
+                            )
+                            .join("")
+                    }
+                  </div>
+                `;
         } catch (error) {
           dashboardElement.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: #e74c3c;">
-        <h3>Error Loading Alerts</h3>
-        <p>Failed to analyze financial data: ${error.message}</p>
-        <button onclick="loadDashboardData()" style="margin-top: 10px; padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">
-          Retry
-        </button>
-      </div>
-    `;
+                  <div style="text-align: center; padding: 40px; color: #e74c3c;">
+                    <h3>Error Loading Alerts</h3>
+                    <p>Failed to analyze financial data: ${error.message}</p>
+                    <button onclick="loadDashboardData()" style="margin-top: 10px; padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                      Retry
+                    </button>
+                  </div>
+                `;
         }
       }
 
@@ -3988,8 +3760,14 @@
           .forEach((btn) => btn.classList.remove("active"));
         button.classList.add("active");
 
-        // Reload dashboard data for new view
-        loadDashboardData();
+        // For YoY, use cached data if available
+        if (view === "year-over-year" && window.cachedYoYData) {
+          console.log("Using cached YoY data - instant load");
+          renderYoYFromCachedData();
+        } else {
+          // Regular loading for other views or uncached YoY
+          loadDashboardData();
+        }
       }
 
       function backToConnections() {
@@ -4014,37 +3792,20 @@
         }
       }
 
-      // ====== RESIZER FUNCTIONALITY ======
+      function handleMouseMove(e) {
+        if (!isResizing) return;
 
-      function initializeResizer() {
-        let isResizing = false;
+        const container = document.querySelector(".main-container");
+        const containerRect = container.getBoundingClientRect();
+        const percentage =
+          ((e.clientX - containerRect.left) / containerRect.width) * 100;
 
-        document
-          .querySelector(".resizer")
-          .addEventListener("mousedown", function (e) {
-            isResizing = true;
-            document.addEventListener("mousemove", handleMouseMove);
-            document.addEventListener("mouseup", function () {
-              isResizing = false;
-              document.removeEventListener("mousemove", handleMouseMove);
-            });
-          });
-
-        function handleMouseMove(e) {
-          if (!isResizing) return;
-
-          const container = document.querySelector(".main-container");
-          const containerRect = container.getBoundingClientRect();
-          const percentage =
-            ((e.clientX - containerRect.left) / containerRect.width) * 100;
-
-          if (percentage > 20 && percentage < 80) {
-            document.querySelector(".ai-chat-panel").style.width =
-              percentage + "%";
-            document.querySelector(".dashboard-panel").style.width =
-              100 - percentage + "%";
-            document.querySelector(".resizer").style.left = percentage + "%";
-          }
+        if (percentage > 20 && percentage < 80) {
+          document.querySelector(".ai-chat-panel").style.width =
+            percentage + "%";
+          document.querySelector(".dashboard-panel").style.width =
+            100 - percentage + "%";
+          document.querySelector(".resizer").style.left = percentage + "%";
         }
       }
 
