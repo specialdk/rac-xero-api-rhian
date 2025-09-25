@@ -506,20 +506,20 @@
         indicator.style.color = colors[viewMode];
       }
 
-      function getOrganizationName(tenantName) {
-        const mapping = {
-          Mining: "Mining",
-          "Aboriginal Corporation": "Aboriginal Corporation",
-          Property: "Property",
-          Enterprises: "Enterprises",
-          Invest: "Invest",
-        };
+      function getOrganizationName(tenantId) {
+        // This function should return a SHORT display name based on the tenant ID
+        // But the tenantId passed to APIs should remain the actual database tenant ID
+        const company = connectedCompanies.find((c) => c.tenantId === tenantId);
+        if (!company) return "Unknown";
 
-        return Object.keys(mapping).find((key) => tenantName.includes(key))
-          ? mapping[
-              Object.keys(mapping).find((key) => tenantName.includes(key))
-            ]
-          : "Unknown";
+        const tenantName = company.tenantName;
+        if (tenantName.includes("Mining")) return "Mining";
+        if (tenantName.includes("Aboriginal Corporation"))
+          return "Aboriginal Corporation";
+        if (tenantName.includes("Property")) return "Property";
+        if (tenantName.includes("Enterprises")) return "Enterprises";
+        if (tenantName.includes("Invest")) return "Invest";
+        return "Unknown";
       }
 
       function getSelectedCompanyNames() {
@@ -564,8 +564,13 @@
       ) {
         if (activeCompanyFilters.length === 0) return [];
 
+        console.log("🔍 Active company filters:", activeCompanyFilters); // DEBUG LINE
+        console.log("🔍 Connected companies:", connectedCompanies); // DEBUG LINE
+
         const loadingPromises = activeCompanyFilters.map(async (tenantId) => {
           try {
+            console.log(`🔍 Making API call to: /api/${endpoint}/${tenantId}`); // DEBUG LINE
+
             const urlParams = new URLSearchParams({ ...params });
             const response = await fetch(
               `/api/${endpoint}/${tenantId}?${urlParams}`
