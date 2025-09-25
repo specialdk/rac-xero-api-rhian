@@ -1,13 +1,15 @@
-!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>RAC MCP - Integrated Dashboard with Enhanced Chat Filtering</title>
-    /* ====== SECTION 1: CSS STYLES & LAYOUT ====== */
-/* Organized and consolidated styles with redundancy removed */
+    <title>RAC XERO API - FINANCE DASHBOARD</title>
+    
 
 <style>
+  /* ====== SECTION 1: CSS STYLES & LAYOUT ====== */
+  /* Organized and consolidated styles with redundancy removed */
+  
   /* ====== GLOBAL RESET & BASE STYLES ====== */
   * {
     margin: 0;
@@ -1423,18 +1425,248 @@
 
   // ====== TRIAL BALANCE DATA LOADING ======
 
+  // ====== TRIAL BALANCE IMPLEMENTATION ======
+  // Replace the placeholder loadTrialBalanceData() function with this complete implementation
+
   async function loadTrialBalanceData() {
     if (activeCompanyFilters.length === 0) {
       showNoCompaniesSelected();
       return;
     }
 
+    const dashboardElement = document.getElementById("dashboardData");
+    dashboardElement.innerHTML = `
+      <div class="loading">
+        <div class="loading-spinner"></div>
+        Loading consolidated trial balance data...
+      </div>
+    `;
+
     try {
-      const consolidatedData = await buildConsolidatedTrialBalance();
-      renderTrialBalanceWithConsolidated(consolidatedData);
+      const trialBalanceData = [];
+      const consolidatedAccounts = {
+        assets: {},
+        liabilities: {},
+        equity: {}
+      };
+
+      let consolidatedTotals = {
+        totalAssets: 0,
+        totalLiabilities: 0,
+        totalEquity: 0
+      };
+
+      let balancedCompanies = 0;
+      let totalCompanies = 0;
+
+      // Load trial balance for each selected company
+      for (const tenantId of activeCompanyFilters) {
+        const connectedCompany = connectedCompanies.find(c => c.tenantId === tenantId);
+        if (!connectedCompany) continue;
+
+        const orgName = getOrganizationName(connectedCompany.tenantName);
+        const response = await fetchWithErrorHandling("/api/trial-balance", { organizationName: orgName });
+
+        if (response && response.ok) {
+          const data = await response.json();
+          totalCompanies++;
+
+          trialBalanceData.push({
+            companyName: connectedCompany.tenantName.replace("Rirratjingu ", ""),
+            balanced: data.balanceCheck.debitsEqualCredits,
+            ...data
+          });
+
+          // Aggregate into consolidated accounts
+          ['assets', 'liabilities', 'equity'].forEach(category => {
+            if (data.trialBalance[category]) {
+              data.trialBalance[category].forEach(account => {
+                if (!consolidatedAccounts[category][account.name]) {
+                  consolidatedAccounts[category][account.name] = 0;
+                }
+                consolidatedAccounts[category][account.name] += account.balance;
+              });
+            }
+          });
+
+          // Update consolidated totals
+          consolidatedTotals.totalAssets += data.trialBalance.totals.totalAssets;
+          consolidatedTotals.totalLiabilities += data.trialBalance.totals.totalLiabilities;
+          consolidatedTotals.totalEquity += data.trialBalance.totals.totalEquity;
+
+          if (data.balanceCheck.debitsEqualCredits) {
+            balancedCompanies++;
+          }
+        }
+      }
+
+      // Convert consolidated accounts to sorted arrays
+      const consolidatedAssets = Object.entries(consolidatedAccounts.assets)
+        .map(([name, balance]) => ({ name, balance }))
+        .sort((a, b) => b.balance - a.balance);
+
+      const consolidatedLiabilities = Object.entries(consolidatedAccounts.liabilities)
+        .map(([name, balance]) => ({ name, balance }))
+        .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
+
+      const consolidatedEquity = Object.entries(consolidatedAccounts.equity)
+        .map(([name, balance]) => ({ name, balance }))
+        .sort((a, b) => b.balance - a.balance);
+
+      const isConsolidatedBalanced = balancedCompanies === totalCompanies;
+
+      renderTrialBalanceView(
+        consolidatedAssets,
+        consolidatedLiabilities,
+        consolidatedEquity,
+        consolidatedTotals,
+        isConsolidatedBalanced,
+        trialBalanceData,
+        balancedCompanies,
+        totalCompanies
+      );
+
     } catch (error) {
       showErrorState(error);
     }
+  }
+
+  function renderTrialBalanceView(assets, liabilities, equity, totals, isBalanced, companies, balancedCount, totalCount) {
+    const dashboardElement = document.getElementById("dashboardData");
+    
+    dashboardElement.innerHTML = `
+      <!-- CONSOLIDATED TRIAL BALANCE HEADER -->
+      <div class="dashboard-card" style="margin-bottom: 20px;">
+        <h3>Consolidated Trial Balance - All Selected Companies</h3>
+        <div style="margin-bottom: 15px;">
+          <strong>Status:</strong>
+          <span style="color: ${isBalanced ? '#27ae60' : '#e74c3c'};">
+            ${isBalanced ? '✅ Balanced' : '⚠️ Out of Balance'}
+          </span>
+          <span style="margin-left: 20px; font-size: 14px; color: #666;">
+            Companies: ${totalCount} | 
+            Balanced: ${balancedCount}/${totalCount} |
+            Total Accounts: ${assets.length + liabilities.length + equity.length}
+          </span>
+        </div>
+
+        <!-- CONSOLIDATED TRIAL BALANCE TABLE -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+          
+          <!-- ASSETS COLUMN -->
+          <div>
+            <h4 style="color: #27ae60; border-bottom: 2px solid #27ae60; padding-bottom: 8px;">
+              Assets (${assets.length} accounts)
+            </h4>
+            <div style="max-height: 50vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px;">
+              ${assets.length > 0 ? assets.map(account => `
+                <div style="display: flex; justify-content: space-between; padding: 6px 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px;">
+                  <span style="flex: 1; margin-right: 10px;">${account.name}</span>
+                  <span style="font-weight: 600; min-width: 100px; text-align: right;">
+                    $${account.balance.toLocaleString()}
+                  </span>
+                </div>
+              `).join('') : '<div style="padding: 20px; text-align: center; color: #666;">No asset accounts</div>'}
+            </div>
+            <div style="border-top: 3px solid #27ae60; padding: 12px; font-weight: bold; color: #27ae60; background: #f8fff8;">
+              Total Assets: $${totals.totalAssets.toLocaleString()}
+            </div>
+          </div>
+
+          <!-- LIABILITIES COLUMN -->
+          <div>
+            <h4 style="color: #e74c3c; border-bottom: 2px solid #e74c3c; padding-bottom: 8px;">
+              Liabilities (${liabilities.length} accounts)
+            </h4>
+            <div style="max-height: 50vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px;">
+              ${liabilities.length > 0 ? liabilities.map(account => `
+                <div style="display: flex; justify-content: space-between; padding: 6px 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px;">
+                  <span style="flex: 1; margin-right: 10px;">${account.name}</span>
+                  <span style="font-weight: 600; min-width: 100px; text-align: right;">
+                    $${Math.abs(account.balance).toLocaleString()}
+                  </span>
+                </div>
+              `).join('') : '<div style="padding: 20px; text-align: center; color: #666;">No liability accounts</div>'}
+            </div>
+            <div style="border-top: 3px solid #e74c3c; padding: 12px; font-weight: bold; color: #e74c3c; background: #fff8f8;">
+              Total Liabilities: $${Math.abs(totals.totalLiabilities).toLocaleString()}
+            </div>
+          </div>
+
+          <!-- EQUITY COLUMN -->
+          <div>
+            <h4 style="color: #3498db; border-bottom: 2px solid #3498db; padding-bottom: 8px;">
+              Equity (${equity.length} accounts)
+            </h4>
+            <div style="max-height: 50vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px;">
+              ${equity.length > 0 ? equity.map(account => `
+                <div style="display: flex; justify-content: space-between; padding: 6px 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px;">
+                  <span style="flex: 1; margin-right: 10px;">${account.name}</span>
+                  <span style="font-weight: 600; min-width: 100px; text-align: right;">
+                    $${account.balance.toLocaleString()}
+                  </span>
+                </div>
+              `).join('') : '<div style="padding: 20px; text-align: center; color: #666;">No equity accounts</div>'}
+            </div>
+            <div style="border-top: 3px solid #3498db; padding: 12px; font-weight: bold; color: #3498db; background: #f8fffe;">
+              Total Equity: $${totals.totalEquity.toLocaleString()}
+            </div>
+          </div>
+        </div>
+
+        <!-- BALANCE CHECK SUMMARY -->
+        <div style="margin-top: 20px; padding: 15px; background: ${isBalanced ? '#f8fff8' : '#fff8f8'}; border-radius: 6px; border: 1px solid ${isBalanced ? '#27ae60' : '#e74c3c'};">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <strong>Balance Check:</strong>
+              <span style="color: ${isBalanced ? '#27ae60' : '#e74c3c'}; margin-left: 10px;">
+                ${isBalanced ? 'All companies balanced ✅' : `${balancedCount}/${totalCount} companies balanced ⚠️`}
+              </span>
+            </div>
+            <div style="font-size: 14px; color: #666;">
+              ${isBalanced ? 'Trial balance is in perfect balance across all selected companies.' : 'Some companies have trial balance discrepancies that need attention.'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- INDIVIDUAL COMPANY STATUS -->
+      <div class="dashboard-card">
+        <h3>Individual Company Trial Balance Status</h3>
+        <div style="max-height: 40vh; overflow-y: auto;">
+          ${companies.map(company => `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid ${company.balanced ? '#27ae60' : '#e74c3c'}; background: ${company.balanced ? '#f8fff8' : '#fff8f8'};">
+              <div>
+                <strong style="font-size: 16px;">${company.companyName}</strong>
+                <div style="font-size: 12px; color: #666; margin-top: 4px;">
+                  Assets: $${company.trialBalance.totals.totalAssets.toLocaleString()} | 
+                  Liabilities: $${Math.abs(company.trialBalance.totals.totalLiabilities).toLocaleString()} | 
+                  Equity: $${company.trialBalance.totals.totalEquity.toLocaleString()}
+                </div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-weight: bold; color: ${company.balanced ? '#27ae60' : '#e74c3c'};">
+                  ${company.balanced ? '✅ Balanced' : '❌ Out of Balance'}
+                </div>
+                ${!company.balanced ? `
+                  <div style="font-size: 11px; color: #e74c3c; margin-top: 2px;">
+                    Difference: $${Math.abs(company.balanceCheck.difference || 0).toLocaleString()}
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        ${balancedCount < totalCount ? `
+          <div style="margin-top: 15px; padding: 12px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px;">
+            <strong>⚠️ Action Required:</strong> 
+            ${totalCount - balancedCount} ${totalCount - balancedCount === 1 ? 'company has' : 'companies have'} trial balance discrepancies. 
+            Review journal entries and account reconciliations for the affected ${totalCount - balancedCount === 1 ? 'company' : 'companies'}.
+          </div>
+        ` : ''}
+      </div>
+    `;
   }
 
   async function buildConsolidatedTrialBalance() {
