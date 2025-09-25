@@ -248,13 +248,15 @@ const tokenStorage = {
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json());
 
-app.use(express.static('public', {
-  setHeaders: (res, path) => {
-    if (path.endsWith('.css')) {
-      res.setHeader('Content-Type', 'text/css');
-    }
-  }
-}));
+app.use(
+  express.static("public", {
+    setHeaders: (res, path) => {
+      if (path.endsWith(".css")) {
+        res.setHeader("Content-Type", "text/css");
+      }
+    },
+  })
+);
 
 // Initialize Xero client with reports scope
 const xero = new XeroClient({
@@ -463,6 +465,32 @@ app.get("/callback/approvalmax", async (req, res) => {
 // ============================================================================
 // API ROUTES (UPDATED WITH DATABASE TOKEN RETRIEVAL)
 // ============================================================================
+
+// Add this endpoint to your server.js file with your other /api/ routes
+
+app.get("/api/connected-companies", async (req, res) => {
+  try {
+    console.log("📊 Fetching connected companies from database...");
+
+    const result = await pool.query(`
+      SELECT DISTINCT 
+        tenant_id as "tenantId",
+        organization_name as "tenantName"
+      FROM xero_tokens 
+      WHERE access_token IS NOT NULL 
+        AND expires_at > NOW()
+      ORDER BY organization_name
+    `);
+
+    const companies = result.rows;
+    console.log(`📊 Found ${companies.length} connected companies:`, companies);
+
+    res.json(companies);
+  } catch (error) {
+    console.error("❌ Error fetching connected companies:", error);
+    res.status(500).json({ error: "Failed to fetch connected companies" });
+  }
+});
 
 // Connection status endpoint - UPDATED WITH DATABASE
 app.get("/api/connection-status", async (req, res) => {
