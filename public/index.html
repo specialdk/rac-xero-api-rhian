@@ -4,21 +4,284 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RAC MCP - Integrated Dashboard with Enhanced Chat Filtering</title>
-
-    <!-- Import shared styles -->
-    <link rel="stylesheet" href="shared-styles.css" />
-
     <style>
-      /* ====== PAGE-SPECIFIC STYLES ONLY ====== */
-      /* Only styles unique to this page that aren't in shared-styles.css */
-
-      /* Dashboard-specific grid override */
-      .dashboard-grid {
-        grid-template-columns: repeat(5, minmax(200px, 1fr)) !important;
-        gap: 10px;
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
       }
 
-      /* Enhanced company filter styling specific to dashboard */
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        height: 100vh;
+        overflow: hidden;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      }
+
+      /* CONNECTION MANAGER STYLES */
+      .connection-manager {
+        min-height: 100vh;
+        padding: 2rem;
+        display: block;
+      }
+
+      .login-container {
+        max-width: 800px;
+        margin: 40px auto;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+      }
+
+      .login-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        text-align: center;
+      }
+
+      .login-header h1 {
+        font-size: 1.8rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .login-content {
+        padding: 2rem;
+      }
+
+      .step-indicator {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 2rem;
+      }
+
+      .step {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        background: #f8f9fa;
+        color: #666;
+        font-size: 0.9rem;
+        margin: 0 0.5rem;
+      }
+
+      .step.active {
+        background: #667eea;
+        color: white;
+      }
+
+      .step.completed {
+        background: #28a745;
+        color: white;
+      }
+
+      .step-number {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        font-weight: bold;
+      }
+
+      .company-list {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .company-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        border-radius: 6px;
+        margin-bottom: 0.5rem;
+        transition: background-color 0.2s;
+        cursor: pointer;
+      }
+
+      .company-item:hover {
+        background-color: #f8f9fa;
+      }
+
+      .company-item.all-companies {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        font-weight: bold;
+        margin-bottom: 1rem;
+      }
+
+      .company-checkbox {
+        width: 18px;
+        height: 18px;
+        margin-right: 1rem;
+        cursor: pointer;
+      }
+
+      .company-name {
+        flex: 1;
+        font-size: 1rem;
+      }
+
+      .selection-summary {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 6px;
+        margin-bottom: 1rem;
+        text-align: center;
+      }
+
+      .continue-btn {
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: 6px;
+        font-size: 1rem;
+        cursor: pointer;
+        width: 100%;
+        transition: background 0.2s;
+      }
+
+      .continue-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .oauth-flow {
+        display: none;
+        text-align: center;
+      }
+
+      .current-connection {
+        background: #f8f9fa;
+        padding: 2rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+      }
+
+      .progress-bar {
+        background: #e0e0e0;
+        border-radius: 10px;
+        height: 8px;
+        margin: 15px 0;
+        overflow: hidden;
+      }
+
+      .progress-fill {
+        background: linear-gradient(45deg, #4caf50, #8bc34a);
+        height: 100%;
+        transition: width 0.3s ease;
+      }
+
+      .oauth-btn {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: 6px;
+        font-size: 1rem;
+        cursor: pointer;
+        margin: 0.5rem;
+      }
+
+      .oauth-btn.primary {
+        background: #667eea;
+      }
+
+      .completion {
+        display: none;
+        text-align: center;
+      }
+
+      .launch-btn {
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 1.5rem 3rem;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: background 0.2s;
+        margin-top: 1rem;
+      }
+
+      .success-box {
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        border-radius: 8px;
+        padding: 12px;
+        margin: 10px 0;
+        color: #155724;
+      }
+
+      /* SPLIT SCREEN DASHBOARD STYLES */
+      .main-dashboard {
+        display: none;
+        height: 100vh;
+        background: #f5f5f5;
+      }
+
+      .header {
+        background: #2c3e50;
+        color: white;
+        padding: 12px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+        position: relative;
+      }
+
+      .header h1 {
+        font-size: 18px;
+        font-weight: 600;
+      }
+
+      .header .session-info {
+        font-size: 14px;
+        opacity: 0.9;
+      }
+
+      .main-container {
+        display: block; /* Change from flex */
+        height: calc(100vh - 60px);
+        position: relative;
+      }
+
+      .ai-chat-panel {
+        display: none; /* Hide chat panel entirely */
+      }
+
+      .dashboard-panel {
+        width: 100%; /* Full width */
+        background: #fafafa;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+      }
+
+      .panel-header {
+        background: #34495e;
+        color: white;
+        padding: 12px 20px;
+        font-weight: 600;
+        font-size: 14px;
+        border-bottom: 1px solid #2c3e50;
+      }
+
+      /* ENHANCED COMPANY FILTER BAR FOR CHAT */
       .company-filter-bar {
         background: #ecf0f1;
         padding: 12px 20px;
@@ -40,7 +303,41 @@
         margin-bottom: 8px;
       }
 
-      /* Quick filter buttons specific to dashboard */
+      .company-checkbox-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+
+      .company-checkbox-item:hover {
+        background: rgba(52, 152, 219, 0.1);
+      }
+
+      .company-checkbox-item input[type="checkbox"] {
+        margin: 0;
+        cursor: pointer;
+      }
+
+      .company-checkbox-item label {
+        font-weight: 500;
+        color: #2c3e50;
+        cursor: pointer;
+        font-size: 12px;
+      }
+
+      .company-checkbox-item.balanced label {
+        color: #27ae60;
+      }
+
+      .company-checkbox-item.imbalanced label {
+        color: #e74c3c;
+      }
+
+      /* QUICK FILTER BUTTONS */
       .quick-filter-buttons {
         display: flex;
         gap: 8px;
@@ -63,7 +360,37 @@
         border-color: #3498db;
       }
 
-      /* Analysis status boxes for dashboard */
+      /* QUICK ANALYSIS GRID */
+      .chat-quick-actions {
+        padding: 12px 20px;
+        background: #f8f9fa;
+        border-bottom: 1px solid #e0e0e0;
+      }
+
+      .quick-action-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px;
+      }
+
+      .quick-action-btn {
+        padding: 8px 10px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 11px;
+        text-align: center;
+        transition: all 0.2s;
+      }
+
+      .quick-action-btn:hover {
+        background: #3498db;
+        color: white;
+        border-color: #3498db;
+      }
+
+      /* ANALYSIS STATUS BOX */
       .company-analysis-status {
         background: #e8f4f8;
         border: 1px solid #bee5eb;
@@ -84,96 +411,241 @@
         color: #856404;
       }
 
-      /* YoY status indicator */
-      .yoy-status {
-        font-size: 11px;
-        margin-left: 5px;
-        color: #999;
+      .ai-chat-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
       }
 
-      /* Dashboard-specific header styling */
-      .individual-company-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+      .dashboard-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        height: calc(
+          100vh - 120px
+        ); /* Use almost full screen height minus header space */
+      }
+
+      .chat-messages {
+        flex: 1;
         margin-bottom: 20px;
       }
 
-      .consolidated-header {
-        background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
-        color: white;
-        margin-bottom: 20px;
+      .message {
+        margin-bottom: 15px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        max-width: 85%;
       }
 
-      /* Company breakdown cards for dashboard */
-      .company-breakdown {
-        border: 1px solid #e0e0e0;
-        border-radius: 6px;
+      .message.user {
+        background: #e3f2fd;
+        border: 1px solid #bbdefb;
+        margin-left: auto;
+        text-align: right;
+      }
+
+      .message.assistant {
+        background: #f1f8e9;
+        border: 1px solid #c8e6c9;
+        margin-right: auto;
+      }
+
+      .chat-input-area {
+        border-top: 1px solid #e0e0e0;
         padding: 15px;
-        margin: 10px 0;
         background: #fafafa;
       }
 
-      .company-breakdown.balanced {
-        background: #f8fff8;
-        border-color: #27ae60;
-      }
-
-      .company-breakdown.imbalanced {
-        background: #fff8f8;
-        border-color: #e74c3c;
-      }
-
-      /* Monthly performance grid for YoY analysis */
-      .monthly-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 10px;
-        margin: 15px 0;
-      }
-
-      .monthly-card {
-        border: 1px solid #e0e0e0;
-        border-radius: 4px;
+      .chat-input {
+        width: 100%;
         padding: 12px;
-        font-size: 12px;
-        background: #fafafa;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+        resize: vertical;
+        min-height: 44px;
+        font-family: inherit;
       }
 
-      .monthly-card.profitable {
-        background: #f8fff8;
-        border-color: #27ae60;
+      .chat-input:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
       }
 
-      .monthly-card.loss {
-        background: #fff8f8;
-        border-color: #e74c3c;
-      }
-
-      /* Retry button for error states */
-      .retry-btn {
+      .send-button {
         margin-top: 10px;
-        padding: 8px 16px;
         background: #3498db;
         color: white;
         border: none;
-        border-radius: 4px;
+        padding: 10px 20px;
+        border-radius: 6px;
         cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
       }
 
-      /* View mode indicator in header */
-      .view-mode-indicator {
-        font-size: 12px;
-        color: rgba(255, 255, 255, 0.8);
-        margin-left: 15px;
+      .send-button:hover {
+        background: #2980b9;
       }
 
-      /* Unused chat panel styles - hidden but kept for potential future use */
-      .ai-chat-panel {
-        display: none;
+      .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(200px, 1fr)) !important;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+
+      .dashboard-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e0e0e0;
+        min-width: 250px; /* Add this line */
+      }
+
+      .dashboard-card h3 {
+        color: #2c3e50;
+        margin-bottom: 15px;
+        font-size: 16px;
+      }
+
+      .metric {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #f0f0f0;
+      }
+
+      .metric:last-child {
+        border-bottom: none;
+      }
+
+      .metric-value {
+        font-weight: 600;
+        color: #27ae60;
+      }
+
+      .metric-value.negative {
+        color: #e74c3c;
+      }
+
+      .status-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 8px;
+      }
+
+      .status-indicator.balanced {
+        background: #27ae60;
+      }
+
+      .status-indicator.imbalanced {
+        background: #e74c3c;
       }
 
       .resizer {
-        display: none;
+        display: none; /* Remove resizer */
+      }
+
+      .resizer:hover {
+        background: #3498db;
+      }
+
+      .toolbar {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+      }
+
+      .toolbar button {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        background: white;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+      }
+
+      .toolbar button:hover {
+        background: #f0f0f0;
+      }
+
+      .toolbar button.active {
+        background: #3498db;
+        color: white;
+        border-color: #3498db;
+      }
+
+      /* Loading states */
+      .loading {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+      }
+
+      .loading-spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #3498db;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 15px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* Back to connection button */
+      .back-to-connections {
+        background: #6c757d;
+        color: white;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        margin-left: 10px;
+      }
+
+      /* Responsive design */
+      @media (max-width: 480) {
+        .main-container {
+          flex-direction: column;
+        }
+
+        .ai-chat-panel,
+        .dashboard-panel {
+          width: 100%;
+          height: 50%;
+        }
+
+        .resizer {
+          display: none;
+        }
+
+        .company-checkboxes {
+          flex-direction: column;
+          gap: 6px;
+        }
+      }
+
+      .hidden {
+        display: none !important;
       }
     </style>
   </head>
@@ -387,7 +859,6 @@
     </div>
 
     <!-- SINGLE PANEL DASHBOARD SECTION -->
-
     <div class="main-dashboard" id="mainDashboard">
       <div class="header">
         <h1>RAC Financial Dashboard</h1>
@@ -432,8 +903,8 @@
               </button>
               <button onclick="setView('cash-flow', this)">Cash Flow</button>
               <button onclick="setView('p-and-l', this)">P&L</button>
-              <button onclick="setView('year-over-year', this)" id="yoyButton">
-                YoY Analysis<span id="yoyStatus" class="yoy-status">●</span>
+              <button onclick="setView('year-over-year', this)">
+                YoY Analysis
               </button>
               <button onclick="setView('alerts', this)">Alerts</button>
             </div>
@@ -448,7 +919,6 @@
         </div>
       </div>
     </div>
-
     <script>
       // ====== GLOBAL VARIABLES ======
       const companies = {
@@ -458,6 +928,8 @@
           "Rirratjingu Property Management & Maintenance Services Pty Ltd",
         enterprises: "Rirratjingu Enterprises Pty Ltd",
         invest: "Rirratjingu Invest P/ L ATF Miliditjpi Trust",
+        ngarrkuwuy: "Ngarrkuwuy Developments Pty Ltd",
+        marrin: "Marrin Square Developments Pty Ltd",
       };
 
       let selectedCompanies = [];
@@ -466,394 +938,6 @@
       let isOAuthInProgress = false;
       let activeCompanyFilters = [];
       let currentView = "overview";
-
-      // YoY caching variables
-      let cachedYoYData = null;
-      let yoyLoadingStartTime = null;
-
-      // ====== OPTIMIZED UTILITY FUNCTIONS ======
-
-      function getViewMode() {
-        if (activeCompanyFilters.length === 0) return "none";
-        return activeCompanyFilters.length === 1
-          ? "individual"
-          : "consolidated";
-      }
-
-      function updateViewModeIndicator() {
-        const indicator = document.getElementById("viewModeIndicator");
-
-        // Safety check - if element doesn't exist, skip this function
-        if (!indicator) {
-          console.log("viewModeIndicator element not found - skipping update");
-          return;
-        }
-
-        const viewMode = getViewMode();
-        const colors = {
-          none: "#e74c3c",
-          individual: "#667eea",
-          consolidated: "#27ae60",
-        };
-
-        const messages = {
-          none: "No companies selected",
-          individual: `Individual: ${getSelectedCompanyNames()[0]}`,
-          consolidated: `Consolidated: ${activeCompanyFilters.length} companies`,
-        };
-
-        indicator.textContent = messages[viewMode];
-        indicator.style.color = colors[viewMode];
-      }
-
-      function getOrganizationName(tenantId) {
-        // This function should return a SHORT display name based on the tenant ID
-        // But the tenantId passed to APIs should remain the actual database tenant ID
-        const company = connectedCompanies.find((c) => c.tenantId === tenantId);
-        if (!company) return "Unknown";
-
-        const tenantName = company.tenantName;
-        if (tenantName.includes("Mining")) return "Mining";
-        if (tenantName.includes("Aboriginal Corporation"))
-          return "Aboriginal Corporation";
-        if (tenantName.includes("Property")) return "Property";
-        if (tenantName.includes("Enterprises")) return "Enterprises";
-        if (tenantName.includes("Invest")) return "Invest";
-        return "Unknown";
-      }
-
-      function getSelectedCompanyNames() {
-        return activeCompanyFilters.map((tenantId) => {
-          const company = connectedCompanies.find(
-            (c) => c.tenantId === tenantId
-          );
-          return company
-            ? company.tenantName
-                .replace("Rirratjingu ", "")
-                .replace(" Pty Ltd", "")
-            : "Unknown";
-        });
-      }
-
-      function calculateGrowthRate(prior, current) {
-        if (prior === 0 && current === 0) return 0;
-        if (prior === 0) return current > 0 ? 100 : -100;
-        return ((current - prior) / Math.abs(prior)) * 100;
-      }
-
-      function formatCurrency(amount) {
-        return new Intl.NumberFormat("en-AU", {
-          style: "currency",
-          currency: "AUD",
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        }).format(amount || 0);
-      }
-
-      function formatPercentage(value) {
-        const sign = value > 0 ? "+" : "";
-        return `${sign}${value.toFixed(1)}%`;
-      }
-
-      // ====== CONSOLIDATED DATA LOADING FUNCTION ======
-      // This replaces multiple similar functions with one unified loader
-
-      async function loadFinancialDataForSelectedCompanies(
-        endpoint,
-        params = {}
-      ) {
-        if (activeCompanyFilters.length === 0) return [];
-
-        console.log("🔍 Active company filters:", activeCompanyFilters); // DEBUG LINE
-        console.log("🔍 Connected companies:", connectedCompanies); // DEBUG LINE
-
-        const loadingPromises = activeCompanyFilters.map(async (tenantId) => {
-          try {
-            console.log(`🔍 Making API call to: /api/${endpoint}/${tenantId}`); // DEBUG LINE
-
-            const urlParams = new URLSearchParams({ ...params });
-            const response = await fetch(
-              `/api/${endpoint}/${tenantId}?${urlParams}`
-            );
-
-            if (!response.ok) {
-              console.error(
-                `Failed to load ${endpoint} for tenant ${tenantId}:`,
-                response.statusText
-              );
-              return null;
-            }
-
-            const data = await response.json();
-            return {
-              tenantId,
-              data,
-              organizationName: getOrganizationName(tenantId),
-            };
-          } catch (error) {
-            console.error(
-              `Error loading ${endpoint} for tenant ${tenantId}:`,
-              error
-            );
-            return null;
-          }
-        });
-
-        const results = await Promise.all(loadingPromises);
-        return results.filter((result) => result !== null);
-      }
-
-      // ====== UNIFIED RENDER FUNCTION ======
-      // This replaces separate renderIndividual/renderConsolidated functions
-
-      function renderFinancialView(viewType, dataArray) {
-        const viewMode = getViewMode();
-        if (viewMode === "none")
-          return '<div class="no-data">No companies selected</div>';
-
-        const renderFunctions = {
-          "trial-balance":
-            viewMode === "individual"
-              ? renderIndividualTrialBalance
-              : renderConsolidatedTrialBalance,
-          "cash-flow":
-            viewMode === "individual"
-              ? renderIndividualCashFlow
-              : renderConsolidatedCashFlow,
-          "profit-loss":
-            viewMode === "individual"
-              ? renderIndividualProfitLoss
-              : renderConsolidatedProfitLoss,
-          overview:
-            viewMode === "individual"
-              ? renderIndividualOverview
-              : renderConsolidatedOverview,
-        };
-
-        const renderFunction = renderFunctions[viewType];
-        return renderFunction
-          ? renderFunction(dataArray)
-          : '<div class="error">Unknown view type</div>';
-      }
-
-      // ====== STREAMLINED VIEW SWITCHING ======
-
-      function setView(view, buttonElement) {
-        // Remove active class from all buttons
-        document
-          .querySelectorAll(".nav-button")
-          .forEach((btn) => btn.classList.remove("active"));
-
-        // Add active class to clicked button
-        if (buttonElement) buttonElement.classList.add("active");
-
-        currentView = view;
-        loadDashboardData();
-      }
-
-      async function loadDashboardData() {
-        if (activeCompanyFilters.length === 0) {
-          document.getElementById("dashboardData").innerHTML =
-            '<div class="no-data">Please select companies to view financial data</div>';
-          return;
-        }
-
-        // Show loading
-        document.getElementById("dashboardData").innerHTML =
-          '<div class="loading"><div class="loading-spinner"></div>Loading financial data...</div>';
-
-        try {
-          let dataArray;
-
-          switch (currentView) {
-            case "trial-balance":
-              dataArray = await loadFinancialDataForSelectedCompanies(
-                "trial-balance"
-              );
-              document.getElementById("dashboardData").innerHTML =
-                renderFinancialView("trial-balance", dataArray);
-              break;
-
-            case "cash-flow":
-              dataArray = await loadFinancialDataForSelectedCompanies(
-                "cash-position"
-              );
-              document.getElementById("dashboardData").innerHTML =
-                renderFinancialView("cash-flow", dataArray);
-              break;
-
-            case "profit-loss":
-              dataArray = await loadFinancialDataForSelectedCompanies(
-                "profit-loss"
-              );
-              document.getElementById("dashboardData").innerHTML =
-                renderFinancialView("profit-loss", dataArray);
-              break;
-
-            case "year-over-year":
-              if (cachedYoYData) {
-                renderYoYFromCachedData();
-              } else {
-                await loadYoYAnalysis();
-              }
-              break;
-
-            case "alerts":
-              await loadAlertsView();
-              break;
-
-            default: // overview
-              await loadOverviewData();
-              break;
-          }
-        } catch (error) {
-          console.error("Error loading dashboard data:", error);
-          document.getElementById("dashboardData").innerHTML =
-            '<div class="error">Error loading financial data. Please try again.</div>';
-        }
-      }
-
-      // ====== OPTIMIZED ERROR HANDLING ======
-
-      function handleApiError(error, context) {
-        console.error(`Error in ${context}:`, error);
-        return `<div class="error">Failed to load ${context}. Please try refreshing the page.</div>`;
-      }
-
-      // ====== YOY BACKGROUND LOADING OPTIMIZATION ======
-
-      function startYoYBackgroundLoading() {
-        if (!cachedYoYData && activeCompanyFilters.length > 0) {
-          yoyLoadingStartTime = Date.now();
-          updateYoYStatus("loading");
-          loadYoYInBackground();
-        }
-      }
-
-      async function loadYoYInBackground() {
-        try {
-          const promises = activeCompanyFilters.map(async (tenantId) => {
-            const [currentYear, priorYear] = await Promise.all([
-              fetch(`/api/profit-loss/${tenantId}?periodMonths=12`).then((r) =>
-                r.json()
-              ),
-              fetch(
-                `/api/profit-loss/${tenantId}?periodMonths=12&date=${getPriorYearDate()}`
-              ).then((r) => r.json()),
-            ]);
-
-            return {
-              tenantId,
-              currentYear,
-              priorYear,
-              organizationName: getOrganizationName(tenantId),
-            };
-          });
-
-          cachedYoYData = await Promise.all(promises);
-          updateYoYStatus("loaded");
-        } catch (error) {
-          console.error("Background YoY loading failed:", error);
-          updateYoYStatus("error");
-        }
-      }
-
-      function updateYoYStatus(status) {
-        const statusElement = document.getElementById("yoyStatus");
-        const statusMap = {
-          loading: { color: "#f39c12", text: "●" },
-          loaded: { color: "#27ae60", text: "●" },
-          error: { color: "#e74c3c", text: "●" },
-        };
-
-        if (statusElement && statusMap[status]) {
-          statusElement.style.color = statusMap[status].color;
-          statusElement.textContent = statusMap[status].text;
-        }
-      }
-
-      function getPriorYearDate() {
-        const date = new Date();
-        date.setFullYear(date.getFullYear() - 1);
-        return date.toISOString().split("T")[0];
-      }
-
-      // ====== COMPANY FILTER OPTIMIZATION ======
-
-      function toggleCompany(tenantId, companyName) {
-        const index = activeCompanyFilters.indexOf(tenantId);
-
-        if (index === -1) {
-          activeCompanyFilters.push(tenantId);
-        } else {
-          activeCompanyFilters.splice(index, 1);
-        }
-
-        updateFilterButtons();
-        updateViewModeIndicator();
-
-        // Auto-refresh current view
-        if (currentView) loadDashboardData();
-
-        // Start YoY background loading for new selections
-        startYoYBackgroundLoading();
-      }
-
-      function updateFilterButtons() {
-        connectedCompanies.forEach((company) => {
-          const button = document.querySelector(
-            `[data-tenant-id="${company.tenantId}"]`
-          );
-          if (button) {
-            button.classList.toggle(
-              "active",
-              activeCompanyFilters.includes(company.tenantId)
-            );
-          }
-        });
-      }
-
-      // ====== INITIALIZATION ======
-
-      function initializeMainDashboard() {
-        loadConnectedCompanies();
-        setView("overview", document.querySelector(".nav-button"));
-      }
-
-      async function loadConnectedCompanies() {
-        try {
-          const response = await fetch("/api/connected-companies");
-          if (response.ok) {
-            connectedCompanies = await response.json();
-            renderCompanyFilters();
-            updateConnectedCount();
-          }
-        } catch (error) {
-          console.error("Error loading companies:", error);
-        }
-      }
-
-      function renderCompanyFilters() {
-        const container = document.getElementById("companyFilters");
-        container.innerHTML = connectedCompanies
-          .map((company) => {
-            const shortName = company.tenantName
-              .replace("Rirratjingu ", "")
-              .replace(" Pty Ltd", "");
-            return `
-      <button class="filter-button" 
-              data-tenant-id="${company.tenantId}" 
-              onclick="toggleCompany('${company.tenantId}', '${shortName}')">
-        ${shortName}
-      </button>`;
-          })
-          .join("");
-      }
-
-      function updateConnectedCount() {
-        document.getElementById("connectedCount").textContent =
-          connectedCompanies.length;
-      }
 
       // ====== CONNECTION MANAGER FUNCTIONS ======
 
@@ -878,6 +962,26 @@
           "racCompanyPreferences",
           JSON.stringify(selectedCompanies)
         );
+      }
+
+      function toggleCompany(companyId, event) {
+        event.stopPropagation();
+        const checkbox = document.getElementById(`company-${companyId}`);
+        checkbox.checked = !checkbox.checked;
+
+        if (checkbox.checked) {
+          if (!selectedCompanies.includes(companyId)) {
+            selectedCompanies.push(companyId);
+          }
+        } else {
+          selectedCompanies = selectedCompanies.filter(
+            (id) => id !== companyId
+          );
+          document.getElementById("all-companies").checked = false;
+        }
+
+        updateSelectionSummary();
+        savePreferences();
       }
 
       function toggleAllCompanies(event) {
@@ -959,9 +1063,9 @@
           }`;
 
           document.getElementById("oauthInstructions").innerHTML = `
-            <strong>Next Company:</strong> ${companyName}<br>
-            <small>When the Xero login opens, select "${companyName}" from the dropdown and authorize access.</small>
-          `;
+                                      <strong>Next Company:</strong> ${companyName}<br>
+                                      <small>When the Xero login opens, select "${companyName}" from the dropdown and authorize access.</small>
+                                  `;
         }
       }
 
@@ -1025,7 +1129,7 @@
             }
           } else {
             alert(
-              `⚠ Failed to connect ${currentCompanyName}. Please try again.`
+              `❌ Failed to connect ${currentCompanyName}. Please try again.`
             );
             isOAuthInProgress = false;
             document.getElementById("startOAuthBtn").style.display =
@@ -1033,8 +1137,8 @@
             document.getElementById("waitingMessage").style.display = "none";
           }
         } catch (error) {
-          console.error("⚠ Error checking OAuth status:", error);
-          alert("⚠ Error checking connection status. Please try again.");
+          console.error("❌ Error checking OAuth status:", error);
+          alert("❌ Error checking connection status. Please try again.");
           isOAuthInProgress = false;
           document.getElementById("startOAuthBtn").style.display =
             "inline-block";
@@ -1053,17 +1157,18 @@
         connectedList.innerHTML = connectedCompanies
           .map(
             (company) => `
-          <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; border: 1px solid #28a745; background: #f8fff9; border-radius: 6px; margin-bottom: 0.5rem;">
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <div style="width: 12px; height: 12px; border-radius: 50%; background: #28a745;"></div>
-              <strong>${company.name}</strong>
-            </div>
-            <div style="color: #28a745; font-size: 0.9rem;">✅ Connected</div>
-          </div>
-        `
+                                  <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; border: 1px solid #28a745; background: #f8fff9; border-radius: 6px; margin-bottom: 0.5rem;">
+                                      <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                          <div style="width: 12px; height: 12px; border-radius: 50%; background: #28a745;"></div>
+                                          <strong>${company.name}</strong>
+                                      </div>
+                                      <div style="color: #28a745; font-size: 0.9rem;">✅ Connected</div>
+                                  </div>
+                              `
           )
           .join("");
 
+        // Auto-launch after 3 seconds
         setTimeout(() => showMainDashboard(), 3000);
       }
 
@@ -1107,12 +1212,61 @@
 
       // ====== DASHBOARD FUNCTIONS ======
 
+      async function initializeMainDashboard() {
+        try {
+          await loadConnectedCompanies();
+          setupCompanyFilters();
+          await loadDashboardData();
+          //initializeChat();// Removed
+          //initializeResizer();//Removed
+        } catch (error) {
+          console.error("Error initializing dashboard:", error);
+        }
+      }
+
+      async function loadConnectedCompanies() {
+        try {
+          const response = await fetch("/api/connection-status");
+          const connections = await response.json();
+
+          connectedCompanies = connections.filter((conn) => conn.connected);
+          activeCompanyFilters = connectedCompanies.map(
+            (conn) => conn.tenantId
+          );
+
+          document.getElementById("connectedCount").textContent =
+            connectedCompanies.length;
+
+          // Update status indicators
+          const hasConnections = connectedCompanies.length > 0;
+          // Remove this line since aiStatus element no longer exists:
+          // document.getElementById("aiStatus").className = `status-indicator ${
+          //   hasConnections ? "balanced" : "imbalanced"
+          // }`;
+          document.getElementById(
+            "dashboardStatus"
+          ).className = `status-indicator ${
+            hasConnections ? "balanced" : "imbalanced"
+          }`;
+        } catch (error) {
+          console.error("Error loading connected companies:", error);
+          connectedCompanies = [];
+        }
+      }
+
       function setupCompanyFilters() {
         const filtersContainer = document.getElementById("companyFilters");
+        const summaryElement = document.getElementById("filterSummary");
+        const chatStatus = document.getElementById("chatAnalysisStatus");
 
         if (connectedCompanies.length === 0) {
           filtersContainer.innerHTML =
             '<div style="color: #e74c3c;">No companies connected</div>';
+          summaryElement.textContent =
+            "No connected companies found. Please manage connections.";
+          chatStatus.textContent = "No companies available for analysis";
+          chatStatus.style.background = "#f8d7da";
+          chatStatus.style.color = "#721c24";
           return;
         }
 
@@ -1122,16 +1276,23 @@
               .replace("Rirratjingu ", "")
               .replace(" Pty Ltd", "");
             return `
-            <div class="company-checkbox-item balanced">
-              <input type="checkbox" id="filter-${company.tenantId}" checked 
-                     onchange="handleCompanyFilterChange('${company.tenantId}')">
-              <label for="filter-${company.tenantId}" 
-                     onclick="toggleCompanyFilterByLabel('${company.tenantId}')">${shortName}</label>
-            </div>
-          `;
+                          <div class="company-checkbox-item balanced">
+                            <input type="checkbox"
+                                   id="filter-${company.tenantId}"
+                                   checked
+                                   onchange="handleCompanyFilterChange('${company.tenantId}')">
+                            <label for="filter-${company.tenantId}"
+                                   onclick="toggleCompanyFilterByLabel('${company.tenantId}')">${shortName}</label>
+                          </div>
+                        `;
           })
           .join("");
+
+        //updateFilterSummary();
+        //updateChatAnalysisStatus();
       }
+
+      // Add these functions after the setupCompanyFilters() function:
 
       function handleCompanyFilterChange(tenantId) {
         const checkbox = document.getElementById(`filter-${tenantId}`);
@@ -1146,66 +1307,352 @@
           );
         }
 
+        //updateFilterSummary();
+        //updateChatAnalysisStatus();
         loadDashboardData();
+
+        // Add chat message about filter change
         const selectedCompanies = getSelectedCompanyNames();
+        addMessage(
+          "assistant",
+          `Analysis scope updated: Now analyzing ${
+            selectedCompanies.length
+          } companies: ${selectedCompanies.join(", ")}`
+        );
       }
 
       function toggleCompanyFilterByLabel(tenantId) {
         const checkbox = document.getElementById(`filter-${tenantId}`);
         checkbox.checked = !checkbox.checked;
 
+        // Trigger the change event
         const event = new Event("change");
         checkbox.dispatchEvent(event);
       }
 
-      // Helper functions and data loading methods would continue here...
-      // (Rest of JavaScript implementation - keeping for brevity)
+      function getSelectedCompanyNames() {
+        return activeCompanyFilters.map((tenantId) => {
+          const company = connectedCompanies.find(
+            (c) => c.tenantId === tenantId
+          );
+          return company
+            ? company.tenantName
+                .replace("Rirratjingu ", "")
+                .replace(" Pty Ltd", "")
+            : "Unknown";
+        });
+      }
 
-      // Add this function to your JavaScript - it got lost during reorganization
+      // ====== QUICK FILTER FUNCTIONS ======
+      function selectAllCompanies() {
+        activeCompanyFilters = connectedCompanies.map((c) => c.tenantId);
+        connectedCompanies.forEach((company) => {
+          const checkbox = document.getElementById(
+            `filter-${company.tenantId}`
+          );
+          if (checkbox) checkbox.checked = true;
+        });
+        //updateFilterSummary();
+        //updateChatAnalysisStatus();
+        loadDashboardData();
+        addMessage(
+          "assistant",
+          "Analysis scope updated: Now analyzing all connected companies"
+        );
+      }
 
-      async function loadOverviewData() {
-        try {
-          const dataArray = await loadFinancialDataForSelectedCompanies(
-            "trial-balance"
+      function selectNoCompanies() {
+        activeCompanyFilters = [];
+        connectedCompanies.forEach((company) => {
+          const checkbox = document.getElementById(
+            `filter-${company.tenantId}`
+          );
+          if (checkbox) checkbox.checked = false;
+        });
+        //updateFilterSummary();
+        //updateChatAnalysisStatus();
+        loadDashboardData();
+        addMessage(
+          "assistant",
+          "Analysis scope cleared: No companies selected. Choose companies above to begin analysis."
+        );
+      }
+
+      function selectMainEntities() {
+        // Select main entities: Aboriginal Corp and Mining
+        const mainEntityNames = ["Aboriginal Corporation", "Mining"];
+        activeCompanyFilters = [];
+
+        connectedCompanies.forEach((company) => {
+          const checkbox = document.getElementById(
+            `filter-${company.tenantId}`
+          );
+          const isMain = mainEntityNames.some((name) =>
+            company.tenantName.includes(name)
           );
 
-          if (dataArray.length === 0) {
-            document.getElementById("dashboardData").innerHTML =
-              '<div class="no-data">No company data available</div>';
-            return;
+          if (checkbox) checkbox.checked = isMain;
+          if (isMain) activeCompanyFilters.push(company.tenantId);
+        });
+
+        //updateFilterSummary();
+        //updateChatAnalysisStatus();
+        loadDashboardData();
+
+        const selectedNames = getSelectedCompanyNames();
+        addMessage(
+          "assistant",
+          `Analysis scope updated: Focusing on main entities - ${selectedNames.join(
+            ", "
+          )}`
+        );
+      }
+
+      // ====== QUICK ANALYSIS FUNCTIONS ======
+      function quickAnalysis(type) {
+        const selectedCompanies = getSelectedCompanyNames();
+
+        if (selectedCompanies.length === 0) {
+          addMessage(
+            "assistant",
+            "Please select companies using the filters above before requesting analysis."
+          );
+          return;
+        }
+
+        let query = "";
+        let analysisType = "";
+
+        switch (type) {
+          case "trial-balance":
+            query = "Show me the trial balance";
+            analysisType = "Trial Balance Analysis";
+            break;
+          case "cash-position":
+            query = "What is the current cash position?";
+            analysisType = "Cash Position Analysis";
+            break;
+          case "profit-loss":
+            query = "Show me the profit and loss summary";
+            analysisType = "Profit & Loss Analysis";
+            break;
+          case "financial-ratios":
+            query = "Calculate key financial ratios";
+            analysisType = "Financial Ratios Analysis";
+            break;
+          case "outstanding-invoices":
+            query = "Show me outstanding invoices";
+            analysisType = "Outstanding Invoices Analysis";
+            break;
+          case "consolidate-all":
+            query = "Show me consolidated financial summary";
+            analysisType = "Consolidated Analysis";
+            break;
+        }
+
+        addMessage("user", query);
+
+        // Show analysis in progress
+        setTimeout(() => {
+          addMessage(
+            "assistant",
+            `Processing ${analysisType} for: ${selectedCompanies.join(", ")}...`
+          );
+
+          // Simulate actual MCP analysis - replace with real MCP calls
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              `${analysisType} completed for ${selectedCompanies.length} companies. Here's the summary: [This would contain actual financial data from your MCP server tools]`
+            );
+          }, 2000);
+        }, 500);
+      }
+
+      // ====== CHAT FUNCTIONS ======
+
+      function initializeChat() {
+        const chatInput = document.getElementById("chatInput");
+
+        chatInput.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
           }
+        });
+      }
 
-          const viewMode = getViewMode();
-          let overviewHtml = "";
+      function sendMessage() {
+        const chatInput = document.getElementById("chatInput");
+        const message = chatInput.value.trim();
 
-          if (viewMode === "individual") {
-            overviewHtml = renderIndividualOverview(dataArray[0]);
-          } else {
-            overviewHtml = renderConsolidatedOverview(dataArray);
+        if (!message) return;
+
+        const selectedCompanies = getSelectedCompanyNames();
+
+        if (selectedCompanies.length === 0) {
+          addMessage(
+            "assistant",
+            "Please select companies using the filters above before asking questions."
+          );
+          return;
+        }
+
+        addMessage("user", message);
+        chatInput.value = "";
+
+        // Show analysis scope and processing message
+        setTimeout(() => {
+          const scope =
+            selectedCompanies.length === connectedCompanies.length
+              ? `all ${connectedCompanies.length} connected companies`
+              : `${
+                  selectedCompanies.length
+                } selected companies: ${selectedCompanies.join(", ")}`;
+
+          addMessage(
+            "assistant",
+            `I'll analyze ${scope} for your query: "${message}". Accessing RAC Xero MCP system with ${selectedCompanies.length} company scope...`
+          );
+
+          // Here you would integrate with your actual MCP server
+          // For now, showing example of what the integration would look like
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              `Analysis complete for ${selectedCompanies.join(
+                ", "
+              )}. [This response would contain actual financial data from your MCP server based on the selected companies and query type.]`
+            );
+          }, 2000);
+        }, 500);
+      }
+
+      function addMessage(type, content) {
+        const messagesContainer = document.getElementById("chatMessages");
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `message ${type}`;
+        messageDiv.innerHTML = `<strong>${
+          type === "user" ? "You" : "Claude"
+        }:</strong> ${content}`;
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+
+      // ====== DASHBOARD DATA LOADING FUNCTIONS ======
+
+      async function loadDashboardData() {
+        const dashboardElement = document.getElementById("dashboardData");
+
+        if (activeCompanyFilters.length === 0) {
+          dashboardElement.innerHTML = `
+                  <div style="text-align: center; padding: 40px; color: #666;">
+                    <h3>No Companies Selected</h3>
+                    <p>Please select companies using the filters above to view financial data.</p>
+                  </div>
+                `;
+          return;
+        }
+
+        // Show loading with specific company count
+        const selectedCompanyNames = getSelectedCompanyNames();
+        dashboardElement.innerHTML = `
+                <div class="loading">
+                  <div class="loading-spinner"></div>
+                  Loading ${currentView} data from ${
+          activeCompanyFilters.length
+        } companies:<br>
+                  <small>${selectedCompanyNames.join(", ")}</small>
+                </div>
+              `;
+
+        try {
+          if (currentView === "overview") {
+            await loadOverviewDataWithYoY();
+          } else if (currentView === "trial-balance") {
+            await loadTrialBalanceData();
+          } else if (currentView === "cash-flow") {
+            await loadCashFlowData();
+          } else if (currentView === "p-and-l") {
+            await loadProfitLossData();
+          } else if (currentView === "year-over-year") {
+            await loadYearOverYearData(); // <- Add this line
+          } else if (currentView === "alerts") {
+            await loadAlertsData();
           }
-
-          document.getElementById("dashboardData").innerHTML = overviewHtml;
         } catch (error) {
-          console.error("Error loading overview data:", error);
-          document.getElementById("dashboardData").innerHTML =
-            '<div class="error">Error loading overview data. Please try again.</div>';
+          dashboardElement.innerHTML = `
+                  <div style="text-align: center; padding: 40px; color: #e74c3c;">
+                    <h3>Error Loading Data</h3>
+                    <p>Failed to load dashboard data: ${error.message}</p>
+                    <button onclick="loadDashboardData()" style="margin-top: 10px; padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                      Retry
+                    </button>
+                  </div>
+                `;
         }
       }
 
-      // Also add this missing function for alerts
-      async function loadAlertsView() {
-        document.getElementById("dashboardData").innerHTML = `
-    <div class="dashboard-card">
-      <h3>System Alerts</h3>
-      <div class="alert-item">
-        <span class="alert-icon">⚠️</span>
-        <span>No critical alerts at this time</span>
-      </div>
-    </div>
-  `;
+      // Helper function for calculating consolidated metrics
+      function calculateConsolidatedFromNewEndpoint(validData) {
+        const consolidated = {
+          current: { revenue: 0, expenses: 0, profit: 0, assets: 0, equity: 0 },
+          previous: {
+            revenue: 0,
+            expenses: 0,
+            profit: 0,
+            assets: 0,
+            equity: 0,
+          },
+          growth: { revenue: 0, expenses: 0, profit: 0, assets: 0, equity: 0 },
+        };
+
+        validData.forEach((company) => {
+          const current = company.analysis.periods.current;
+          const previous = company.analysis.periods.previous;
+
+          consolidated.current.revenue += current.revenue;
+          consolidated.current.expenses += current.expenses;
+          consolidated.current.profit += current.profit;
+          consolidated.current.assets += current.assets;
+          consolidated.current.equity += current.equity;
+
+          consolidated.previous.revenue += previous.revenue;
+          consolidated.previous.expenses += previous.expenses;
+          consolidated.previous.profit += previous.profit;
+          consolidated.previous.assets += previous.assets;
+          consolidated.previous.equity += previous.equity;
+        });
+
+        // Calculate consolidated growth rates
+        consolidated.growth.revenue = calculateGrowthRate(
+          consolidated.previous.revenue,
+          consolidated.current.revenue
+        );
+
+        consolidated.growth.expenses = calculateGrowthRate(
+          consolidated.previous.expenses,
+          consolidated.current.expenses
+        );
+
+        consolidated.growth.profit = calculateGrowthRate(
+          consolidated.previous.profit,
+          consolidated.current.profit
+        );
+        consolidated.growth.assets = calculateGrowthRate(
+          consolidated.previous.assets,
+          consolidated.current.assets
+        );
+        consolidated.growth.equity = calculateGrowthRate(
+          consolidated.previous.equity,
+          consolidated.current.equity
+        );
+
+        return consolidated;
       }
 
-      // Placeholder implementations for brevity - include all your dashboard functions here
+      // ====== ENHANCED loadOverviewDataWithYoY() WITH MORE BUSINESS METRICS ======
+
       async function loadOverviewDataWithYoY() {
         // Check if any companies are selected
         if (activeCompanyFilters.length === 0) {
@@ -1624,6 +2071,614 @@
                   </div>
                 `;
         }
+      }
+
+      // ====== YoY Card ======
+      // Replace the existing loadYearOverYearData() function with this corrected version
+      async function loadYearOverYearData() {
+        if (activeCompanyFilters.length === 0) {
+          const dashboardElement = document.getElementById("dashboardData");
+          dashboardElement.innerHTML = `
+      <div style="text-align: center; padding: 40px; color: #666;">
+        <h3>No Companies Selected</h3>
+        <p>Please select companies using the filters above to view YoY analysis.</p>
+      </div>
+    `;
+          return;
+        }
+
+        const dashboardElement = document.getElementById("dashboardData");
+        dashboardElement.innerHTML = `
+    <div class="loading">
+      <div class="loading-spinner"></div>
+      Loading consolidated year-over-year analysis...
+    </div>
+  `;
+
+        try {
+          const yoyData = [];
+          const monthlyData = [];
+          let consolidatedYoY = {
+            current: {
+              revenue: 0,
+              expenses: 0,
+              profit: 0,
+              assets: 0,
+              equity: 0,
+            },
+            previous: {
+              revenue: 0,
+              expenses: 0,
+              profit: 0,
+              assets: 0,
+              equity: 0,
+            },
+            growth: {
+              revenue: 0,
+              expenses: 0,
+              profit: 0,
+              assets: 0,
+              equity: 0,
+            },
+            companies: [],
+          };
+
+          // Load both YoY and Monthly data for each selected company
+          for (const tenantId of activeCompanyFilters) {
+            const connectedCompany = connectedCompanies.find(
+              (c) => c.tenantId === tenantId
+            );
+            if (!connectedCompany) continue;
+
+            try {
+              const orgName = getOrganizationName(connectedCompany.tenantName);
+
+              // Load YoY and Monthly data in parallel
+              const [yoyResponse, monthlyResponse] = await Promise.all([
+                fetch("/api/yoy-analysis", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ organizationName: orgName }),
+                }),
+                fetch("/api/monthly-breakdown", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ organizationName: orgName }),
+                }),
+              ]);
+
+              if (yoyResponse.ok) {
+                const data = await yoyResponse.json();
+                const companyYoyData = {
+                  companyName: connectedCompany.tenantName.replace(
+                    "Rirratjingu ",
+                    ""
+                  ),
+                  tenantName: data.tenantName,
+                  analysis: data.analysis,
+                  error: false,
+                };
+                yoyData.push(companyYoyData);
+
+                // Add to consolidated totals
+                const current = data.analysis.periods.current;
+                const previous = data.analysis.periods.previous;
+
+                consolidatedYoY.current.revenue += current.revenue || 0;
+                consolidatedYoY.current.expenses +=
+                  current.revenue - current.profit || 0;
+                consolidatedYoY.current.profit += current.profit || 0;
+                consolidatedYoY.current.assets += current.assets || 0;
+                consolidatedYoY.current.equity += current.equity || 0;
+
+                consolidatedYoY.previous.revenue += previous.revenue || 0;
+                consolidatedYoY.previous.expenses +=
+                  previous.revenue - previous.profit || 0;
+                consolidatedYoY.previous.profit += previous.profit || 0;
+                consolidatedYoY.previous.assets += previous.assets || 0;
+                consolidatedYoY.previous.equity += previous.equity || 0;
+
+                consolidatedYoY.companies.push(companyYoyData);
+              }
+
+              if (monthlyResponse.ok) {
+                const monthlyResult = await monthlyResponse.json();
+                monthlyData.push({
+                  companyName: connectedCompany.tenantName.replace(
+                    "Rirratjingu ",
+                    ""
+                  ),
+                  tenantName: monthlyResult.tenantName,
+                  monthlyBreakdown: monthlyResult.monthlyBreakdown,
+                  totals: monthlyResult.totals,
+                  error: false,
+                });
+              }
+            } catch (error) {
+              console.error(
+                `Error loading data for ${connectedCompany.tenantName}:`,
+                error
+              );
+            }
+          }
+
+          // Calculate consolidated growth rates
+          consolidatedYoY.growth.revenue = calculateGrowthRate(
+            consolidatedYoY.previous.revenue,
+            consolidatedYoY.current.revenue
+          );
+          consolidatedYoY.growth.expenses = calculateGrowthRate(
+            consolidatedYoY.previous.expenses,
+            consolidatedYoY.current.expenses
+          );
+          consolidatedYoY.growth.profit = calculateGrowthRate(
+            consolidatedYoY.previous.profit,
+            consolidatedYoY.current.profit
+          );
+          consolidatedYoY.growth.assets = calculateGrowthRate(
+            consolidatedYoY.previous.assets,
+            consolidatedYoY.current.assets
+          );
+          consolidatedYoY.growth.equity = calculateGrowthRate(
+            consolidatedYoY.previous.equity,
+            consolidatedYoY.current.equity
+          );
+
+          // Render consolidated YoY + individual companies with scroll
+          renderConsolidatedYoYAnalysis(consolidatedYoY, yoyData, monthlyData);
+        } catch (error) {
+          console.error("Error in YoY analysis:", error);
+          dashboardElement.innerHTML = `
+      <div style="text-align: center; padding: 40px; color: #e74c3c;">
+        <h3>Error Loading YoY Data</h3>
+        <p>Failed to load year-over-year analysis: ${error.message}</p>
+      </div>
+    `;
+        }
+      }
+
+      function renderConsolidatedYoYAnalysis(
+        consolidatedYoY,
+        yoyData,
+        monthlyData
+      ) {
+        const dashboardElement = document.getElementById("dashboardData");
+
+        // Get period labels from first valid company
+        const firstValidCompany = yoyData.find((d) => !d.error);
+        const currentLabel = firstValidCompany
+          ? firstValidCompany.analysis.periods.current.label
+          : "Current Year";
+        const previousLabel = firstValidCompany
+          ? firstValidCompany.analysis.periods.previous.label
+          : "Previous Year";
+
+        const consolidatedHtml = `
+    <div class="dashboard-card" style="margin-bottom: 20px;">
+      <h3>Consolidated Year-over-Year Analysis - All Selected Companies</h3>
+      <div style="margin-bottom: 15px;">
+        <span style="font-size: 14px; color: #666;">
+          Companies: ${consolidatedYoY.companies.length} | 
+          Period: ${currentLabel} vs ${previousLabel}
+        </span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 20px;">
+        <div class="dashboard-card" style="padding: 15px;">
+          <h4>Revenue Performance</h4>
+          <div class="metric">
+            <span>${currentLabel}</span>
+            <span class="metric-value">$${consolidatedYoY.current.revenue.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>${previousLabel}</span>
+            <span class="metric-value">$${consolidatedYoY.previous.revenue.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>Growth</span>
+            <span class="metric-value ${
+              consolidatedYoY.growth.revenue >= 0 ? "" : "negative"
+            }">
+              ${
+                consolidatedYoY.growth.revenue >= 0 ? "+" : ""
+              }${consolidatedYoY.growth.revenue.toFixed(1)}%
+            </span>
+          </div>
+        </div>
+
+        <div class="dashboard-card" style="padding: 15px;">
+          <h4>Expense Performance</h4>
+          <div class="metric">
+            <span>${currentLabel}</span>
+            <span class="metric-value">$${consolidatedYoY.current.expenses.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>${previousLabel}</span>
+            <span class="metric-value">$${consolidatedYoY.previous.expenses.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>Growth</span>
+            <span class="metric-value ${
+              consolidatedYoY.growth.expenses >= 0 ? "negative" : ""
+            }">
+              ${
+                consolidatedYoY.growth.expenses >= 0 ? "+" : ""
+              }${consolidatedYoY.growth.expenses.toFixed(1)}%
+            </span>
+          </div>
+        </div>
+
+        <div class="dashboard-card" style="padding: 15px;">
+          <h4>Profit Performance</h4>
+          <div class="metric">
+            <span>${currentLabel}</span>
+            <span class="metric-value ${
+              consolidatedYoY.current.profit >= 0 ? "" : "negative"
+            }">$${consolidatedYoY.current.profit.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>${previousLabel}</span>
+            <span class="metric-value ${
+              consolidatedYoY.previous.profit >= 0 ? "" : "negative"
+            }">$${consolidatedYoY.previous.profit.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>Growth</span>
+            <span class="metric-value ${
+              consolidatedYoY.growth.profit >= 0 ? "" : "negative"
+            }">
+              ${
+                consolidatedYoY.growth.profit >= 0 ? "+" : ""
+              }${consolidatedYoY.growth.profit.toFixed(1)}%
+            </span>
+          </div>
+        </div>
+
+        <div class="dashboard-card" style="padding: 15px;">
+          <h4>Asset Growth</h4>
+          <div class="metric">
+            <span>${currentLabel}</span>
+            <span class="metric-value">$${consolidatedYoY.current.assets.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>${previousLabel}</span>
+            <span class="metric-value">$${consolidatedYoY.previous.assets.toLocaleString()}</span>
+          </div>
+          <div class="metric">
+            <span>Growth</span>
+            <span class="metric-value ${
+              consolidatedYoY.growth.assets >= 0 ? "" : "negative"
+            }">
+              ${
+                consolidatedYoY.growth.assets >= 0 ? "+" : ""
+              }${consolidatedYoY.growth.assets.toFixed(1)}%
+            </span>
+          </div>
+        </div>
+
+        <div class="dashboard-card" style="padding: 15px;">
+          <h4>Financial Health</h4>
+          <div class="metric">
+            <span>Current Margin</span>
+            <span class="metric-value">
+              ${
+                consolidatedYoY.current.revenue > 0
+                  ? (
+                      (consolidatedYoY.current.profit /
+                        consolidatedYoY.current.revenue) *
+                      100
+                    ).toFixed(1)
+                  : 0
+              }%
+            </span>
+          </div>
+          <div class="metric">
+            <span>Prior Margin</span>
+            <span class="metric-value">
+              ${
+                consolidatedYoY.previous.revenue > 0
+                  ? (
+                      (consolidatedYoY.previous.profit /
+                        consolidatedYoY.previous.revenue) *
+                      100
+                    ).toFixed(1)
+                  : 0
+              }%
+            </span>
+          </div>
+          <div class="metric">
+            <span>Trend</span>
+            <span class="metric-value ${
+              consolidatedYoY.growth.revenue > 0 &&
+              consolidatedYoY.growth.profit > 0
+                ? ""
+                : "negative"
+            }">
+              ${
+                consolidatedYoY.growth.revenue > 0 &&
+                consolidatedYoY.growth.profit > 0
+                  ? "Positive"
+                  : "Declining"
+              }
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Monthly Performance Breakdown for first company as sample -->
+      ${monthlyData.length > 0 ? renderMonthlyCard(monthlyData) : ""}
+    </div>
+  `;
+
+        const individualHtml = `
+    <div style="height: 50vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px;">
+      <h3>Individual Company Performance</h3>
+      ${yoyData
+        .map((company) => {
+          if (company.error) {
+            return `
+            <div style="border: 1px solid #e74c3c; border-radius: 6px; padding: 15px; margin: 10px 0; background: #fff5f5;">
+              <strong style="color: #e74c3c;">${company.companyName}</strong>
+              <div style="color: #666; margin-top: 5px;">Error loading YoY data</div>
+            </div>
+          `;
+          }
+
+          const current = company.analysis.periods.current;
+          const previous = company.analysis.periods.previous;
+          const growth = company.analysis.growth;
+
+          return `
+          <div style="border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px; margin: 10px 0; background: #fafafa;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+              <strong style="font-size: 16px;">${company.companyName}</strong>
+              <div style="display: flex; gap: 15px; font-size: 14px;">
+                <span style="color: ${
+                  growth.revenue >= 0 ? "#27ae60" : "#e74c3c"
+                };">
+                  Revenue: ${
+                    growth.revenue >= 0 ? "+" : ""
+                  }${growth.revenue.toFixed(1)}%
+                </span>
+                <span style="color: ${
+                  growth.profit >= 0 ? "#27ae60" : "#e74c3c"
+                };">
+                  Profit: ${
+                    growth.profit >= 0 ? "+" : ""
+                  }${growth.profit.toFixed(1)}%
+                </span>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; font-size: 13px;">
+              <div>
+                <div style="color: #666; margin-bottom: 3px;">${currentLabel} Revenue</div>
+                <div style="font-weight: 600;">$${current.revenue.toLocaleString()}</div>
+              </div>
+              <div>
+                <div style="color: #666; margin-bottom: 3px;">${previousLabel} Revenue</div>
+                <div style="font-weight: 600;">$${previous.revenue.toLocaleString()}</div>
+              </div>
+              <div>
+                <div style="color: #666; margin-bottom: 3px;">${currentLabel} Profit</div>
+                <div style="font-weight: 600; color: ${
+                  current.profit >= 0 ? "#27ae60" : "#e74c3c"
+                };">
+                  $${current.profit.toLocaleString()}
+                </div>
+              </div>
+              <div>
+                <div style="color: #666; margin-bottom: 3px;">${previousLabel} Profit</div>
+                <div style="font-weight: 600; color: ${
+                  previous.profit >= 0 ? "#27ae60" : "#e74c3c"
+                };">
+                  $${previous.profit.toLocaleString()}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        })
+        .join("")}
+    </div>
+  `;
+
+        dashboardElement.innerHTML = consolidatedHtml;
+      }
+
+      // Monthly Card component
+      function renderMonthlyCard(monthlyData) {
+        if (!monthlyData || monthlyData.length === 0) {
+          return `
+                  <div class="dashboard-card">
+                    <h3>Monthly Breakdown</h3>
+                    <div style="text-align: center; padding: 20px; color: #666;">
+                      No monthly data available
+                    </div>
+                  </div>
+                `;
+        }
+
+        // Use first company's data for display (extend later for multi-company)
+        const companyData = monthlyData[0];
+        const months = companyData.monthlyBreakdown;
+
+        // Calculate totals
+        const totals = {
+          revenue: months.reduce((sum, month) => sum + month.revenue, 0),
+          expenses: months.reduce((sum, month) => sum + month.expenses, 0),
+          profit: months.reduce((sum, month) => sum + month.netProfit, 0),
+        };
+
+        return `
+                <div class="dashboard-card">
+                  <h3>Monthly Performance Breakdown (${
+                    companyData.companyName
+                  })</h3>
+
+                  <!-- Monthly Grid -->
+                  <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;">
+                    ${months
+                      .map(
+                        (month, index) => `
+                      <div style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 8px; background: ${
+                        month.netProfit >= 0 ? "#f8fff8" : "#fff8f8"
+                      }; font-size: 12px;">
+                        <div style="font-weight: 600; margin-bottom: 4px; color: #2c3e50;">${
+                          month.label
+                        }</div>
+                        <div class="metric" style="padding: 2px 0; border: none;">
+                          <span style="font-size: 11px; color: #666;">Revenue</span>
+                          <span style="font-weight: 600; font-size: 11px;">$${(
+                            month.revenue / 1000
+                          ).toFixed(0)}K</span>
+                        </div>
+                        <div class="metric" style="padding: 2px 0; border: none;">
+                          <span style="font-size: 11px; color: #666;">Expenses</span>
+                          <span style="font-weight: 600; font-size: 11px;">$${(
+                            month.expenses / 1000
+                          ).toFixed(0)}K</span>
+                        </div>
+                        <div class="metric" style="padding: 2px 0; border: none;">
+                          <span style="font-size: 11px; color: #666;">Profit</span>
+                          <span style="font-weight: 600; font-size: 11px; color: ${
+                            month.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+                          };">
+                            $${(month.netProfit / 1000).toFixed(0)}K
+                          </span>
+                        </div>
+                      </div>
+                    `
+                      )
+                      .join("")}
+                  </div>
+
+                  <!-- Totals Summary -->
+                  <div style="border-top: 2px solid #2c3e50; padding-top: 15px;">
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+                      <div class="metric">
+                        <span>Total Revenue (12 months)</span>
+                        <span class="metric-value">$${totals.revenue.toLocaleString()}</span>
+                      </div>
+                      <div class="metric">
+                        <span>Total Expenses (12 months)</span>
+                        <span class="metric-value">$${totals.expenses.toLocaleString()}</span>
+                      </div>
+                      <div class="metric">
+                        <span>Net Profit (12 months)</span>
+                        <span class="metric-value ${
+                          totals.profit >= 0 ? "" : "negative"
+                        }">$${totals.profit.toLocaleString()}</span>
+                      </div>
+                      <div class="metric">
+                        <span>Average Monthly Profit</span>
+                        <span class="metric-value ${
+                          totals.profit >= 0 ? "" : "negative"
+                        }">$${(totals.profit / 12).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `;
+      }
+
+      // 7. Generate insights based on YoY data
+      function generateYoYInsights(consolidatedYoY, yoyData) {
+        const insights = [];
+        const validCompanies = yoyData.filter((d) => !d.error);
+
+        // Revenue insights
+        if (consolidatedYoY.growth.revenue > 10) {
+          insights.push(
+            `<strong>Strong Revenue Growth:</strong> Consolidated revenue increased by ${consolidatedYoY.growth.revenue.toFixed(
+              1
+            )}%, indicating robust business expansion.`
+          );
+        } else if (consolidatedYoY.growth.revenue < -5) {
+          insights.push(
+            `<strong>Revenue Decline:</strong> Consolidated revenue decreased by ${Math.abs(
+              consolidatedYoY.growth.revenue
+            ).toFixed(1)}%, requiring strategic attention.`
+          );
+        }
+
+        // Profit insights
+        if (consolidatedYoY.growth.profit > 15) {
+          insights.push(
+            `<strong>Excellent Profitability:</strong> Net profit growth of ${consolidatedYoY.growth.profit.toFixed(
+              1
+            )}% demonstrates strong operational efficiency.`
+          );
+        } else if (consolidatedYoY.growth.profit < -10) {
+          insights.push(
+            `<strong>Profitability Concerns:</strong> Net profit declined by ${Math.abs(
+              consolidatedYoY.growth.netProfit
+            ).toFixed(1)}%, suggesting need for cost management review.`
+          );
+        }
+
+        // Company performance insights
+        const growingCompanies = validCompanies.filter(
+          (c) => c.growth.revenue > 0 && c.growth.netProfit > 0
+        );
+        const decliningCompanies = validCompanies.filter(
+          (c) => c.growth.revenue < 0 || c.growth.netProfit < 0
+        );
+
+        if (growingCompanies.length > 0) {
+          insights.push(
+            `<strong>High Performers:</strong> ${growingCompanies
+              .map((c) => c.companyName)
+              .join(", ")} showing positive growth in both revenue and profit.`
+          );
+        }
+
+        if (decliningCompanies.length > 0) {
+          insights.push(
+            `<strong>Areas for Review:</strong> ${decliningCompanies
+              .map((c) => c.companyName)
+              .join(", ")} may require strategic intervention.`
+          );
+        }
+
+        // Asset growth insights
+        if (consolidatedYoY.growth.assets > 5) {
+          insights.push(
+            `<strong>Asset Expansion:</strong> ${consolidatedYoY.growth.assets.toFixed(
+              1
+            )}% asset growth indicates successful capital investment and business development.`
+          );
+        }
+
+        return insights.length > 0
+          ? insights.join("<br><br>")
+          : "Analyzing year-over-year trends...";
+      }
+
+      // 8. Update your setView function to handle YoY
+      // Find your existing setView function and add this case:
+      // else if (currentView === "year-over-year") {
+      //   await loadYearOverYearData();
+      // }
+      // ====== HELPER FUNCTIONS FOR PARSING MCP RESPONSES ======
+
+      function getOrganizationName(tenantName) {
+        if (tenantName.includes("Mining")) return "Mining";
+        if (tenantName.includes("Aboriginal Corporation"))
+          return "Aboriginal Corporation";
+        if (tenantName.includes("Property")) return "Property";
+        if (tenantName.includes("Enterprises")) return "Enterprises";
+        if (tenantName.includes("Invest")) return "Invest";
+        if (tenantName.includes("Ngarrkuwuy")) return "Ngarrkuwuy";
+        if (tenantName.includes("Marrin")) return "Marrin";
+        return "Unknown";
+      }
+
+      // Add this helper function (around line 1400 in your frontend)
+      function calculateGrowthRate(prior, current) {
+        if (prior === 0 && current === 0) return 0;
+        if (prior === 0) return current > 0 ? 100 : -100;
+        return ((current - prior) / Math.abs(prior)) * 100;
       }
 
       async function loadTrialBalanceData() {
@@ -2241,590 +3296,6 @@
         dashboardElement.innerHTML = consolidatedHtml;
       }
 
-      async function loadYearOverYearData() {
-        // Implementation continues...
-      }
-
-      async function loadYearOverYearData() {
-        if (activeCompanyFilters.length === 0) {
-          const dashboardElement = document.getElementById("dashboardData");
-          dashboardElement.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: #666;">
-        <h3>No Companies Selected</h3>
-        <p>Please select companies using the filters above to view YoY analysis.</p>
-      </div>
-    `;
-          return;
-        }
-
-        const dashboardElement = document.getElementById("dashboardData");
-        dashboardElement.innerHTML = `
-    <div class="loading">
-      <div class="loading-spinner"></div>
-      Loading consolidated year-over-year analysis...
-    </div>
-  `;
-
-        try {
-          const yoyData = [];
-          const monthlyData = [];
-          let consolidatedYoY = {
-            current: {
-              revenue: 0,
-              expenses: 0,
-              profit: 0,
-              assets: 0,
-              equity: 0,
-            },
-            previous: {
-              revenue: 0,
-              expenses: 0,
-              profit: 0,
-              assets: 0,
-              equity: 0,
-            },
-            growth: {
-              revenue: 0,
-              expenses: 0,
-              profit: 0,
-              assets: 0,
-              equity: 0,
-            },
-            companies: [],
-          };
-
-          // Load both YoY and Monthly data for each selected company
-          for (const tenantId of activeCompanyFilters) {
-            const connectedCompany = connectedCompanies.find(
-              (c) => c.tenantId === tenantId
-            );
-            if (!connectedCompany) continue;
-
-            try {
-              const orgName = getOrganizationName(connectedCompany.tenantName);
-
-              // Load YoY and Monthly data in parallel
-              const [yoyResponse, monthlyResponse] = await Promise.all([
-                fetch("/api/yoy-analysis", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ organizationName: orgName }),
-                }),
-                fetch("/api/monthly-breakdown", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ organizationName: orgName }),
-                }),
-              ]);
-
-              if (yoyResponse.ok) {
-                const data = await yoyResponse.json();
-                const companyYoyData = {
-                  companyName: connectedCompany.tenantName.replace(
-                    "Rirratjingu ",
-                    ""
-                  ),
-                  tenantName: data.tenantName,
-                  analysis: data.analysis,
-                  error: false,
-                };
-                yoyData.push(companyYoyData);
-
-                // Add to consolidated totals
-                const current = data.analysis.periods.current;
-                const previous = data.analysis.periods.previous;
-
-                consolidatedYoY.current.revenue += current.revenue || 0;
-                consolidatedYoY.current.expenses +=
-                  current.revenue - current.profit || 0;
-                consolidatedYoY.current.profit += current.profit || 0;
-                consolidatedYoY.current.assets += current.assets || 0;
-                consolidatedYoY.current.equity += current.equity || 0;
-
-                consolidatedYoY.previous.revenue += previous.revenue || 0;
-                consolidatedYoY.previous.expenses +=
-                  previous.revenue - previous.profit || 0;
-                consolidatedYoY.previous.profit += previous.profit || 0;
-                consolidatedYoY.previous.assets += previous.assets || 0;
-                consolidatedYoY.previous.equity += previous.equity || 0;
-
-                consolidatedYoY.companies.push(companyYoyData);
-              }
-
-              if (monthlyResponse.ok) {
-                const monthlyResult = await monthlyResponse.json();
-                monthlyData.push({
-                  companyName: connectedCompany.tenantName.replace(
-                    "Rirratjingu ",
-                    ""
-                  ),
-                  tenantName: monthlyResult.tenantName,
-                  monthlyBreakdown: monthlyResult.monthlyBreakdown,
-                  totals: monthlyResult.totals,
-                  error: false,
-                });
-              }
-            } catch (error) {
-              console.error(
-                `Error loading data for ${connectedCompany.tenantName}:`,
-                error
-              );
-            }
-          }
-
-          // Calculate consolidated growth rates
-          consolidatedYoY.growth.revenue = calculateGrowthRate(
-            consolidatedYoY.previous.revenue,
-            consolidatedYoY.current.revenue
-          );
-          consolidatedYoY.growth.expenses = calculateGrowthRate(
-            consolidatedYoY.previous.expenses,
-            consolidatedYoY.current.expenses
-          );
-          consolidatedYoY.growth.profit = calculateGrowthRate(
-            consolidatedYoY.previous.profit,
-            consolidatedYoY.current.profit
-          );
-          consolidatedYoY.growth.assets = calculateGrowthRate(
-            consolidatedYoY.previous.assets,
-            consolidatedYoY.current.assets
-          );
-          consolidatedYoY.growth.equity = calculateGrowthRate(
-            consolidatedYoY.previous.equity,
-            consolidatedYoY.current.equity
-          );
-
-          // Render consolidated YoY + individual companies with scroll
-          renderConsolidatedYoYAnalysis(consolidatedYoY, yoyData, monthlyData);
-        } catch (error) {
-          console.error("Error in YoY analysis:", error);
-          dashboardElement.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: #e74c3c;">
-        <h3>Error Loading YoY Data</h3>
-        <p>Failed to load year-over-year analysis: ${error.message}</p>
-      </div>
-    `;
-        }
-      }
-
-      function renderConsolidatedYoYAnalysis(
-        consolidatedYoY,
-        yoyData,
-        monthlyData
-      ) {
-        const dashboardElement = document.getElementById("dashboardData");
-
-        // Get period labels from first valid company
-        const firstValidCompany = yoyData.find((d) => !d.error);
-        const currentLabel = firstValidCompany
-          ? firstValidCompany.analysis.periods.current.label
-          : "Current Year";
-        const previousLabel = firstValidCompany
-          ? firstValidCompany.analysis.periods.previous.label
-          : "Previous Year";
-
-        const consolidatedHtml = `
-    <div class="dashboard-card" style="margin-bottom: 20px;">
-      <h3>Consolidated Year-over-Year Analysis - All Selected Companies</h3>
-      <div style="margin-bottom: 15px;">
-        <span style="font-size: 14px; color: #666;">
-          Companies: ${consolidatedYoY.companies.length} | 
-          Period: ${currentLabel} vs ${previousLabel}
-        </span>
-      </div>
-
-      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 20px;">
-        <div class="dashboard-card" style="padding: 15px;">
-          <h4>Revenue Performance</h4>
-          <div class="metric">
-            <span>${currentLabel}</span>
-            <span class="metric-value">$${consolidatedYoY.current.revenue.toLocaleString()}</span>
-          </div>
-          <div class="metric">
-            <span>${previousLabel}</span>
-            <span class="metric-value">$${consolidatedYoY.previous.revenue.toLocaleString()}</span>
-          </div>
-          <div class="metric">
-            <span>Growth</span>
-            <span class="metric-value ${
-              consolidatedYoY.growth.revenue >= 0 ? "" : "negative"
-            }">
-              ${
-                consolidatedYoY.growth.revenue >= 0 ? "+" : ""
-              }${consolidatedYoY.growth.revenue.toFixed(1)}%
-            </span>
-          </div>
-        </div>
-
-        <div class="dashboard-card" style="padding: 15px;">
-          <h4>Expense Performance</h4>
-          <div class="metric">
-            <span>${currentLabel}</span>
-            <span class="metric-value">$${consolidatedYoY.current.expenses.toLocaleString()}</span>
-          </div>
-          <div class="metric">
-            <span>${previousLabel}</span>
-            <span class="metric-value">$${consolidatedYoY.previous.expenses.toLocaleString()}</span>
-          </div>
-          <div class="metric">
-            <span>Growth</span>
-            <span class="metric-value ${
-              consolidatedYoY.growth.expenses >= 0 ? "negative" : ""
-            }">
-              ${
-                consolidatedYoY.growth.expenses >= 0 ? "+" : ""
-              }${consolidatedYoY.growth.expenses.toFixed(1)}%
-            </span>
-          </div>
-        </div>
-
-        <div class="dashboard-card" style="padding: 15px;">
-          <h4>Profit Performance</h4>
-          <div class="metric">
-            <span>${currentLabel}</span>
-            <span class="metric-value ${
-              consolidatedYoY.current.profit >= 0 ? "" : "negative"
-            }">$${consolidatedYoY.current.profit.toLocaleString()}</span>
-          </div>
-          <div class="metric">
-            <span>${previousLabel}</span>
-            <span class="metric-value ${
-              consolidatedYoY.previous.profit >= 0 ? "" : "negative"
-            }">$${consolidatedYoY.previous.profit.toLocaleString()}</span>
-          </div>
-          <div class="metric">
-            <span>Growth</span>
-            <span class="metric-value ${
-              consolidatedYoY.growth.profit >= 0 ? "" : "negative"
-            }">
-              ${
-                consolidatedYoY.growth.profit >= 0 ? "+" : ""
-              }${consolidatedYoY.growth.profit.toFixed(1)}%
-            </span>
-          </div>
-        </div>
-
-        <div class="dashboard-card" style="padding: 15px;">
-          <h4>Asset Growth</h4>
-          <div class="metric">
-            <span>${currentLabel}</span>
-            <span class="metric-value">$${consolidatedYoY.current.assets.toLocaleString()}</span>
-          </div>
-          <div class="metric">
-            <span>${previousLabel}</span>
-            <span class="metric-value">$${consolidatedYoY.previous.assets.toLocaleString()}</span>
-          </div>
-          <div class="metric">
-            <span>Growth</span>
-            <span class="metric-value ${
-              consolidatedYoY.growth.assets >= 0 ? "" : "negative"
-            }">
-              ${
-                consolidatedYoY.growth.assets >= 0 ? "+" : ""
-              }${consolidatedYoY.growth.assets.toFixed(1)}%
-            </span>
-          </div>
-        </div>
-
-        <div class="dashboard-card" style="padding: 15px;">
-          <h4>Financial Health</h4>
-          <div class="metric">
-            <span>Current Margin</span>
-            <span class="metric-value">
-              ${
-                consolidatedYoY.current.revenue > 0
-                  ? (
-                      (consolidatedYoY.current.profit /
-                        consolidatedYoY.current.revenue) *
-                      100
-                    ).toFixed(1)
-                  : 0
-              }%
-            </span>
-          </div>
-          <div class="metric">
-            <span>Prior Margin</span>
-            <span class="metric-value">
-              ${
-                consolidatedYoY.previous.revenue > 0
-                  ? (
-                      (consolidatedYoY.previous.profit /
-                        consolidatedYoY.previous.revenue) *
-                      100
-                    ).toFixed(1)
-                  : 0
-              }%
-            </span>
-          </div>
-          <div class="metric">
-            <span>Trend</span>
-            <span class="metric-value ${
-              consolidatedYoY.growth.revenue > 0 &&
-              consolidatedYoY.growth.profit > 0
-                ? ""
-                : "negative"
-            }">
-              ${
-                consolidatedYoY.growth.revenue > 0 &&
-                consolidatedYoY.growth.profit > 0
-                  ? "Positive"
-                  : "Declining"
-              }
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Monthly Performance Breakdown for first company as sample -->
-      ${monthlyData.length > 0 ? renderMonthlyCard(monthlyData) : ""}
-    </div>
-  `;
-
-        const individualHtml = `
-    <div style="height: 50vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px;">
-      <h3>Individual Company Performance</h3>
-      ${yoyData
-        .map((company) => {
-          if (company.error) {
-            return `
-            <div style="border: 1px solid #e74c3c; border-radius: 6px; padding: 15px; margin: 10px 0; background: #fff5f5;">
-              <strong style="color: #e74c3c;">${company.companyName}</strong>
-              <div style="color: #666; margin-top: 5px;">Error loading YoY data</div>
-            </div>
-          `;
-          }
-
-          const current = company.analysis.periods.current;
-          const previous = company.analysis.periods.previous;
-          const growth = company.analysis.growth;
-
-          return `
-          <div style="border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px; margin: 10px 0; background: #fafafa;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-              <strong style="font-size: 16px;">${company.companyName}</strong>
-              <div style="display: flex; gap: 15px; font-size: 14px;">
-                <span style="color: ${
-                  growth.revenue >= 0 ? "#27ae60" : "#e74c3c"
-                };">
-                  Revenue: ${
-                    growth.revenue >= 0 ? "+" : ""
-                  }${growth.revenue.toFixed(1)}%
-                </span>
-                <span style="color: ${
-                  growth.profit >= 0 ? "#27ae60" : "#e74c3c"
-                };">
-                  Profit: ${
-                    growth.profit >= 0 ? "+" : ""
-                  }${growth.profit.toFixed(1)}%
-                </span>
-              </div>
-            </div>
-
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; font-size: 13px;">
-              <div>
-                <div style="color: #666; margin-bottom: 3px;">${currentLabel} Revenue</div>
-                <div style="font-weight: 600;">$${current.revenue.toLocaleString()}</div>
-              </div>
-              <div>
-                <div style="color: #666; margin-bottom: 3px;">${previousLabel} Revenue</div>
-                <div style="font-weight: 600;">$${previous.revenue.toLocaleString()}</div>
-              </div>
-              <div>
-                <div style="color: #666; margin-bottom: 3px;">${currentLabel} Profit</div>
-                <div style="font-weight: 600; color: ${
-                  current.profit >= 0 ? "#27ae60" : "#e74c3c"
-                };">
-                  $${current.profit.toLocaleString()}
-                </div>
-              </div>
-              <div>
-                <div style="color: #666; margin-bottom: 3px;">${previousLabel} Profit</div>
-                <div style="font-weight: 600; color: ${
-                  previous.profit >= 0 ? "#27ae60" : "#e74c3c"
-                };">
-                  $${previous.profit.toLocaleString()}
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
-        })
-        .join("")}
-    </div>
-  `;
-
-        dashboardElement.innerHTML = consolidatedHtml;
-      }
-
-      // Monthly Card component
-      function renderMonthlyCard(monthlyData) {
-        if (!monthlyData || monthlyData.length === 0) {
-          return `
-                  <div class="dashboard-card">
-                    <h3>Monthly Breakdown</h3>
-                    <div style="text-align: center; padding: 20px; color: #666;">
-                      No monthly data available
-                    </div>
-                  </div>
-                `;
-        }
-
-        // Use first company's data for display (extend later for multi-company)
-        const companyData = monthlyData[0];
-        const months = companyData.monthlyBreakdown;
-
-        // Calculate totals
-        const totals = {
-          revenue: months.reduce((sum, month) => sum + month.revenue, 0),
-          expenses: months.reduce((sum, month) => sum + month.expenses, 0),
-          profit: months.reduce((sum, month) => sum + month.netProfit, 0),
-        };
-
-        return `
-                <div class="dashboard-card">
-                  <h3>Monthly Performance Breakdown (${
-                    companyData.companyName
-                  })</h3>
-
-                  <!-- Monthly Grid -->
-                  <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;">
-                    ${months
-                      .map(
-                        (month, index) => `
-                      <div style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 8px; background: ${
-                        month.netProfit >= 0 ? "#f8fff8" : "#fff8f8"
-                      }; font-size: 12px;">
-                        <div style="font-weight: 600; margin-bottom: 4px; color: #2c3e50;">${
-                          month.label
-                        }</div>
-                        <div class="metric" style="padding: 2px 0; border: none;">
-                          <span style="font-size: 11px; color: #666;">Revenue</span>
-                          <span style="font-weight: 600; font-size: 11px;">$${(
-                            month.revenue / 1000
-                          ).toFixed(0)}K</span>
-                        </div>
-                        <div class="metric" style="padding: 2px 0; border: none;">
-                          <span style="font-size: 11px; color: #666;">Expenses</span>
-                          <span style="font-weight: 600; font-size: 11px;">$${(
-                            month.expenses / 1000
-                          ).toFixed(0)}K</span>
-                        </div>
-                        <div class="metric" style="padding: 2px 0; border: none;">
-                          <span style="font-size: 11px; color: #666;">Profit</span>
-                          <span style="font-weight: 600; font-size: 11px; color: ${
-                            month.netProfit >= 0 ? "#27ae60" : "#e74c3c"
-                          };">
-                            $${(month.netProfit / 1000).toFixed(0)}K
-                          </span>
-                        </div>
-                      </div>
-                    `
-                      )
-                      .join("")}
-                  </div>
-
-                  <!-- Totals Summary -->
-                  <div style="border-top: 2px solid #2c3e50; padding-top: 15px;">
-                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
-                      <div class="metric">
-                        <span>Total Revenue (12 months)</span>
-                        <span class="metric-value">$${totals.revenue.toLocaleString()}</span>
-                      </div>
-                      <div class="metric">
-                        <span>Total Expenses (12 months)</span>
-                        <span class="metric-value">$${totals.expenses.toLocaleString()}</span>
-                      </div>
-                      <div class="metric">
-                        <span>Net Profit (12 months)</span>
-                        <span class="metric-value ${
-                          totals.profit >= 0 ? "" : "negative"
-                        }">$${totals.profit.toLocaleString()}</span>
-                      </div>
-                      <div class="metric">
-                        <span>Average Monthly Profit</span>
-                        <span class="metric-value ${
-                          totals.profit >= 0 ? "" : "negative"
-                        }">$${(totals.profit / 12).toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              `;
-      }
-
-      // 7. Generate insights based on YoY data
-      function generateYoYInsights(consolidatedYoY, yoyData) {
-        const insights = [];
-        const validCompanies = yoyData.filter((d) => !d.error);
-
-        // Revenue insights
-        if (consolidatedYoY.growth.revenue > 10) {
-          insights.push(
-            `<strong>Strong Revenue Growth:</strong> Consolidated revenue increased by ${consolidatedYoY.growth.revenue.toFixed(
-              1
-            )}%, indicating robust business expansion.`
-          );
-        } else if (consolidatedYoY.growth.revenue < -5) {
-          insights.push(
-            `<strong>Revenue Decline:</strong> Consolidated revenue decreased by ${Math.abs(
-              consolidatedYoY.growth.revenue
-            ).toFixed(1)}%, requiring strategic attention.`
-          );
-        }
-
-        // Profit insights
-        if (consolidatedYoY.growth.profit > 15) {
-          insights.push(
-            `<strong>Excellent Profitability:</strong> Net profit growth of ${consolidatedYoY.growth.profit.toFixed(
-              1
-            )}% demonstrates strong operational efficiency.`
-          );
-        } else if (consolidatedYoY.growth.profit < -10) {
-          insights.push(
-            `<strong>Profitability Concerns:</strong> Net profit declined by ${Math.abs(
-              consolidatedYoY.growth.netProfit
-            ).toFixed(1)}%, suggesting need for cost management review.`
-          );
-        }
-
-        // Company performance insights
-        const growingCompanies = validCompanies.filter(
-          (c) => c.growth.revenue > 0 && c.growth.netProfit > 0
-        );
-        const decliningCompanies = validCompanies.filter(
-          (c) => c.growth.revenue < 0 || c.growth.netProfit < 0
-        );
-
-        if (growingCompanies.length > 0) {
-          insights.push(
-            `<strong>High Performers:</strong> ${growingCompanies
-              .map((c) => c.companyName)
-              .join(", ")} showing positive growth in both revenue and profit.`
-          );
-        }
-
-        if (decliningCompanies.length > 0) {
-          insights.push(
-            `<strong>Areas for Review:</strong> ${decliningCompanies
-              .map((c) => c.companyName)
-              .join(", ")} may require strategic intervention.`
-          );
-        }
-
-        // Asset growth insights
-        if (consolidatedYoY.growth.assets > 5) {
-          insights.push(
-            `<strong>Asset Expansion:</strong> ${consolidatedYoY.growth.assets.toFixed(
-              1
-            )}% asset growth indicates successful capital investment and business development.`
-          );
-        }
-
-        return insights.length > 0
-          ? insights.join("<br><br>")
-          : "Analyzing year-over-year trends...";
-      }
-
       async function loadAlertsData() {
         if (activeCompanyFilters.length === 0) {
           const dashboardElement = document.getElementById("dashboardData");
@@ -3138,6 +3609,19 @@
         }
       }
 
+      function setView(view, button) {
+        currentView = view;
+
+        // Update active button
+        document
+          .querySelectorAll(".toolbar button")
+          .forEach((btn) => btn.classList.remove("active"));
+        button.classList.add("active");
+
+        // Reload dashboard data for new view
+        loadDashboardData();
+      }
+
       function backToConnections() {
         if (
           confirm(
@@ -3147,6 +3631,7 @@
           document.getElementById("mainDashboard").style.display = "none";
           document.getElementById("connectionManager").style.display = "block";
 
+          // Reset to step 1
           document.getElementById("step1").style.display = "block";
           document.getElementById("step2").style.display = "none";
           document.getElementById("step3").style.display = "none";
@@ -3156,6 +3641,23 @@
           document.getElementById("step3Indicator").className = "step";
 
           loadSavedPreferences();
+        }
+      }
+
+      function handleMouseMove(e) {
+        if (!isResizing) return;
+
+        const container = document.querySelector(".main-container");
+        const containerRect = container.getBoundingClientRect();
+        const percentage =
+          ((e.clientX - containerRect.left) / containerRect.width) * 100;
+
+        if (percentage > 20 && percentage < 80) {
+          document.querySelector(".ai-chat-panel").style.width =
+            percentage + "%";
+          document.querySelector(".dashboard-panel").style.width =
+            100 - percentage + "%";
+          document.querySelector(".resizer").style.left = percentage + "%";
         }
       }
 

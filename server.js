@@ -248,16 +248,6 @@ const tokenStorage = {
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json());
 
-app.use(
-  express.static("public", {
-    setHeaders: (res, path) => {
-      if (path.endsWith(".css")) {
-        res.setHeader("Content-Type", "text/css");
-      }
-    },
-  })
-);
-
 // Initialize Xero client with reports scope
 const xero = new XeroClient({
   clientId: XERO_CLIENT_ID,
@@ -465,57 +455,6 @@ app.get("/callback/approvalmax", async (req, res) => {
 // ============================================================================
 // API ROUTES (UPDATED WITH DATABASE TOKEN RETRIEVAL)
 // ============================================================================
-
-// Replace your /api/connected-companies endpoint with this corrected version
-
-app.get("/api/connected-companies", async (req, res) => {
-  try {
-    console.log("📊 Fetching connected companies from database...");
-
-    // First, let's see what columns exist in your table
-    const tableInfo = await pool.query(`
-      SELECT column_name 
-      FROM information_schema.columns 
-      WHERE table_name = 'xero_tokens'
-    `);
-    console.log("📊 Available columns:", tableInfo.rows);
-
-    // Try different possible column names based on what we've seen in your logs
-    const result = await pool.query(`
-      SELECT DISTINCT 
-        tenant_id,
-        tenant_name,
-        organization_name,
-        access_token
-      FROM xero_tokens 
-      WHERE access_token IS NOT NULL 
-        AND expires_at > NOW()
-      ORDER BY COALESCE(organization_name, tenant_name)
-    `);
-
-    console.log("📊 Raw database result:", result.rows);
-
-    // Map the results to the expected format
-    const companies = result.rows.map((row) => ({
-      tenantId: row.tenant_id,
-      tenantName: row.organization_name || row.tenant_name || "Unknown Company",
-    }));
-
-    console.log(
-      `📊 Formatted ${companies.length} connected companies:`,
-      companies
-    );
-
-    res.json(companies);
-  } catch (error) {
-    console.error("❌ Error fetching connected companies:", error.message);
-    console.error("❌ Full error:", error);
-    res.status(500).json({
-      error: "Failed to fetch connected companies",
-      details: error.message,
-    });
-  }
-});
 
 // Connection status endpoint - UPDATED WITH DATABASE
 app.get("/api/connection-status", async (req, res) => {
