@@ -2202,11 +2202,6 @@
       // ====== PLACEHOLDER FUNCTIONS FOR OTHER VIEWS ======
       // These maintain the existing structure while being organized
 
-      async function loadCashFlowData() {
-        // Simplified version - full implementation would follow same pattern as overview
-        showComingSoon("Cash Flow Analysis");
-      }
-
       // ====== CASH FLOW DATA LOADING - LOGICAL STRUCTURE ======
 
       async function loadCashFlowData() {
@@ -2783,6 +2778,746 @@
                 data.companies.length > 0
                   ? `Average per company: $${Math.round(
                       data.totalCash / data.companies.length
+                    ).toLocaleString()}`
+                  : "No data available"
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+      }
+
+      // ====== PROFIT & LOSS DATA LOADING - LOGICAL STRUCTURE ======
+
+      async function loadProfitLossData() {
+        if (activeCompanyFilters.length === 0) {
+          showNoCompaniesSelected();
+          return;
+        }
+
+        try {
+          if (activeCompanyFilters.length === 1) {
+            // Single company - show detailed P&L breakdown
+            await loadSingleCompanyProfitLoss();
+          } else {
+            // Multiple companies - show consolidated P&L summary
+            await loadConsolidatedProfitLoss();
+          }
+        } catch (error) {
+          showErrorState(error);
+        }
+      }
+
+      // ====== SINGLE COMPANY PROFIT & LOSS ======
+      async function loadSingleCompanyProfitLoss() {
+        const tenantId = activeCompanyFilters[0];
+        const connectedCompany = connectedCompanies.find(
+          (c) => c.tenantId === tenantId
+        );
+
+        if (!connectedCompany) return;
+
+        const orgName = getOrganizationName(connectedCompany.tenantName);
+        const response = await fetchWithErrorHandling(
+          "/api/profit-loss-summary",
+          {
+            organizationName: orgName,
+          }
+        );
+
+        if (response && response.ok) {
+          const data = await response.json();
+          renderSingleCompanyProfitLoss(data, connectedCompany);
+        } else {
+          showErrorState(
+            new Error(`Failed to load P&L for ${connectedCompany.tenantName}`)
+          );
+        }
+      }
+
+      function renderSingleCompanyProfitLoss(data, company) {
+        const dashboardElement = document.getElementById("dashboardData");
+        const companyName = company.tenantName.replace("Rirratjingu ", "");
+        const summary = data.summary || {};
+
+        const totalRevenue = summary.totalRevenue || 0;
+        const totalExpenses = summary.totalExpenses || 0;
+        const netProfit = summary.netProfit || 0;
+        const profitMargin =
+          totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+
+        const revenueAccounts = (summary.revenueAccounts || []).sort(
+          (a, b) => b.amount - a.amount
+        );
+        const expenseAccounts = (summary.expenseAccounts || []).sort(
+          (a, b) => b.amount - a.amount
+        );
+
+        // Categorize expenses for insights
+        const largeExpenses = expenseAccounts.filter(
+          (acc) => acc.amount > totalExpenses * 0.1
+        );
+        const mediumExpenses = expenseAccounts.filter(
+          (acc) =>
+            acc.amount <= totalExpenses * 0.1 &&
+            acc.amount > totalExpenses * 0.02
+        );
+        const smallExpenses = expenseAccounts.filter(
+          (acc) => acc.amount <= totalExpenses * 0.02
+        );
+
+        dashboardElement.innerHTML = `
+    <!-- SINGLE COMPANY P&L HEADER -->
+    <div class="dashboard-card">
+      <h3>Profit & Loss Statement - ${companyName}</h3>
+      <div style="margin-bottom: 20px;">
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; text-align: center;">
+          
+          <!-- REVENUE -->
+          <div style="padding: 15px; background: #f8fff8; border-radius: 6px; border: 1px solid #27ae60;">
+            <div style="font-size: 20px; font-weight: bold; color: #27ae60; margin-bottom: 5px;">
+              $${totalRevenue.toLocaleString()}
+            </div>
+            <div style="font-size: 13px; color: #666;">Total Revenue</div>
+            <div style="font-size: 11px; color: #27ae60; margin-top: 3px;">
+              ${revenueAccounts.length} revenue stream${
+          revenueAccounts.length !== 1 ? "s" : ""
+        }
+            </div>
+          </div>
+
+          <!-- EXPENSES -->
+          <div style="padding: 15px; background: #fff8f8; border-radius: 6px; border: 1px solid #e74c3c;">
+            <div style="font-size: 20px; font-weight: bold; color: #e74c3c; margin-bottom: 5px;">
+              $${totalExpenses.toLocaleString()}
+            </div>
+            <div style="font-size: 13px; color: #666;">Total Expenses</div>
+            <div style="font-size: 11px; color: #e74c3c; margin-top: 3px;">
+              ${expenseAccounts.length} expense categor${
+          expenseAccounts.length !== 1 ? "ies" : "y"
+        }
+            </div>
+          </div>
+
+          <!-- NET PROFIT -->
+          <div style="padding: 15px; background: ${
+            netProfit >= 0 ? "#f8fff8" : "#fff8f8"
+          }; border-radius: 6px; border: 1px solid ${
+          netProfit >= 0 ? "#27ae60" : "#e74c3c"
+        };">
+            <div style="font-size: 20px; font-weight: bold; color: ${
+              netProfit >= 0 ? "#27ae60" : "#e74c3c"
+            }; margin-bottom: 5px;">
+              $${netProfit.toLocaleString()}
+            </div>
+            <div style="font-size: 13px; color: #666;">Net Profit</div>
+            <div style="font-size: 11px; color: ${
+              netProfit >= 0 ? "#27ae60" : "#e74c3c"
+            }; margin-top: 3px;">
+              ${netProfit >= 0 ? "Profitable" : "Loss"}
+            </div>
+          </div>
+
+          <!-- PROFIT MARGIN -->
+          <div style="padding: 15px; background: #f8fffe; border-radius: 6px; border: 1px solid #3498db;">
+            <div style="font-size: 20px; font-weight: bold; color: #3498db; margin-bottom: 5px;">
+              ${profitMargin.toFixed(1)}%
+            </div>
+            <div style="font-size: 13px; color: #666;">Profit Margin</div>
+            <div style="font-size: 11px; color: #3498db; margin-top: 3px;">
+              ${
+                profitMargin > 20
+                  ? "Excellent"
+                  : profitMargin > 10
+                  ? "Good"
+                  : profitMargin > 0
+                  ? "Fair"
+                  : "Poor"
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DETAILED BREAKDOWN -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
+        
+        <!-- REVENUE BREAKDOWN -->
+        <div>
+          <h4 style="color: #27ae60; border-bottom: 2px solid #27ae60; padding-bottom: 8px; margin-bottom: 15px;">
+            Revenue Breakdown (${revenueAccounts.length} streams)
+          </h4>
+          
+          ${
+            revenueAccounts.length === 0
+              ? `
+            <div style="text-align: center; padding: 30px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px;">
+              <h5>No Revenue Data</h5>
+              <p style="font-size: 13px; margin-top: 8px;">No revenue accounts found for this period.</p>
+            </div>
+          `
+              : `
+            <div style="max-height: 60vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px;">
+              ${revenueAccounts
+                .map((account) => {
+                  const percentage =
+                    totalRevenue > 0
+                      ? (account.amount / totalRevenue) * 100
+                      : 0;
+                  return `
+                  <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid #f0f0f0;">
+                    <div style="flex: 1;">
+                      <div style="font-weight: 500; font-size: 13px; margin-bottom: 2px;">${
+                        account.name
+                      }</div>
+                      <div style="font-size: 11px; color: #666;">${percentage.toFixed(
+                        1
+                      )}% of total revenue</div>
+                    </div>
+                    <div style="text-align: right;">
+                      <div style="font-weight: 600; color: #27ae60;">$${account.amount.toLocaleString()}</div>
+                    </div>
+                  </div>
+                `;
+                })
+                .join("")}
+            </div>
+            
+            <div style="border-top: 3px solid #27ae60; padding: 12px; font-weight: bold; color: #27ae60; background: #f8fff8; margin-top: 10px;">
+              Total Revenue: $${totalRevenue.toLocaleString()}
+            </div>
+          `
+          }
+        </div>
+
+        <!-- EXPENSE BREAKDOWN -->
+        <div>
+          <h4 style="color: #e74c3c; border-bottom: 2px solid #e74c3c; padding-bottom: 8px; margin-bottom: 15px;">
+            Expense Breakdown (${expenseAccounts.length} categories)
+          </h4>
+          
+          ${
+            expenseAccounts.length === 0
+              ? `
+            <div style="text-align: center; padding: 30px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px;">
+              <h5>No Expense Data</h5>
+              <p style="font-size: 13px; margin-top: 8px;">No expense accounts found for this period.</p>
+            </div>
+          `
+              : `
+            <div style="max-height: 60vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px;">
+              ${expenseAccounts
+                .map((account) => {
+                  const percentage =
+                    totalExpenses > 0
+                      ? (account.amount / totalExpenses) * 100
+                      : 0;
+                  const isLarge = account.amount > totalExpenses * 0.1;
+                  return `
+                  <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid #f0f0f0; ${
+                    isLarge ? "background: #fff8f8;" : ""
+                  }">
+                    <div style="flex: 1;">
+                      <div style="font-weight: 500; font-size: 13px; margin-bottom: 2px;">
+                        ${account.name}
+                        ${
+                          isLarge
+                            ? '<span style="color: #e74c3c; font-size: 10px; margin-left: 6px;">MAJOR</span>'
+                            : ""
+                        }
+                      </div>
+                      <div style="font-size: 11px; color: #666;">${percentage.toFixed(
+                        1
+                      )}% of total expenses</div>
+                    </div>
+                    <div style="text-align: right;">
+                      <div style="font-weight: 600; color: #e74c3c;">$${account.amount.toLocaleString()}</div>
+                    </div>
+                  </div>
+                `;
+                })
+                .join("")}
+            </div>
+            
+            <div style="border-top: 3px solid #e74c3c; padding: 12px; font-weight: bold; color: #e74c3c; background: #fff8f8; margin-top: 10px;">
+              Total Expenses: $${totalExpenses.toLocaleString()}
+            </div>
+          `
+          }
+        </div>
+      </div>
+
+      <!-- P&L INSIGHTS -->
+      <div style="margin-top: 25px; padding: 15px; background: #f8fffe; border: 1px solid #bee5eb; border-radius: 6px;">
+        <h4 style="color: #0c5460; margin-bottom: 10px;">📊 Performance Insights</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; font-size: 13px;">
+          
+          <div>
+            <strong>Profitability Assessment:</strong>
+            <div style="margin-top: 5px;">
+              ${
+                netProfit > 0
+                  ? `Strong performance with $${netProfit.toLocaleString()} profit (${profitMargin.toFixed(
+                      1
+                    )}% margin)`
+                  : netProfit === 0
+                  ? "Break-even position - revenue equals expenses"
+                  : `Loss of $${Math.abs(
+                      netProfit
+                    ).toLocaleString()} requires immediate attention`
+              }
+            </div>
+          </div>
+
+          <div>
+            <strong>Revenue Concentration:</strong>
+            <div style="margin-top: 5px;">
+              ${
+                revenueAccounts.length === 0
+                  ? "No revenue streams identified"
+                  : revenueAccounts.length === 1
+                  ? "Single revenue stream - high concentration risk"
+                  : revenueAccounts.length < 4
+                  ? "Limited revenue diversification"
+                  : "Well-diversified revenue streams"
+              }
+            </div>
+          </div>
+
+          <div>
+            <strong>Expense Structure:</strong>
+            <div style="margin-top: 5px;">
+              ${
+                largeExpenses.length === 0
+                  ? "No major expense concentrations"
+                  : largeExpenses.length === 1
+                  ? `One major expense: ${largeExpenses[0].name}`
+                  : `${largeExpenses.length} major expense categories require monitoring`
+              }
+            </div>
+          </div>
+
+          <div>
+            <strong>Top Revenue Source:</strong>
+            <div style="margin-top: 5px;">
+              ${
+                revenueAccounts.length > 0
+                  ? `${
+                      revenueAccounts[0].name
+                    }: $${revenueAccounts[0].amount.toLocaleString()}`
+                  : "No revenue data available"
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+      }
+
+      // ====== CONSOLIDATED PROFIT & LOSS (MULTIPLE COMPANIES) ======
+      async function loadConsolidatedProfitLoss() {
+        const consolidatedData = {
+          companies: [],
+          totals: { totalRevenue: 0, totalExpenses: 0, netProfit: 0 },
+          summary: {
+            profitableCompanies: 0,
+            lossCompanies: 0,
+            breakEvenCompanies: 0,
+          },
+          accounts: { revenue: {}, expenses: {} },
+        };
+
+        // Load data from each selected company
+        for (const tenantId of activeCompanyFilters) {
+          const connectedCompany = connectedCompanies.find(
+            (c) => c.tenantId === tenantId
+          );
+          if (!connectedCompany) continue;
+
+          const orgName = getOrganizationName(connectedCompany.tenantName);
+          const response = await fetchWithErrorHandling(
+            "/api/profit-loss-summary",
+            {
+              organizationName: orgName,
+            }
+          );
+
+          if (response && response.ok) {
+            const data = await response.json();
+            const companyName = connectedCompany.tenantName.replace(
+              "Rirratjingu ",
+              ""
+            );
+            const summary = data.summary || {};
+
+            const revenue = summary.totalRevenue || 0;
+            const expenses = summary.totalExpenses || 0;
+            const profit = summary.netProfit || 0;
+
+            // Track company P&L status
+            consolidatedData.companies.push({
+              name: companyName,
+              revenue: revenue,
+              expenses: expenses,
+              netProfit: profit,
+              profitMargin: revenue > 0 ? (profit / revenue) * 100 : 0,
+              status:
+                profit > 0 ? "profitable" : profit === 0 ? "breakeven" : "loss",
+              revenueStreams: (summary.revenueAccounts || []).length,
+              expenseCategories: (summary.expenseAccounts || []).length,
+            });
+
+            // Aggregate totals
+            consolidatedData.totals.totalRevenue += revenue;
+            consolidatedData.totals.totalExpenses += expenses;
+            consolidatedData.totals.netProfit += profit;
+
+            // Update summary counts
+            if (profit > 0) consolidatedData.summary.profitableCompanies++;
+            else if (profit === 0)
+              consolidatedData.summary.breakEvenCompanies++;
+            else consolidatedData.summary.lossCompanies++;
+
+            // Aggregate revenue accounts
+            if (summary.revenueAccounts) {
+              summary.revenueAccounts.forEach((account) => {
+                if (!consolidatedData.accounts.revenue[account.name]) {
+                  consolidatedData.accounts.revenue[account.name] = 0;
+                }
+                consolidatedData.accounts.revenue[account.name] +=
+                  account.amount;
+              });
+            }
+
+            // Aggregate expense accounts
+            if (summary.expenseAccounts) {
+              summary.expenseAccounts.forEach((account) => {
+                if (!consolidatedData.accounts.expenses[account.name]) {
+                  consolidatedData.accounts.expenses[account.name] = 0;
+                }
+                consolidatedData.accounts.expenses[account.name] +=
+                  account.amount;
+              });
+            }
+          }
+        }
+
+        renderConsolidatedProfitLoss(consolidatedData);
+      }
+
+      function renderConsolidatedProfitLoss(data) {
+        const dashboardElement = document.getElementById("dashboardData");
+
+        const consolidatedMargin =
+          data.totals.totalRevenue > 0
+            ? (data.totals.netProfit / data.totals.totalRevenue) * 100
+            : 0;
+
+        // Convert account objects to sorted arrays
+        const consolidatedRevenue = Object.entries(data.accounts.revenue)
+          .map(([name, amount]) => ({ name, amount }))
+          .sort((a, b) => b.amount - a.amount);
+
+        const consolidatedExpenses = Object.entries(data.accounts.expenses)
+          .map(([name, amount]) => ({ name, amount }))
+          .sort((a, b) => b.amount - a.amount);
+
+        const healthyCompanies = data.summary.profitableCompanies;
+        const problematicCompanies = data.summary.lossCompanies;
+
+        dashboardElement.innerHTML = `
+    <!-- CONSOLIDATED P&L HEADER -->
+    <div class="dashboard-card">
+      <h3>Consolidated Profit & Loss - ${data.companies.length} Companies</h3>
+      
+      <!-- CONSOLIDATED TOTALS -->
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px;">
+        
+        <div style="text-align: center; padding: 20px; background: #f8fff8; border-radius: 6px; border: 1px solid #27ae60;">
+          <div style="font-size: 24px; font-weight: bold; color: #27ae60; margin-bottom: 5px;">
+            $${data.totals.totalRevenue.toLocaleString()}
+          </div>
+          <div style="font-size: 14px; color: #666;">Total Revenue</div>
+          <div style="font-size: 11px; color: #27ae60; margin-top: 5px;">
+            ${consolidatedRevenue.length} revenue streams
+          </div>
+        </div>
+
+        <div style="text-align: center; padding: 20px; background: #fff8f8; border-radius: 6px; border: 1px solid #e74c3c;">
+          <div style="font-size: 24px; font-weight: bold; color: #e74c3c; margin-bottom: 5px;">
+            $${data.totals.totalExpenses.toLocaleString()}
+          </div>
+          <div style="font-size: 14px; color: #666;">Total Expenses</div>
+          <div style="font-size: 11px; color: #e74c3c; margin-top: 5px;">
+            ${consolidatedExpenses.length} expense categories
+          </div>
+        </div>
+
+        <div style="text-align: center; padding: 20px; background: ${
+          data.totals.netProfit >= 0 ? "#f8fff8" : "#fff8f8"
+        }; border-radius: 6px; border: 1px solid ${
+          data.totals.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+        };">
+          <div style="font-size: 24px; font-weight: bold; color: ${
+            data.totals.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+          }; margin-bottom: 5px;">
+            $${data.totals.netProfit.toLocaleString()}
+          </div>
+          <div style="font-size: 14px; color: #666;">Net Profit</div>
+          <div style="font-size: 11px; color: ${
+            data.totals.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+          }; margin-top: 5px;">
+            ${data.totals.netProfit >= 0 ? "Profitable" : "Loss"}
+          </div>
+        </div>
+
+        <div style="text-align: center; padding: 20px; background: #f8fffe; border-radius: 6px; border: 1px solid #3498db;">
+          <div style="font-size: 24px; font-weight: bold; color: #3498db; margin-bottom: 5px;">
+            ${consolidatedMargin.toFixed(1)}%
+          </div>
+          <div style="font-size: 14px; color: #666;">Profit Margin</div>
+          <div style="font-size: 11px; color: #3498db; margin-top: 5px;">
+            ${
+              consolidatedMargin > 15
+                ? "Excellent"
+                : consolidatedMargin > 8
+                ? "Good"
+                : consolidatedMargin > 0
+                ? "Fair"
+                : "Poor"
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- COMPANY PERFORMANCE SUMMARY -->
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px;">
+        <div style="text-align: center; padding: 15px; background: #f8fff8; border-radius: 6px; border: 1px solid #27ae60;">
+          <div style="font-size: 20px; font-weight: bold; color: #27ae60;">${
+            data.summary.profitableCompanies
+          }</div>
+          <div style="font-size: 13px; color: #666;">Profitable Companies</div>
+        </div>
+        <div style="text-align: center; padding: 15px; background: #fffdf5; border-radius: 6px; border: 1px solid #f39c12;">
+          <div style="font-size: 20px; font-weight: bold; color: #f39c12;">${
+            data.summary.breakEvenCompanies
+          }</div>
+          <div style="font-size: 13px; color: #666;">Break-Even</div>
+        </div>
+        <div style="text-align: center; padding: 15px; background: #fff8f8; border-radius: 6px; border: 1px solid #e74c3c;">
+          <div style="font-size: 20px; font-weight: bold; color: #e74c3c;">${
+            data.summary.lossCompanies
+          }</div>
+          <div style="font-size: 13px; color: #666;">Loss-Making</div>
+        </div>
+      </div>
+
+      <!-- CONSOLIDATED ACCOUNTS SUMMARY -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
+        
+        <!-- TOP REVENUE SOURCES -->
+        <div>
+          <h4>Top Revenue Sources</h4>
+          <div style="max-height: 40vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px;">
+            ${consolidatedRevenue
+              .slice(0, 10)
+              .map((account) => {
+                const percentage =
+                  data.totals.totalRevenue > 0
+                    ? (account.amount / data.totals.totalRevenue) * 100
+                    : 0;
+                return `
+                <div style="display: flex; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid #f0f0f0;">
+                  <div style="flex: 1;">
+                    <div style="font-weight: 500; font-size: 13px;">${
+                      account.name
+                    }</div>
+                    <div style="font-size: 11px; color: #666;">${percentage.toFixed(
+                      1
+                    )}% of total</div>
+                  </div>
+                  <div style="font-weight: 600; color: #27ae60;">
+                    $${account.amount.toLocaleString()}
+                  </div>
+                </div>
+              `;
+              })
+              .join("")}
+            ${
+              consolidatedRevenue.length > 10
+                ? `
+              <div style="text-align: center; padding: 8px; color: #666; font-size: 12px;">
+                ... and ${consolidatedRevenue.length - 10} more revenue streams
+              </div>
+            `
+                : ""
+            }
+          </div>
+        </div>
+
+        <!-- TOP EXPENSE CATEGORIES -->
+        <div>
+          <h4>Top Expense Categories</h4>
+          <div style="max-height: 40vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px;">
+            ${consolidatedExpenses
+              .slice(0, 10)
+              .map((account) => {
+                const percentage =
+                  data.totals.totalExpenses > 0
+                    ? (account.amount / data.totals.totalExpenses) * 100
+                    : 0;
+                return `
+                <div style="display: flex; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid #f0f0f0;">
+                  <div style="flex: 1;">
+                    <div style="font-weight: 500; font-size: 13px;">${
+                      account.name
+                    }</div>
+                    <div style="font-size: 11px; color: #666;">${percentage.toFixed(
+                      1
+                    )}% of total</div>
+                  </div>
+                  <div style="font-weight: 600; color: #e74c3c;">
+                    $${account.amount.toLocaleString()}
+                  </div>
+                </div>
+              `;
+              })
+              .join("")}
+            ${
+              consolidatedExpenses.length > 10
+                ? `
+              <div style="text-align: center; padding: 8px; color: #666; font-size: 12px;">
+                ... and ${
+                  consolidatedExpenses.length - 10
+                } more expense categories
+              </div>
+            `
+                : ""
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INDIVIDUAL COMPANY PERFORMANCE -->
+    <div class="dashboard-card">
+      <h3>Individual Company Performance</h3>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 15px;">
+        ${data.companies
+          .map(
+            (company) => `
+          <div style="border: 1px solid ${
+            company.status === "profitable"
+              ? "#27ae60"
+              : company.status === "breakeven"
+              ? "#f39c12"
+              : "#e74c3c"
+          }; border-radius: 6px; padding: 15px; background: ${
+              company.status === "profitable"
+                ? "#f8fff8"
+                : company.status === "breakeven"
+                ? "#fffdf5"
+                : "#fff8f8"
+            };">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <strong style="font-size: 14px;">${company.name}</strong>
+              <div style="font-size: 14px; font-weight: bold; color: ${
+                company.status === "profitable"
+                  ? "#27ae60"
+                  : company.status === "breakeven"
+                  ? "#f39c12"
+                  : "#e74c3c"
+              };">
+                ${company.profitMargin.toFixed(1)}%
+              </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 12px; margin-bottom: 8px;">
+              <div>
+                <div style="color: #666;">Revenue</div>
+                <div style="font-weight: 600;">$${company.revenue.toLocaleString()}</div>
+              </div>
+              <div>
+                <div style="color: #666;">Expenses</div>
+                <div style="font-weight: 600;">$${company.expenses.toLocaleString()}</div>
+              </div>
+              <div>
+                <div style="color: #666;">Net Profit</div>
+                <div style="font-weight: 600; color: ${
+                  company.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+                };">
+                  $${company.netProfit.toLocaleString()}
+                </div>
+              </div>
+            </div>
+            
+            <div style="font-size: 11px; color: #666;">
+              ${company.revenueStreams} revenue stream${
+              company.revenueStreams !== 1 ? "s" : ""
+            } | 
+              ${company.expenseCategories} expense categor${
+              company.expenseCategories !== 1 ? "ies" : "y"
+            } |
+              Status: <span style="color: ${
+                company.status === "profitable"
+                  ? "#27ae60"
+                  : company.status === "breakeven"
+                  ? "#f39c12"
+                  : "#e74c3c"
+              }; font-weight: 500;">
+                ${
+                  company.status === "profitable"
+                    ? "Profitable"
+                    : company.status === "breakeven"
+                    ? "Break-Even"
+                    : "Loss"
+                }
+              </span>
+            </div>
+          </div>
+        `
+          )
+          .join("")}
+      </div>
+
+      <!-- CONSOLIDATED P&L INSIGHTS -->
+      <div style="margin-top: 25px; padding: 15px; background: #f8fffe; border: 1px solid #bee5eb; border-radius: 6px;">
+        <h4 style="color: #0c5460; margin-bottom: 10px;">🏢 Consolidated Performance Insights</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; font-size: 13px;">
+          <div>
+            <strong>Overall Health:</strong>
+            <div style="margin-top: 5px;">
+              ${
+                healthyCompanies === data.companies.length
+                  ? "Excellent - All companies profitable"
+                  : healthyCompanies > problematicCompanies
+                  ? "Good - Majority profitable"
+                  : "Concerning - Multiple companies losing money"
+              }
+            </div>
+          </div>
+          <div>
+            <strong>Revenue Diversity:</strong>
+            <div style="margin-top: 5px;">
+              ${
+                consolidatedRevenue.length > 10
+                  ? "Highly diversified revenue base"
+                  : consolidatedRevenue.length > 5
+                  ? "Moderately diversified"
+                  : "Limited revenue diversification"
+              }
+            </div>
+          </div>
+          <div>
+            <strong>Profit Distribution:</strong>
+            <div style="margin-top: 5px;">
+              ${
+                data.companies.length > 0
+                  ? `Average profit per company: $${Math.round(
+                      data.totals.netProfit / data.companies.length
                     ).toLocaleString()}`
                   : "No data available"
               }
