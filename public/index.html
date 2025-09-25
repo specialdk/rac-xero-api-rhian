@@ -1567,16 +1567,16 @@
           )}
           ${createMetric(
             "Total Liabilities",
-            `$${totals.totalLiabilities.toLocaleString()}`
+            `$${safeTotals.totalLiabilities.toLocaleString()}`
           )}
           ${createMetric(
             "Net Equity",
-            `$${totals.totalEquity.toLocaleString()}`
+            `$${safeTotals.totalEquity.toLocaleString()}`
           )}
           ${createMetric(
             "Net Worth",
             `$${(
-              totals.totalAssets - totals.totalLiabilities
+              safeTotals.totalAssets - safeTotals.totalLiabilities
             ).toLocaleString()}`
           )}
         </div>
@@ -1616,8 +1616,10 @@
           )}
           ${createMetric(
             "Debt/Equity Ratio",
-            totals.totalEquity > 0
-              ? (totals.totalLiabilities / totals.totalEquity).toFixed(2)
+            safeTotals.totalEquity > 0
+              ? (safeTotals.totalLiabilities / safeTotals.totalEquity).toFixed(
+                  2
+                )
               : "N/A"
           )}
           ${createMetric(
@@ -1805,12 +1807,12 @@
               });
 
               // Update consolidated totals
-              consolidatedTotals.totalAssets +=
+              consolidatedsafeTotals.totalAssets +=
                 data.trialBalance.totals.totalAssets;
-              consolidatedTotals.totalLiabilities +=
-                data.trialBalance.totals.totalLiabilities;
-              consolidatedTotals.totalEquity +=
-                data.trialBalance.totals.totalEquity;
+              consolidatedsafeTotals.totalLiabilities +=
+                data.trialBalance.safeTotals.totalLiabilities;
+              consolidatedsafeTotals.totalEquity +=
+                data.trialBalance.safeTotals.totalEquity;
 
               if (data.balanceCheck.debitsEqualCredits) {
                 balancedCompanies++;
@@ -1862,6 +1864,20 @@
       ) {
         const dashboardElement = document.getElementById("dashboardData");
 
+        // Add safety checks to prevent undefined errors
+        const safeAssets = assets || [];
+        const safeLiabilities = liabilities || [];
+        const safeEquity = equity || [];
+        const safeCompanies = companies || [];
+        const safeTotals = totals || {
+          totalAssets: 0,
+          totalLiabilities: 0,
+          totalEquity: 0,
+        };
+        const safeBalancedCount = balancedCount || 0;
+        const safeTotalCount = totalCount || 0;
+        const safeIsBalanced = isBalanced !== undefined ? isBalanced : false;
+
         dashboardElement.innerHTML = `
       <!-- CONSOLIDATED TRIAL BALANCE HEADER -->
       <div class="dashboard-card" style="margin-bottom: 20px;">
@@ -1875,7 +1891,7 @@
             Companies: ${totalCount} | 
             Balanced: ${balancedCount}/${totalCount} |
             Total Accounts: ${
-              assets.length + liabilities.length + equity.length
+              safeAssets.length + safeLiabilities.length + safeEquity.length
             }
           </span>
         </div>
@@ -1886,11 +1902,11 @@
           <!-- ASSETS COLUMN -->
           <div>
             <h4 style="color: #27ae60; border-bottom: 2px solid #27ae60; padding-bottom: 8px;">
-              Assets (${assets.length} accounts)
+              Assets (${safeAssets.length} accounts)
             </h4>
             <div style="max-height: 50vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px;">
               ${
-                assets.length > 0
+                safeAssets.length > 0
                   ? assets
                       .map(
                         (account) => `
@@ -1916,11 +1932,11 @@
           <!-- LIABILITIES COLUMN -->
           <div>
             <h4 style="color: #e74c3c; border-bottom: 2px solid #e74c3c; padding-bottom: 8px;">
-              Liabilities (${liabilities.length} accounts)
+              Liabilities (${safeLiabilities.length} accounts)
             </h4>
             <div style="max-height: 50vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px;">
               ${
-                liabilities.length > 0
+                safeLiabilities.length > 0
                   ? liabilities
                       .map(
                         (account) => `
@@ -1940,7 +1956,7 @@
             </div>
             <div style="border-top: 3px solid #e74c3c; padding: 12px; font-weight: bold; color: #e74c3c; background: #fff8f8;">
               Total Liabilities: $${Math.abs(
-                totals.totalLiabilities
+                safeTotals.totalLiabilities
               ).toLocaleString()}
             </div>
           </div>
@@ -1948,11 +1964,11 @@
           <!-- EQUITY COLUMN -->
           <div>
             <h4 style="color: #3498db; border-bottom: 2px solid #3498db; padding-bottom: 8px;">
-              Equity (${equity.length} accounts)
+              Equity (${safeEquity.length} accounts)
             </h4>
             <div style="max-height: 50vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px;">
               ${
-                equity.length > 0
+                safeEquity.length > 0
                   ? equity
                       .map(
                         (account) => `
@@ -1971,7 +1987,7 @@
               }
             </div>
             <div style="border-top: 3px solid #3498db; padding: 12px; font-weight: bold; color: #3498db; background: #f8fffe;">
-              Total Equity: $${totals.totalEquity.toLocaleString()}
+              Total Equity: $${safeTotals.totalEquity.toLocaleString()}
             </div>
           </div>
         </div>
@@ -2024,9 +2040,9 @@
                 <div style="font-size: 12px; color: #666; margin-top: 4px;">
                   Assets: $${company.trialBalance.totals.totalAssets.toLocaleString()} | 
                   Liabilities: $${Math.abs(
-                    company.trialBalance.totals.totalLiabilities
+                    company.trialBalance.safeTotals.totalLiabilities
                   ).toLocaleString()} | 
-                  Equity: $${company.trialBalance.totals.totalEquity.toLocaleString()}
+                  Equity: $${company.trialBalance.safeTotals.totalEquity.toLocaleString()}
                 </div>
               </div>
               <div style="text-align: right;">
@@ -2221,18 +2237,18 @@
       }
 
       function updateConsolidatedTotals(consolidatedData, data) {
-        consolidatedData.consolidated.totals.totalAssets +=
+        consolidatedData.consolidated.safeTotals.totalAssets +=
           data.trialBalance.totals.totalAssets;
-        consolidatedData.consolidated.totals.totalLiabilities +=
-          data.trialBalance.totals.totalLiabilities;
-        consolidatedData.consolidated.totals.totalEquity +=
-          data.trialBalance.totals.totalEquity;
+        consolidatedData.consolidated.safeTotals.totalLiabilities +=
+          data.trialBalance.safeTotals.totalLiabilities;
+        consolidatedData.consolidated.safeTotals.totalEquity +=
+          data.trialBalance.safeTotals.totalEquity;
 
         consolidatedData.summary.totalCompanies++;
         consolidatedData.summary.totalAccounts +=
-          data.trialBalance.assets.length +
-          data.trialBalance.liabilities.length +
-          data.trialBalance.equity.length;
+          data.trialBalance.safeAssets.length +
+          data.trialBalance.safeLiabilities.length +
+          data.trialBalance.safeEquity.length;
 
         if (data.balanceCheck.debitsEqualCredits) {
           consolidatedData.summary.balancedCompanies++;
