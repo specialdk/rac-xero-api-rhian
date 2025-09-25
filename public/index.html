@@ -1932,10 +1932,15 @@
       async function loadConsolidatedTrialBalance() {
         const consolidatedData = {
           companies: [],
-          totals: { totalAssets: 0, totalLiabilities: 0, totalEquity: 0 },
-          balancedCount: 0,
-          totalCompanies: activeCompanyFilters.length,
-          accounts: { assets: {}, liabilities: {}, equity: {} },
+          consolidated: {
+            totals: { totalAssets: 0, totalLiabilities: 0, totalEquity: 0 },
+            balanceCheck: { debitsEqualCredits: true },
+          },
+          summary: {
+            totalCompanies: 0,
+            totalAccounts: 0,
+            balancedCompanies: 0,
+          },
         };
 
         // Load data from each selected company
@@ -1957,36 +1962,40 @@
               ""
             );
 
-            // Track company status
             consolidatedData.companies.push({
-              name: companyName,
-              balanced: data.balanceCheck.debitsEqualCredits,
-              difference: data.balanceCheck.difference || 0,
-              totals: data.trialBalance.totals,
+              companyName: companyName,
+              sections: {
+                assets: { accounts: data.trialBalance.assets || [] },
+                liabilities: { accounts: data.trialBalance.liabilities || [] },
+                equity: { accounts: data.trialBalance.equity || [] },
+              },
+              balanceCheck: data.balanceCheck || {
+                debitsEqualCredits: true,
+                difference: 0,
+              },
             });
 
-            // Aggregate totals
-            consolidatedData.totals.totalAssets +=
-              data.trialBalance.totals.totalAssets;
-            consolidatedData.totals.totalLiabilities +=
-              data.trialBalance.totals.totalLiabilities;
-            consolidatedData.totals.totalEquity +=
-              data.trialBalance.totals.totalEquity;
+            // Update consolidated totals
+            const totals = data.trialBalance.totals || {};
+            consolidatedData.consolidated.totals.totalAssets +=
+              totals.totalAssets || 0;
+            consolidatedData.consolidated.totals.totalLiabilities +=
+              totals.totalLiabilities || 0;
+            consolidatedData.consolidated.totals.totalEquity +=
+              totals.totalEquity || 0;
 
-            if (data.balanceCheck.debitsEqualCredits) {
-              consolidatedData.balancedCount++;
+            // Update summary
+            consolidatedData.summary.totalCompanies++;
+            consolidatedData.summary.totalAccounts +=
+              (data.trialBalance.assets?.length || 0) +
+              (data.trialBalance.liabilities?.length || 0) +
+              (data.trialBalance.equity?.length || 0);
+
+            if (data.balanceCheck?.debitsEqualCredits !== false) {
+              consolidatedData.summary.balancedCompanies++;
+            } else {
+              consolidatedData.consolidated.balanceCheck.debitsEqualCredits = false;
             }
-
-            // Aggregate accounts by category
-            ["assets", "liabilities", "equity"].forEach((category) => {
-              data.trialBalance[category].forEach((account) => {
-                if (!consolidatedData.accounts[category][account.name]) {
-                  consolidatedData.accounts[category][account.name] = 0;
-                }
-                consolidatedData.accounts[category][account.name] +=
-                  account.balance;
-              });
-            });
           }
         }
 
@@ -1998,7 +2007,7 @@
       function renderConsolidatedTrialBalance(data) {
         const dashboardElement = document.getElementById("dashboardData");
 
-        if (!data || !data.companies) {
+        if (!data || !data.companies || data.companies.length === 0) {
           dashboardElement.innerHTML = `
       <div style="text-align: center; padding: 40px; color: #666;">
         <h3>No Trial Balance Data Available</h3>
@@ -2018,12 +2027,17 @@
         // Aggregate accounts across all companies
         data.companies.forEach((company) => {
           ["assets", "liabilities", "equity"].forEach((category) => {
-            if (company.sections && company.sections[category]) {
+            if (
+              company.sections &&
+              company.sections[category] &&
+              company.sections[category].accounts
+            ) {
               company.sections[category].accounts.forEach((account) => {
                 if (!consolidatedAccounts[category][account.name]) {
                   consolidatedAccounts[category][account.name] = 0;
                 }
-                consolidatedAccounts[category][account.name] += account.balance;
+                consolidatedAccounts[category][account.name] +=
+                  account.balance || 0;
               });
             }
           });
@@ -2044,8 +2058,19 @@
           .map(([name, balance]) => ({ name, balance }))
           .sort((a, b) => b.balance - a.balance);
 
-        const totals = data.consolidated.totals;
-        const balanceCheck = data.consolidated.balanceCheck;
+        // Safe access to totals with fallbacks
+        const totals = data.consolidated?.totals || {
+          totalAssets: 0,
+          totalLiabilities: 0,
+          totalEquity: 0,
+        };
+        const balanceCheck = data.consolidated?.balanceCheck || {
+          debitsEqualCredits: true,
+        };
+        const summary = data.summary || {
+          totalCompanies: 0,
+          balancedCompanies: 0,
+        };
         const isBalanced = balanceCheck.debitsEqualCredits;
 
         // Helper function to render account list with expand/collapse
@@ -2073,69 +2098,81 @@
         </h4>
         
         <div style="border: 1px solid #e0e0e0; border-radius: 4px; max-height: 50vh; overflow-y: auto;">
-          <!-- ALWAYS VISIBLE ACCOUNTS -->
-          ${displayAccounts
-            .map(
-              (account) => `
-            <div style="display: flex; justify-content: space-between; padding: 6px 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px;">
-              <span style="flex: 1; margin-right: 10px;">${account.name}</span>
-              <span style="font-weight: 600; min-width: 100px; text-align: right;">
-                $${
-                  category === "liabilities"
-                    ? Math.abs(account.balance).toLocaleString()
-                    : account.balance.toLocaleString()
-                }
-              </span>
-            </div>
-          `
-            )
-            .join("")}
-          
           ${
-            hiddenAccounts.length > 0
+            displayAccounts.length === 0
               ? `
-            <!-- EXPANDABLE SECTION -->
-            <div id="${expandedId}" style="display: none;">
-              ${hiddenAccounts
-                .map(
-                  (account) => `
-                <div style="display: flex; justify-content: space-between; padding: 6px 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px; background: ${
-                  colors.bg
-                };">
-                  <span style="flex: 1; margin-right: 10px;">${
-                    account.name
-                  }</span>
-                  <span style="font-weight: 600; min-width: 100px; text-align: right;">
-                    $${
-                      category === "liabilities"
-                        ? Math.abs(account.balance).toLocaleString()
-                        : account.balance.toLocaleString()
-                    }
-                  </span>
-                </div>
-              `
-                )
-                .join("")}
-            </div>
-            
-            <!-- EXPAND/COLLAPSE BUTTON -->
-            <div style="text-align: center; padding: 10px; background: #f8f9fa; border-top: 1px solid #e0e0e0;">
-              <button 
-                id="${buttonId}"
-                onclick="toggleAccountExpansion('${category}')" 
-                style="background: ${
-                  colors.main
-                }; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: all 0.2s;"
-                onmouseover="this.style.opacity='0.8'" 
-                onmouseout="this.style.opacity='1'">
-                <span id="${buttonId}-text">Show All ${
-                  hiddenAccounts.length
-                } More</span>
-                <span id="${buttonId}-icon" style="margin-left: 5px;">▼</span>
-              </button>
+            <div style="text-align: center; padding: 30px; color: #666;">
+              No ${category} accounts found
             </div>
           `
-              : ""
+              : `
+            <!-- ALWAYS VISIBLE ACCOUNTS -->
+            ${displayAccounts
+              .map(
+                (account) => `
+              <div style="display: flex; justify-content: space-between; padding: 6px 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px;">
+                <span style="flex: 1; margin-right: 10px;">${
+                  account.name
+                }</span>
+                <span style="font-weight: 600; min-width: 100px; text-align: right;">
+                  $${
+                    category === "liabilities"
+                      ? Math.abs(account.balance).toLocaleString()
+                      : account.balance.toLocaleString()
+                  }
+                </span>
+              </div>
+            `
+              )
+              .join("")}
+            
+            ${
+              hiddenAccounts.length > 0
+                ? `
+              <!-- EXPANDABLE SECTION -->
+              <div id="${expandedId}" style="display: none;">
+                ${hiddenAccounts
+                  .map(
+                    (account) => `
+                  <div style="display: flex; justify-content: space-between; padding: 6px 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px; background: ${
+                    colors.bg
+                  };">
+                    <span style="flex: 1; margin-right: 10px;">${
+                      account.name
+                    }</span>
+                    <span style="font-weight: 600; min-width: 100px; text-align: right;">
+                      $${
+                        category === "liabilities"
+                          ? Math.abs(account.balance).toLocaleString()
+                          : account.balance.toLocaleString()
+                      }
+                    </span>
+                  </div>
+                `
+                  )
+                  .join("")}
+              </div>
+              
+              <!-- EXPAND/COLLAPSE BUTTON -->
+              <div style="text-align: center; padding: 10px; background: #f8f9fa; border-top: 1px solid #e0e0e0;">
+                <button 
+                  id="${buttonId}"
+                  onclick="toggleAccountExpansion('${category}')" 
+                  style="background: ${
+                    colors.main
+                  }; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: all 0.2s;"
+                  onmouseover="this.style.opacity='0.8'" 
+                  onmouseout="this.style.opacity='1'">
+                  <span id="${buttonId}-text">Show All ${
+                    hiddenAccounts.length
+                  } More</span>
+                  <span id="${buttonId}-icon" style="margin-left: 5px;">▼</span>
+                </button>
+              </div>
+            `
+                : ""
+            }
+          `
           }
         </div>
         
@@ -2147,16 +2184,14 @@
           Total ${category.charAt(0).toUpperCase() + category.slice(1)}: 
           $${
             category === "liabilities"
-              ? Math.abs(
+              ? Math.abs(totals.totalLiabilities || 0).toLocaleString()
+              : (
                   totals[
                     `total${
                       category.charAt(0).toUpperCase() + category.slice(1)
                     }`
-                  ]
+                  ] || 0
                 ).toLocaleString()
-              : totals[
-                  `total${category.charAt(0).toUpperCase() + category.slice(1)}`
-                ].toLocaleString()
           }
         </div>
       </div>
@@ -2173,10 +2208,8 @@
           ${isBalanced ? "✅ Balanced" : "⚠️ Out of Balance"}
         </span>
         <span style="margin-left: 20px; font-size: 14px; color: #666;">
-          Companies: ${data.summary.totalCompanies} | 
-          Balanced: ${data.summary.balancedCompanies}/${
-          data.summary.totalCompanies
-        } |
+          Companies: ${summary.totalCompanies} | 
+          Balanced: ${summary.balancedCompanies}/${summary.totalCompanies} |
           Total Accounts: ${
             assetAccounts.length +
             liabilityAccounts.length +
@@ -2207,7 +2240,7 @@
               ${
                 isBalanced
                   ? "All companies balanced ✅"
-                  : `${data.summary.balancedCompanies}/${data.summary.totalCompanies} companies balanced ⚠️`
+                  : `${summary.balancedCompanies}/${summary.totalCompanies} companies balanced ⚠️`
               }
             </span>
           </div>
@@ -2230,23 +2263,9 @@
       <div style="padding: 0 20px 20px 20px;">
         ${data.companies
           .map((company) => {
-            const companyData = data.companies.find(
-              (c) => c.companyName === company.companyName
-            );
-            const companyTotals = {
-              assets: Object.values(
-                company.sections.assets?.accounts || {}
-              ).reduce((sum, acc) => sum + (acc.balance || 0), 0),
-              liabilities: Object.values(
-                company.sections.liabilities?.accounts || {}
-              ).reduce((sum, acc) => sum + (acc.balance || 0), 0),
-              equity: Object.values(
-                company.sections.equity?.accounts || {}
-              ).reduce((sum, acc) => sum + (acc.balance || 0), 0),
-            };
-
-            // Assume balanced if we don't have specific balance check data
-            const isCompanyBalanced = true; // You may need to pass this data from the backend
+            const isCompanyBalanced =
+              company.balanceCheck?.debitsEqualCredits !== false;
+            const difference = company.balanceCheck?.difference || 0;
 
             return `
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid ${
@@ -2255,11 +2274,11 @@
               <div>
                 <strong style="font-size: 16px;">${company.companyName}</strong>
                 <div style="font-size: 12px; color: #666; margin-top: 4px;">
-                  Assets: $${companyTotals.assets.toLocaleString()} | 
-                  Liabilities: $${Math.abs(
-                    companyTotals.liabilities
-                  ).toLocaleString()} | 
-                  Equity: $${companyTotals.equity.toLocaleString()}
+                  ${
+                    (company.sections.assets?.accounts?.length || 0) +
+                    (company.sections.liabilities?.accounts?.length || 0) +
+                    (company.sections.equity?.accounts?.length || 0)
+                  } accounts
                 </div>
               </div>
               <div style="text-align: right;">
@@ -2268,6 +2287,15 @@
                 };">
                   ${isCompanyBalanced ? "✅ Balanced" : "⚠️ Out of Balance"}
                 </div>
+                ${
+                  !isCompanyBalanced && Math.abs(difference) > 0
+                    ? `
+                  <div style="font-size: 11px; color: #e74c3c; margin-top: 2px;">
+                    Difference: $${Math.abs(difference).toLocaleString()}
+                  </div>
+                `
+                    : ""
+                }
               </div>
             </div>
           `;
@@ -2276,18 +2304,18 @@
       </div>
 
       ${
-        data.summary.balancedCompanies < data.summary.totalCompanies
+        summary.balancedCompanies < summary.totalCompanies
           ? `
         <div style="position: sticky; bottom: 0; background: white; margin: 0 -20px -20px -20px; padding: 15px; border-top: 1px solid #e0e0e0;">
           <div style="padding: 12px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px;">
             <strong>⚠️ Action Required:</strong> 
-            ${data.summary.totalCompanies - data.summary.balancedCompanies} ${
-              data.summary.totalCompanies - data.summary.balancedCompanies === 1
+            ${summary.totalCompanies - summary.balancedCompanies} ${
+              summary.totalCompanies - summary.balancedCompanies === 1
                 ? "company has"
                 : "companies have"
             } trial balance discrepancies. 
             Review journal entries and account reconciliations for the affected ${
-              data.summary.totalCompanies - data.summary.balancedCompanies === 1
+              summary.totalCompanies - summary.balancedCompanies === 1
                 ? "company"
                 : "companies"
             }.
