@@ -2006,10 +2006,13 @@
         </div>
       </div>
 
-      <!-- INDIVIDUAL COMPANY STATUS - FIXED SCROLLING -->
-      <div class="dashboard-card">
-        <h3>Individual Company Trial Balance Status</h3>
-        <div style="max-height: 40vh; overflow-y: scroll; border: 1px solid #e0e0e0; border-radius: 6px; padding: 10px;">
+      // ====== SCROLL FIX FOR TRIAL BALANCE ======
+// Replace the "Individual Company Trial Balance Status" section in your TB function:
+
+      <!-- INDIVIDUAL COMPANY STATUS - FIXED CARD-LEVEL SCROLLING -->
+      <div class="dashboard-card" style="max-height: 60vh; overflow-y: scroll; border: 1px solid #e0e0e0;">
+        <h3 style="position: sticky; top: 0; background: white; padding: 15px; margin: -20px -20px 10px -20px; border-bottom: 1px solid #e0e0e0;">Individual Company Trial Balance Status</h3>
+        <div style="padding: 0 20px 20px 20px;">
           ${companies
             .map(
               (company) => `
@@ -2049,23 +2052,123 @@
             )
             .join("")}
         </div>
+
         ${
           balancedCount < totalCount
             ? `
-          <div style="margin-top: 15px; padding: 12px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px;">
-            <strong>⚠️ Action Required:</strong> 
-            ${totalCount - balancedCount} ${
+          <div style="position: sticky; bottom: 0; background: white; margin: 0 -20px -20px -20px; padding: 15px; border-top: 1px solid #e0e0e0;">
+            <div style="padding: 12px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px;">
+              <strong>⚠️ Action Required:</strong> 
+              ${totalCount - balancedCount} ${
                 totalCount - balancedCount === 1
                   ? "company has"
                   : "companies have"
               } trial balance discrepancies. 
-            Review journal entries and account reconciliations for the affected ${
-              totalCount - balancedCount === 1 ? "company" : "companies"
-            }.
+              Review journal entries and account reconciliations for the affected ${
+                totalCount - balancedCount === 1 ? "company" : "companies"
+              }.
+            </div>
           </div>
         `
             : ""
         }
+      </div>
+
+// ====== SCROLL FIX FOR CASH FLOW ======
+// Replace the "Individual Company Cash Positions" section in your Cash Flow function:
+
+      <!-- INDIVIDUAL COMPANY CASH POSITIONS - FIXED CARD-LEVEL SCROLLING -->
+      <div class="dashboard-card" style="max-height: 60vh; overflow-y: scroll; border: 1px solid #e0e0e0;">
+        <h3 style="position: sticky; top: 0; background: white; padding: 15px; margin: -20px -20px 10px -20px; border-bottom: 1px solid #e0e0e0;">Individual Company Cash Positions</h3>
+        <div style="padding: 0 20px 20px 20px;">
+          ${companies
+            .map((company) => {
+              if (company.error) {
+                return `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; margin: 10px 0; border-radius: 6px; border: 1px solid #e74c3c; background: #fff8f8;">
+                  <div>
+                    <strong style="font-size: 16px; color: #e74c3c;">${company.companyName}</strong>
+                    <div style="font-size: 12px; color: #e74c3c; margin-top: 4px;">
+                      ${company.errorMessage}
+                    </div>
+                  </div>
+                  <div style="color: #e74c3c; font-weight: bold;">❌ Error</div>
+                </div>
+              `;
+              }
+
+              return `
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; margin: 10px 0; border-radius: 6px; border: 1px solid ${
+                company.totalCash > 0 ? "#27ae60" : "#e74c3c"
+              }; background: ${company.totalCash > 0 ? "#f8fff8" : "#fff8f8"};">
+                <div style="flex: 1;">
+                  <strong style="font-size: 16px;">${
+                    company.companyName
+                  }</strong>
+                  <div style="font-size: 12px; color: #666; margin-top: 4px;">
+                    ${company.bankAccounts.length} ${
+                company.bankAccounts.length === 1
+                  ? "bank account"
+                  : "bank accounts"
+              }
+                    ${
+                      company.bankAccounts.length > 0
+                        ? ": " +
+                          company.bankAccounts.map((acc) => acc.name).join(", ")
+                        : ""
+                    }
+                  </div>
+                  ${
+                    company.bankAccounts.length > 3
+                      ? `
+                    <div style="font-size: 11px; color: #999; margin-top: 2px;">
+                      ${company.bankAccounts.length - 3} additional accounts...
+                    </div>
+                  `
+                      : ""
+                  }
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-weight: bold; font-size: 20px; color: ${
+                    company.totalCash > 0 ? "#27ae60" : "#e74c3c"
+                  };">
+                    $${company.totalCash.toLocaleString()}
+                  </div>
+                  <div style="font-size: 12px; color: ${
+                    company.totalCash > 0 ? "#27ae60" : "#e74c3c"
+                  };">
+                    ${company.totalCash > 0 ? "✅ Positive Cash" : "⚠️ No Cash"}
+                  </div>
+                </div>
+              </div>
+            `;
+            })
+            .join("")}
+        </div>
+
+        <!-- CASH FLOW INSIGHTS - STICKY FOOTER -->
+        <div style="position: sticky; bottom: 0; background: white; margin: 0 -20px -20px -20px; padding: 15px; border-top: 1px solid #e0e0e0;">
+          ${
+            totals.companiesWithZeroCash > 0
+              ? `
+            <div style="padding: 15px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px;">
+              <strong>⚠️ Cash Flow Alert:</strong> 
+              ${totals.companiesWithZeroCash} ${
+                  totals.companiesWithZeroCash === 1
+                    ? "company has"
+                    : "companies have"
+                } zero or minimal cash positions. 
+              Consider reviewing cash flow management and bank account connectivity for these entities.
+            </div>
+          `
+              : `
+            <div style="padding: 15px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 6px;">
+              <strong>✅ Cash Position Healthy:</strong> 
+              All selected companies maintain positive cash balances across ${totals.totalBankAccounts} bank accounts.
+            </div>
+          `
+          }
+        </div>
       </div>
     `;
       }
@@ -2163,134 +2266,160 @@
       </div>
     `;
       }
-      
 
-  // ====== CASH FLOW IMPLEMENTATION ======
-  // Replace the placeholder loadCashFlowData() function with this complete implementation
+      // ====== CASH FLOW IMPLEMENTATION ======
+      // Replace the placeholder loadCashFlowData() function with this complete implementation
 
-  async function loadCashFlowData() {
-    if (activeCompanyFilters.length === 0) {
-      showNoCompaniesSelected();
-      return;
-    }
+      async function loadCashFlowData() {
+        if (activeCompanyFilters.length === 0) {
+          showNoCompaniesSelected();
+          return;
+        }
 
-    const dashboardElement = document.getElementById("dashboardData");
-    dashboardElement.innerHTML = `
+        const dashboardElement = document.getElementById("dashboardData");
+        dashboardElement.innerHTML = `
       <div class="loading">
         <div class="loading-spinner"></div>
         Loading cash flow data from ${activeCompanyFilters.length} companies...
       </div>
     `;
 
-    try {
-      const cashData = [];
-      const consolidatedBankAccounts = {};
-      let consolidatedTotals = {
-        totalCash: 0,
-        totalBankAccounts: 0,
-        companiesWithCash: 0,
-        companiesWithZeroCash: 0
-      };
-
-      // Load cash position for each selected company
-      for (const tenantId of activeCompanyFilters) {
-        const connectedCompany = connectedCompanies.find(c => c.tenantId === tenantId);
-        if (!connectedCompany) continue;
-
-        const orgName = getOrganizationName(connectedCompany.tenantName);
-        const response = await fetchWithErrorHandling("/api/cash-position", { organizationName: orgName });
-
-        if (response && response.ok) {
-          const data = await response.json();
-          
-          const companyData = {
-            companyName: connectedCompany.tenantName.replace("Rirratjingu ", ""),
-            tenantName: data.tenantName,
-            totalCash: data.totalCash || 0,
-            bankAccounts: data.bankAccounts || [],
-            error: false
+        try {
+          const cashData = [];
+          const consolidatedBankAccounts = {};
+          let consolidatedTotals = {
+            totalCash: 0,
+            totalBankAccounts: 0,
+            companiesWithCash: 0,
+            companiesWithZeroCash: 0,
           };
 
-          cashData.push(companyData);
+          // Load cash position for each selected company
+          for (const tenantId of activeCompanyFilters) {
+            const connectedCompany = connectedCompanies.find(
+              (c) => c.tenantId === tenantId
+            );
+            if (!connectedCompany) continue;
 
-          // Update consolidated totals
-          consolidatedTotals.totalCash += companyData.totalCash;
-          consolidatedTotals.totalBankAccounts += companyData.bankAccounts.length;
-          
-          if (companyData.totalCash > 0) {
-            consolidatedTotals.companiesWithCash++;
-          } else {
-            consolidatedTotals.companiesWithZeroCash++;
-          }
+            const orgName = getOrganizationName(connectedCompany.tenantName);
+            const response = await fetchWithErrorHandling(
+              "/api/cash-position",
+              { organizationName: orgName }
+            );
 
-          // Consolidate bank accounts by name across companies
-          if (companyData.bankAccounts.length > 0) {
-            companyData.bankAccounts.forEach(account => {
-              const accountKey = account.name || 'Unnamed Account';
-              
-              if (!consolidatedBankAccounts[accountKey]) {
-                consolidatedBankAccounts[accountKey] = {
-                  name: accountKey,
-                  totalBalance: 0,
-                  companies: [],
-                  accountCount: 0
-                };
+            if (response && response.ok) {
+              const data = await response.json();
+
+              const companyData = {
+                companyName: connectedCompany.tenantName.replace(
+                  "Rirratjingu ",
+                  ""
+                ),
+                tenantName: data.tenantName,
+                totalCash: data.totalCash || 0,
+                bankAccounts: data.bankAccounts || [],
+                error: false,
+              };
+
+              cashData.push(companyData);
+
+              // Update consolidated totals
+              consolidatedTotals.totalCash += companyData.totalCash;
+              consolidatedTotals.totalBankAccounts +=
+                companyData.bankAccounts.length;
+
+              if (companyData.totalCash > 0) {
+                consolidatedTotals.companiesWithCash++;
+              } else {
+                consolidatedTotals.companiesWithZeroCash++;
               }
 
-              consolidatedBankAccounts[accountKey].totalBalance += account.balance;
-              consolidatedBankAccounts[accountKey].accountCount++;
-              consolidatedBankAccounts[accountKey].companies.push({
-                company: companyData.companyName,
-                balance: account.balance,
-                code: account.code
+              // Consolidate bank accounts by name across companies
+              if (companyData.bankAccounts.length > 0) {
+                companyData.bankAccounts.forEach((account) => {
+                  const accountKey = account.name || "Unnamed Account";
+
+                  if (!consolidatedBankAccounts[accountKey]) {
+                    consolidatedBankAccounts[accountKey] = {
+                      name: accountKey,
+                      totalBalance: 0,
+                      companies: [],
+                      accountCount: 0,
+                    };
+                  }
+
+                  consolidatedBankAccounts[accountKey].totalBalance +=
+                    account.balance;
+                  consolidatedBankAccounts[accountKey].accountCount++;
+                  consolidatedBankAccounts[accountKey].companies.push({
+                    company: companyData.companyName,
+                    balance: account.balance,
+                    code: account.code,
+                  });
+                });
+              }
+            } else {
+              // Add error entry for failed companies
+              cashData.push({
+                companyName: connectedCompany.tenantName.replace(
+                  "Rirratjingu ",
+                  ""
+                ),
+                error: true,
+                errorMessage: "Failed to load cash position data",
               });
-            });
+            }
           }
-        } else {
-          // Add error entry for failed companies
-          cashData.push({
-            companyName: connectedCompany.tenantName.replace("Rirratjingu ", ""),
-            error: true,
-            errorMessage: "Failed to load cash position data"
-          });
+
+          // Convert consolidated bank accounts to sorted array
+          const sortedBankAccounts = Object.values(
+            consolidatedBankAccounts
+          ).sort((a, b) => b.totalBalance - a.totalBalance);
+
+          renderCashFlowView(cashData, sortedBankAccounts, consolidatedTotals);
+        } catch (error) {
+          showErrorState(error);
         }
       }
 
-      // Convert consolidated bank accounts to sorted array
-      const sortedBankAccounts = Object.values(consolidatedBankAccounts)
-        .sort((a, b) => b.totalBalance - a.totalBalance);
+      function renderCashFlowView(companies, consolidatedBankAccounts, totals) {
+        const dashboardElement = document.getElementById("dashboardData");
 
-      renderCashFlowView(cashData, sortedBankAccounts, consolidatedTotals);
+        const cashHealthStatus =
+          totals.companiesWithZeroCash === 0
+            ? "healthy"
+            : totals.companiesWithZeroCash >= totals.companiesWithCash
+            ? "critical"
+            : "warning";
 
-    } catch (error) {
-      showErrorState(error);
-    }
-  }
-
-  function renderCashFlowView(companies, consolidatedBankAccounts, totals) {
-    const dashboardElement = document.getElementById("dashboardData");
-    
-    const cashHealthStatus = totals.companiesWithZeroCash === 0 ? 'healthy' : 
-                           totals.companiesWithZeroCash >= totals.companiesWithCash ? 'critical' : 'warning';
-    
-    dashboardElement.innerHTML = `
+        dashboardElement.innerHTML = `
       <!-- CONSOLIDATED CASH POSITION HEADER -->
       <div class="dashboard-card" style="margin-bottom: 20px;">
         <h3>Consolidated Cash Position - All Selected Companies</h3>
         <div style="margin-bottom: 15px;">
           <strong>Total Cash:</strong> 
-          <span style="font-size: 18px; font-weight: bold; color: ${totals.totalCash > 0 ? '#27ae60' : '#e74c3c'};">
+          <span style="font-size: 18px; font-weight: bold; color: ${
+            totals.totalCash > 0 ? "#27ae60" : "#e74c3c"
+          };">
             $${totals.totalCash.toLocaleString()}
           </span>
           <span style="margin-left: 20px; font-size: 14px; color: #666;">
             Companies: ${companies.length} | 
             Bank Accounts: ${totals.totalBankAccounts} |
             Cash Status: <span style="color: ${
-              cashHealthStatus === 'healthy' ? '#27ae60' : 
-              cashHealthStatus === 'warning' ? '#f39c12' : '#e74c3c'
+              cashHealthStatus === "healthy"
+                ? "#27ae60"
+                : cashHealthStatus === "warning"
+                ? "#f39c12"
+                : "#e74c3c"
             };">
-              ${cashHealthStatus === 'healthy' ? '✅ Healthy' : 
-                cashHealthStatus === 'warning' ? '⚠️ Mixed' : '❌ Critical'}
+              ${
+                cashHealthStatus === "healthy"
+                  ? "✅ Healthy"
+                  : cashHealthStatus === "warning"
+                  ? "⚠️ Mixed"
+                  : "❌ Critical"
+              }
             </span>
           </span>
         </div>
@@ -2318,8 +2447,14 @@
             <div style="font-size: 12px; color: #666; margin-top: 4px;">Companies with Positive Cash</div>
           </div>
 
-          <div style="text-align: center; padding: 15px; background: ${totals.companiesWithZeroCash > 0 ? '#fff8f8' : '#f8f9fa'}; border-radius: 6px; border: 1px solid ${totals.companiesWithZeroCash > 0 ? '#e74c3c' : '#dee2e6'};">
-            <div style="font-size: 24px; font-weight: bold; color: ${totals.companiesWithZeroCash > 0 ? '#e74c3c' : '#495057'};">
+          <div style="text-align: center; padding: 15px; background: ${
+            totals.companiesWithZeroCash > 0 ? "#fff8f8" : "#f8f9fa"
+          }; border-radius: 6px; border: 1px solid ${
+          totals.companiesWithZeroCash > 0 ? "#e74c3c" : "#dee2e6"
+        };">
+            <div style="font-size: 24px; font-weight: bold; color: ${
+              totals.companiesWithZeroCash > 0 ? "#e74c3c" : "#495057"
+            };">
               ${totals.companiesWithZeroCash}
             </div>
             <div style="font-size: 12px; color: #666; margin-top: 4px;">Companies with Zero/Low Cash</div>
@@ -2327,46 +2462,73 @@
         </div>
 
         <!-- CONSOLIDATED BANK ACCOUNTS -->
-        ${consolidatedBankAccounts.length > 0 ? `
-          <h4 style="margin-bottom: 10px;">Bank Accounts Summary (${consolidatedBankAccounts.length} account types)</h4>
+        ${
+          consolidatedBankAccounts.length > 0
+            ? `
+          <h4 style="margin-bottom: 10px;">Bank Accounts Summary (${
+            consolidatedBankAccounts.length
+          } account types)</h4>
           <div style="max-height: 50vh; overflow-y: scroll; border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px;">
-            ${consolidatedBankAccounts.map(account => `
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; margin: 8px 0; border-radius: 6px; background: ${account.totalBalance > 0 ? '#f8fff8' : '#fff8f8'}; border: 1px solid ${account.totalBalance > 0 ? '#27ae60' : '#e74c3c'};">
+            ${consolidatedBankAccounts
+              .map(
+                (account) => `
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; margin: 8px 0; border-radius: 6px; background: ${
+                account.totalBalance > 0 ? "#f8fff8" : "#fff8f8"
+              }; border: 1px solid ${
+                  account.totalBalance > 0 ? "#27ae60" : "#e74c3c"
+                };">
                 <div style="flex: 1;">
-                  <div style="font-weight: 600; font-size: 16px;">${account.name}</div>
+                  <div style="font-weight: 600; font-size: 16px;">${
+                    account.name
+                  }</div>
                   <div style="font-size: 12px; color: #666; margin-top: 4px;">
-                    Found in ${account.companies.length} ${account.companies.length === 1 ? 'company' : 'companies'}: 
-                    ${account.companies.map(comp => 
-                      `${comp.company} ($${comp.balance.toLocaleString()})`
-                    ).join(' | ')}
+                    Found in ${account.companies.length} ${
+                  account.companies.length === 1 ? "company" : "companies"
+                }: 
+                    ${account.companies
+                      .map(
+                        (comp) =>
+                          `${comp.company} ($${comp.balance.toLocaleString()})`
+                      )
+                      .join(" | ")}
                   </div>
                 </div>
                 <div style="text-align: right;">
-                  <div style="font-weight: bold; font-size: 18px; color: ${account.totalBalance > 0 ? '#27ae60' : '#e74c3c'};">
+                  <div style="font-weight: bold; font-size: 18px; color: ${
+                    account.totalBalance > 0 ? "#27ae60" : "#e74c3c"
+                  };">
                     $${account.totalBalance.toLocaleString()}
                   </div>
                   <div style="font-size: 11px; color: #666;">
-                    ${account.accountCount} ${account.accountCount === 1 ? 'account' : 'accounts'}
+                    ${account.accountCount} ${
+                  account.accountCount === 1 ? "account" : "accounts"
+                }
                   </div>
                 </div>
               </div>
-            `).join('')}
+            `
+              )
+              .join("")}
           </div>
-        ` : `
+        `
+            : `
           <div style="text-align: center; padding: 40px; color: #666; background: #f8f9fa; border-radius: 6px;">
             <h4>No Bank Accounts Found</h4>
             <p>No bank account data was retrieved from the selected companies.</p>
           </div>
-        `}
+        `
+        }
       </div>
 
       <!-- INDIVIDUAL COMPANY CASH POSITIONS -->
-      <div class="dashboard-card">
-        <h3>Individual Company Cash Positions</h3>
-        <div style="max-height: 50vh; overflow-y: scroll; border: 1px solid #e0e0e0; border-radius: 6px; padding: 10px;">
-          ${companies.map(company => {
-            if (company.error) {
-              return `
+      <!-- INDIVIDUAL COMPANY CASH POSITIONS - FIXED CARD-LEVEL SCROLLING -->
+      <div class="dashboard-card" style="max-height: 60vh; overflow-y: scroll; border: 1px solid #e0e0e0;">
+        <h3 style="position: sticky; top: 0; background: white; padding: 15px; margin: -20px -20px 10px -20px; border-bottom: 1px solid #e0e0e0;">Individual Company Cash Positions</h3>
+        <div style="padding: 0 20px 20px 20px;">
+          ${companies
+            .map((company) => {
+              if (company.error) {
+                return `
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; margin: 10px 0; border-radius: 6px; border: 1px solid #e74c3c; background: #fff8f8;">
                   <div>
                     <strong style="font-size: 16px; color: #e74c3c;">${company.companyName}</strong>
@@ -2377,55 +2539,508 @@
                   <div style="color: #e74c3c; font-weight: bold;">❌ Error</div>
                 </div>
               `;
-            }
+              }
 
-            return `
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; margin: 10px 0; border-radius: 6px; border: 1px solid ${company.totalCash > 0 ? '#27ae60' : '#e74c3c'}; background: ${company.totalCash > 0 ? '#f8fff8' : '#fff8f8'};">
+              return `
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; margin: 10px 0; border-radius: 6px; border: 1px solid ${
+                company.totalCash > 0 ? "#27ae60" : "#e74c3c"
+              }; background: ${company.totalCash > 0 ? "#f8fff8" : "#fff8f8"};">
                 <div style="flex: 1;">
-                  <strong style="font-size: 16px;">${company.companyName}</strong>
+                  <strong style="font-size: 16px;">${
+                    company.companyName
+                  }</strong>
                   <div style="font-size: 12px; color: #666; margin-top: 4px;">
-                    ${company.bankAccounts.length} ${company.bankAccounts.length === 1 ? 'bank account' : 'bank accounts'}
-                    ${company.bankAccounts.length > 0 ? ': ' + company.bankAccounts.map(acc => acc.name).join(', ') : ''}
+                    ${company.bankAccounts.length} ${
+                company.bankAccounts.length === 1
+                  ? "bank account"
+                  : "bank accounts"
+              }
+                    ${
+                      company.bankAccounts.length > 0
+                        ? ": " +
+                          company.bankAccounts.map((acc) => acc.name).join(", ")
+                        : ""
+                    }
                   </div>
-                  ${company.bankAccounts.length > 3 ? `
+                  ${
+                    company.bankAccounts.length > 3
+                      ? `
                     <div style="font-size: 11px; color: #999; margin-top: 2px;">
                       ${company.bankAccounts.length - 3} additional accounts...
                     </div>
-                  ` : ''}
+                  `
+                      : ""
+                  }
                 </div>
                 <div style="text-align: right;">
-                  <div style="font-weight: bold; font-size: 20px; color: ${company.totalCash > 0 ? '#27ae60' : '#e74c3c'};">
+                  <div style="font-weight: bold; font-size: 20px; color: ${
+                    company.totalCash > 0 ? "#27ae60" : "#e74c3c"
+                  };">
                     $${company.totalCash.toLocaleString()}
                   </div>
-                  <div style="font-size: 12px; color: ${company.totalCash > 0 ? '#27ae60' : '#e74c3c'};">
-                    ${company.totalCash > 0 ? '✅ Positive Cash' : '⚠️ No Cash'}
+                  <div style="font-size: 12px; color: ${
+                    company.totalCash > 0 ? "#27ae60" : "#e74c3c"
+                  };">
+                    ${company.totalCash > 0 ? "✅ Positive Cash" : "⚠️ No Cash"}
                   </div>
                 </div>
               </div>
             `;
-          }).join('')}
+            })
+            .join("")}
         </div>
 
-        <!-- CASH FLOW INSIGHTS -->
-        ${totals.companiesWithZeroCash > 0 ? `
-          <div style="margin-top: 15px; padding: 15px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px;">
-            <strong>⚠️ Cash Flow Alert:</strong> 
-            ${totals.companiesWithZeroCash} ${totals.companiesWithZeroCash === 1 ? 'company has' : 'companies have'} zero or minimal cash positions. 
-            Consider reviewing cash flow management and bank account connectivity for these entities.
-          </div>
-        ` : `
-          <div style="margin-top: 15px; padding: 15px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 6px;">
-            <strong>✅ Cash Position Healthy:</strong> 
-            All selected companies maintain positive cash balances across ${totals.totalBankAccounts} bank accounts.
-          </div>
-        `}
+        <!-- CASH FLOW INSIGHTS - STICKY FOOTER -->
+        <div style="position: sticky; bottom: 0; background: white; margin: 0 -20px -20px -20px; padding: 15px; border-top: 1px solid #e0e0e0;">
+          ${
+            totals.companiesWithZeroCash > 0
+              ? `
+            <div style="padding: 15px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px;">
+              <strong>⚠️ Cash Flow Alert:</strong> 
+              ${totals.companiesWithZeroCash} ${
+                  totals.companiesWithZeroCash === 1
+                    ? "company has"
+                    : "companies have"
+                } zero or minimal cash positions. 
+              Consider reviewing cash flow management and bank account connectivity for these entities.
+            </div>
+          `
+              : `
+            <div style="padding: 15px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 6px;">
+              <strong>✅ Cash Position Healthy:</strong> 
+              All selected companies maintain positive cash balances across ${totals.totalBankAccounts} bank accounts.
+            </div>
+          `
+          }
+        </div>
       </div>
     `;
-  }
+      }
+
+      // ====== PROFIT & LOSS IMPLEMENTATION ======
+      // Replace the placeholder loadProfitLossData() function with this complete implementation
 
       async function loadProfitLossData() {
-        // Simplified version - full implementation would follow same pattern as overview
-        showComingSoon("Profit & Loss Analysis");
+        if (activeCompanyFilters.length === 0) {
+          showNoCompaniesSelected();
+          return;
+        }
+
+        const dashboardElement = document.getElementById("dashboardData");
+        dashboardElement.innerHTML = `
+      <div class="loading">
+        <div class="loading-spinner"></div>
+        Loading consolidated profit & loss data from ${activeCompanyFilters.length} companies...
+      </div>
+    `;
+
+        try {
+          const plData = [];
+          const consolidatedAccounts = {
+            revenue: {},
+            expenses: {},
+          };
+
+          let consolidatedTotals = {
+            totalRevenue: 0,
+            totalExpenses: 0,
+            netProfit: 0,
+            profitableCompanies: 0,
+            lossCompanies: 0,
+          };
+
+          // Load P&L for each selected company
+          for (const tenantId of activeCompanyFilters) {
+            const connectedCompany = connectedCompanies.find(
+              (c) => c.tenantId === tenantId
+            );
+            if (!connectedCompany) continue;
+
+            const orgName = getOrganizationName(connectedCompany.tenantName);
+            const response = await fetchWithErrorHandling(
+              "/api/profit-loss-summary",
+              { organizationName: orgName }
+            );
+
+            if (response && response.ok) {
+              const data = await response.json();
+
+              const companyData = {
+                companyName: connectedCompany.tenantName.replace(
+                  "Rirratjingu ",
+                  ""
+                ),
+                tenantName: data.tenantName,
+                totalRevenue: data.summary.totalRevenue || 0,
+                totalExpenses: data.summary.totalExpenses || 0,
+                netProfit: data.summary.netProfit || 0,
+                profitMargin:
+                  data.summary.totalRevenue > 0
+                    ? (
+                        (data.summary.netProfit / data.summary.totalRevenue) *
+                        100
+                      ).toFixed(1)
+                    : 0,
+                revenueAccounts: data.summary.revenueAccounts || [],
+                expenseAccounts: data.summary.expenseAccounts || [],
+                error: false,
+              };
+
+              plData.push(companyData);
+
+              // Update consolidated totals
+              consolidatedTotals.totalRevenue += companyData.totalRevenue;
+              consolidatedTotals.totalExpenses += companyData.totalExpenses;
+              consolidatedTotals.netProfit += companyData.netProfit;
+
+              if (companyData.netProfit > 0) {
+                consolidatedTotals.profitableCompanies++;
+              } else {
+                consolidatedTotals.lossCompanies++;
+              }
+
+              // Consolidate revenue accounts
+              if (companyData.revenueAccounts.length > 0) {
+                companyData.revenueAccounts.forEach((account) => {
+                  const accountName = account.name || "Unspecified Revenue";
+                  if (!consolidatedAccounts.revenue[accountName]) {
+                    consolidatedAccounts.revenue[accountName] = 0;
+                  }
+                  consolidatedAccounts.revenue[accountName] += account.amount;
+                });
+              }
+
+              // Consolidate expense accounts
+              if (companyData.expenseAccounts.length > 0) {
+                companyData.expenseAccounts.forEach((account) => {
+                  const accountName = account.name || "Unspecified Expense";
+                  if (!consolidatedAccounts.expenses[accountName]) {
+                    consolidatedAccounts.expenses[accountName] = 0;
+                  }
+                  consolidatedAccounts.expenses[accountName] += account.amount;
+                });
+              }
+            } else {
+              // Add error entry for failed companies
+              plData.push({
+                companyName: connectedCompany.tenantName.replace(
+                  "Rirratjingu ",
+                  ""
+                ),
+                error: true,
+                errorMessage: "Failed to load P&L data",
+              });
+            }
+          }
+
+          // Convert consolidated accounts to sorted arrays
+          const consolidatedRevenue = Object.entries(
+            consolidatedAccounts.revenue
+          )
+            .map(([name, amount]) => ({ name, amount }))
+            .sort((a, b) => b.amount - a.amount);
+
+          const consolidatedExpenses = Object.entries(
+            consolidatedAccounts.expenses
+          )
+            .map(([name, amount]) => ({ name, amount }))
+            .sort((a, b) => b.amount - a.amount);
+
+          const consolidatedProfitMargin =
+            consolidatedTotals.totalRevenue > 0
+              ? (
+                  (consolidatedTotals.netProfit /
+                    consolidatedTotals.totalRevenue) *
+                  100
+                ).toFixed(1)
+              : 0;
+
+          renderProfitLossView(
+            plData,
+            consolidatedRevenue,
+            consolidatedExpenses,
+            consolidatedTotals,
+            consolidatedProfitMargin
+          );
+        } catch (error) {
+          showErrorState(error);
+        }
+      }
+
+      function renderProfitLossView(
+        companies,
+        revenueAccounts,
+        expenseAccounts,
+        totals,
+        profitMargin
+      ) {
+        const dashboardElement = document.getElementById("dashboardData");
+
+        const performanceStatus =
+          totals.lossCompanies === 0
+            ? "healthy"
+            : totals.lossCompanies >= totals.profitableCompanies
+            ? "critical"
+            : "warning";
+
+        dashboardElement.innerHTML = `
+      <!-- CONSOLIDATED P&L HEADER -->
+      <div class="dashboard-card" style="margin-bottom: 20px;">
+        <h3>Consolidated Profit & Loss - All Selected Companies</h3>
+        <div style="margin-bottom: 15px;">
+          <span style="font-size: 14px; color: #666;">
+            Companies: ${companies.length} | 
+            Revenue Accounts: ${revenueAccounts.length} | 
+            Expense Accounts: ${expenseAccounts.length} |
+            Performance: <span style="color: ${
+              performanceStatus === "healthy"
+                ? "#27ae60"
+                : performanceStatus === "warning"
+                ? "#f39c12"
+                : "#e74c3c"
+            };">
+              ${
+                performanceStatus === "healthy"
+                  ? "✅ Strong"
+                  : performanceStatus === "warning"
+                  ? "⚠️ Mixed"
+                  : "❌ Concerning"
+              }
+            </span>
+          </span>
+        </div>
+
+        <!-- P&L SUMMARY METRICS -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px;">
+          <div style="text-align: center; padding: 15px; background: #f8fff8; border-radius: 6px; border: 1px solid #27ae60;">
+            <div style="font-size: 24px; font-weight: bold; color: #27ae60;">
+              $${totals.totalRevenue.toLocaleString()}
+            </div>
+            <div style="font-size: 12px; color: #666; margin-top: 4px;">Total Revenue</div>
+          </div>
+          
+          <div style="text-align: center; padding: 15px; background: #fff8f8; border-radius: 6px; border: 1px solid #e74c3c;">
+            <div style="font-size: 24px; font-weight: bold; color: #e74c3c;">
+              $${totals.totalExpenses.toLocaleString()}
+            </div>
+            <div style="font-size: 12px; color: #666; margin-top: 4px;">Total Expenses</div>
+          </div>
+
+          <div style="text-align: center; padding: 15px; background: ${
+            totals.netProfit >= 0 ? "#f8fff8" : "#fff8f8"
+          }; border-radius: 6px; border: 1px solid ${
+          totals.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+        };">
+            <div style="font-size: 24px; font-weight: bold; color: ${
+              totals.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+            };">
+              $${totals.netProfit.toLocaleString()}
+            </div>
+            <div style="font-size: 12px; color: #666; margin-top: 4px;">Net Profit</div>
+          </div>
+
+          <div style="text-align: center; padding: 15px; background: ${
+            profitMargin >= 0 ? "#f8fff8" : "#fff8f8"
+          }; border-radius: 6px; border: 1px solid ${
+          profitMargin >= 0 ? "#27ae60" : "#e74c3c"
+        };">
+            <div style="font-size: 24px; font-weight: bold; color: ${
+              profitMargin >= 0 ? "#27ae60" : "#e74c3c"
+            };">
+              ${profitMargin}%
+            </div>
+            <div style="font-size: 12px; color: #666; margin-top: 4px;">Profit Margin</div>
+          </div>
+        </div>
+
+        <!-- CONSOLIDATED REVENUE & EXPENSES TABLE -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          
+          <!-- REVENUE COLUMN -->
+          <div>
+            <h4 style="color: #27ae60; border-bottom: 2px solid #27ae60; padding-bottom: 8px; margin-bottom: 10px;">
+              Revenue (${revenueAccounts.length} account types)
+            </h4>
+            <div style="max-height: 40vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px;">
+              ${
+                revenueAccounts.length > 0
+                  ? revenueAccounts
+                      .map(
+                        (account) => `
+                <div style="display: flex; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px;">
+                  <span style="flex: 1; margin-right: 10px;">${
+                    account.name
+                  }</span>
+                  <span style="font-weight: 600; min-width: 120px; text-align: right; color: #27ae60;">
+                    $${account.amount.toLocaleString()}
+                  </span>
+                </div>
+              `
+                      )
+                      .join("")
+                  : '<div style="padding: 20px; text-align: center; color: #666;">No revenue accounts</div>'
+              }
+            </div>
+            <div style="border-top: 3px solid #27ae60; padding: 12px; font-weight: bold; color: #27ae60; background: #f8fff8; text-align: right;">
+              Total Revenue: $${totals.totalRevenue.toLocaleString()}
+            </div>
+          </div>
+
+          <!-- EXPENSES COLUMN -->
+          <div>
+            <h4 style="color: #e74c3c; border-bottom: 2px solid #e74c3c; padding-bottom: 8px; margin-bottom: 10px;">
+              Expenses (${expenseAccounts.length} account types)
+            </h4>
+            <div style="max-height: 40vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px;">
+              ${
+                expenseAccounts.length > 0
+                  ? expenseAccounts
+                      .map(
+                        (account) => `
+                <div style="display: flex; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px;">
+                  <span style="flex: 1; margin-right: 10px;">${
+                    account.name
+                  }</span>
+                  <span style="font-weight: 600; min-width: 120px; text-align: right; color: #e74c3c;">
+                    $${account.amount.toLocaleString()}
+                  </span>
+                </div>
+              `
+                      )
+                      .join("")
+                  : '<div style="padding: 20px; text-align: center; color: #666;">No expense accounts</div>'
+              }
+            </div>
+            <div style="border-top: 3px solid #e74c3c; padding: 12px; font-weight: bold; color: #e74c3c; background: #fff8f8; text-align: right;">
+              Total Expenses: $${totals.totalExpenses.toLocaleString()}
+            </div>
+          </div>
+        </div>
+
+        <!-- NET PROFIT SUMMARY -->
+        <div style="margin-top: 20px; padding: 20px; background: ${
+          totals.netProfit >= 0 ? "#f8fff8" : "#fff8f8"
+        }; border-radius: 6px; border: 2px solid ${
+          totals.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+        };">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <span style="font-weight: bold; font-size: 18px;">Consolidated Net Result:</span>
+              <span style="font-weight: bold; font-size: 24px; color: ${
+                totals.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+              }; margin-left: 15px;">
+                $${totals.netProfit.toLocaleString()}
+              </span>
+            </div>
+            <div style="text-align: right; font-size: 14px; color: #666;">
+              <div>Profit Margin: ${profitMargin}%</div>
+              <div style="margin-top: 4px;">
+                Profitable: ${totals.profitableCompanies} | Loss-making: ${
+          totals.lossCompanies
+        }
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- INDIVIDUAL COMPANY P&L PERFORMANCE -->
+      <div class="dashboard-card" style="max-height: 60vh; overflow-y: scroll; border: 1px solid #e0e0e0;">
+        <h3 style="position: sticky; top: 0; background: white; padding: 15px; margin: -20px -20px 10px -20px; border-bottom: 1px solid #e0e0e0;">Individual Company P&L Performance</h3>
+        <div style="padding: 0 20px 20px 20px;">
+          ${companies
+            .map((company) => {
+              if (company.error) {
+                return `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; margin: 10px 0; border-radius: 6px; border: 1px solid #e74c3c; background: #fff8f8;">
+                  <div>
+                    <strong style="font-size: 16px; color: #e74c3c;">${company.companyName}</strong>
+                    <div style="font-size: 12px; color: #e74c3c; margin-top: 4px;">
+                      ${company.errorMessage}
+                    </div>
+                  </div>
+                  <div style="color: #e74c3c; font-weight: bold;">❌ Error</div>
+                </div>
+              `;
+              }
+
+              return `
+              <div style="padding: 15px; margin: 10px 0; border-radius: 6px; border: 1px solid ${
+                company.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+              }; background: ${
+                company.netProfit >= 0 ? "#f8fff8" : "#fff8f8"
+              };">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                  <strong style="font-size: 16px;">${
+                    company.companyName
+                  }</strong>
+                  <div style="text-align: right;">
+                    <div style="font-weight: bold; font-size: 18px; color: ${
+                      company.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+                    };">
+                      $${company.netProfit.toLocaleString()}
+                    </div>
+                    <div style="font-size: 12px; color: ${
+                      company.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+                    };">
+                      ${company.netProfit >= 0 ? "✅ Profitable" : "❌ Loss"}
+                    </div>
+                  </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; font-size: 13px;">
+                  <div>
+                    <div style="color: #666; margin-bottom: 3px;">Revenue</div>
+                    <div style="font-weight: 600; color: #27ae60;">$${company.totalRevenue.toLocaleString()}</div>
+                  </div>
+                  <div>
+                    <div style="color: #666; margin-bottom: 3px;">Expenses</div>
+                    <div style="font-weight: 600; color: #e74c3c;">$${company.totalExpenses.toLocaleString()}</div>
+                  </div>
+                  <div>
+                    <div style="color: #666; margin-bottom: 3px;">Profit Margin</div>
+                    <div style="font-weight: 600;">${
+                      company.profitMargin
+                    }%</div>
+                  </div>
+                  <div>
+                    <div style="color: #666; margin-bottom: 3px;">Accounts</div>
+                    <div style="font-weight: 600;">R:${
+                      company.revenueAccounts.length
+                    } E:${company.expenseAccounts.length}</div>
+                  </div>
+                </div>
+              </div>
+            `;
+            })
+            .join("")}
+        </div>
+
+        <!-- P&L PERFORMANCE INSIGHTS - STICKY FOOTER -->
+        <div style="position: sticky; bottom: 0; background: white; margin: 0 -20px -20px -20px; padding: 15px; border-top: 1px solid #e0e0e0;">
+          ${
+            totals.lossCompanies > 0
+              ? `
+            <div style="padding: 15px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px;">
+              <strong>⚠️ Performance Alert:</strong> 
+              ${totals.lossCompanies} ${
+                  totals.lossCompanies === 1 ? "company is" : "companies are"
+                } operating at a loss with negative profit margins. 
+              Review expense management and revenue optimization strategies for the affected ${
+                totals.lossCompanies === 1 ? "company" : "companies"
+              }.
+            </div>
+          `
+              : `
+            <div style="padding: 15px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 6px;">
+              <strong>✅ Strong Performance:</strong> 
+              All selected companies are profitable with a consolidated profit margin of ${profitMargin}% across $${totals.totalRevenue.toLocaleString()} in total revenue.
+            </div>
+          `
+          }
+        </div>
+      </div>
+    `;
       }
 
       async function loadYearOverYearData() {
