@@ -679,7 +679,7 @@
 
             case "profit-loss":
               dataArray = await loadFinancialDataForSelectedCompanies(
-                "profit-loss-summary"
+                "profit-loss"
               );
               document.getElementById("dashboardData").innerHTML =
                 renderFinancialView("profit-loss", dataArray);
@@ -729,11 +729,11 @@
         try {
           const promises = activeCompanyFilters.map(async (tenantId) => {
             const [currentYear, priorYear] = await Promise.all([
+              fetch(`/api/profit-loss/${tenantId}?periodMonths=12`).then((r) =>
+                r.json()
+              ),
               fetch(
-                `/api/profit-loss-summary/${tenantId}?periodMonths=12`
-              ).then((r) => r.json()),
-              fetch(
-                `/api/profit-loss-summary/${tenantId}?periodMonths=12&date=${getPriorYearDate()}`
+                `/api/profit-loss/${tenantId}?periodMonths=12&date=${getPriorYearDate()}`
               ).then((r) => r.json()),
             ]);
 
@@ -1155,6 +1155,50 @@
 
       // Helper functions and data loading methods would continue here...
       // (Rest of JavaScript implementation - keeping for brevity)
+
+      // Add this function to your JavaScript - it got lost during reorganization
+
+      async function loadOverviewData() {
+        try {
+          const dataArray = await loadFinancialDataForSelectedCompanies(
+            "trial-balance"
+          );
+
+          if (dataArray.length === 0) {
+            document.getElementById("dashboardData").innerHTML =
+              '<div class="no-data">No company data available</div>';
+            return;
+          }
+
+          const viewMode = getViewMode();
+          let overviewHtml = "";
+
+          if (viewMode === "individual") {
+            overviewHtml = renderIndividualOverview(dataArray[0]);
+          } else {
+            overviewHtml = renderConsolidatedOverview(dataArray);
+          }
+
+          document.getElementById("dashboardData").innerHTML = overviewHtml;
+        } catch (error) {
+          console.error("Error loading overview data:", error);
+          document.getElementById("dashboardData").innerHTML =
+            '<div class="error">Error loading overview data. Please try again.</div>';
+        }
+      }
+
+      // Also add this missing function for alerts
+      async function loadAlertsView() {
+        document.getElementById("dashboardData").innerHTML = `
+    <div class="dashboard-card">
+      <h3>System Alerts</h3>
+      <div class="alert-item">
+        <span class="alert-icon">⚠️</span>
+        <span>No critical alerts at this time</span>
+      </div>
+    </div>
+  `;
+      }
 
       // Placeholder implementations for brevity - include all your dashboard functions here
       async function loadOverviewDataWithYoY() {
