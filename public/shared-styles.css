@@ -1,0 +1,539 @@
+/* ====== RAC SHARED STYLES ====== */
+/* Common styles extracted from index.html and login-manager.html */
+
+/* ====== RESET & BASE ====== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  height: 100vh;
+  overflow: hidden;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* ====== COMMON GRADIENTS & COLORS ====== */
+.primary-gradient {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.success-gradient {
+  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+}
+
+.progress-gradient {
+  background: linear-gradient(45deg, #4caf50, #8bc34a);
+}
+
+/* ====== CONTAINERS & LAYOUTS ====== */
+.container {
+  max-width: 800px;
+  margin: 40px auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.login-container {
+  max-width: 800px;
+  margin: 40px auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.connection-manager {
+  min-height: 100vh;
+  padding: 2rem;
+  display: block;
+}
+
+/* ====== HEADERS ====== */
+.header {
+  background: #2c3e50;
+  color: white;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  position: relative;
+}
+
+.header h1 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.header .session-info {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.login-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 2rem;
+  text-align: center;
+}
+
+.login-header h1 {
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.login-content {
+  padding: 2rem;
+}
+
+/* ====== STEP INDICATORS ====== */
+.step-indicator {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  background: #f8f9fa;
+  color: #666;
+  font-size: 0.9rem;
+  margin: 0 0.5rem;
+}
+
+.step.active {
+  background: #667eea;
+  color: white;
+}
+
+.step.completed {
+  background: #28a745;
+  color: white;
+}
+
+.step-number {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+/* ====== BUTTONS ====== */
+.btn {
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  padding: 1rem 2rem;
+}
+
+.btn-primary {
+  background: #667eea;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #5a6fd8;
+}
+
+.btn-primary:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.btn-success {
+  background: #28a745;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #218838;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.continue-btn {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+
+.continue-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.oauth-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  margin: 0.5rem;
+}
+
+.oauth-btn.primary {
+  background: #667eea;
+}
+
+.launch-btn {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 1.5rem 3rem;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-top: 1rem;
+}
+
+.back-to-connections {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  margin-left: 10px;
+}
+
+/* ====== TOOLBAR ====== */
+.toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.toolbar button {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.toolbar button:hover {
+  background: #f0f0f0;
+}
+
+.toolbar button.active {
+  background: #3498db;
+  color: white;
+  border-color: #3498db;
+}
+
+/* ====== COMPANY LISTS & SELECTION ====== */
+.company-list {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.company-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+  transition: background-color 0.2s;
+  cursor: pointer;
+}
+
+.company-item:hover {
+  background-color: #f8f9fa;
+}
+
+.company-item.all-companies {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+.company-checkbox {
+  width: 18px;
+  height: 18px;
+  margin-right: 1rem;
+  cursor: pointer;
+}
+
+.company-name {
+  flex: 1;
+  font-size: 1rem;
+}
+
+.company-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.company-checkbox-item:hover {
+  background: rgba(52, 152, 219, 0.1);
+}
+
+.company-checkbox-item input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+}
+
+.company-checkbox-item label {
+  font-weight: 500;
+  color: #2c3e50;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.company-checkbox-item.balanced label {
+  color: #27ae60;
+}
+
+.company-checkbox-item.imbalanced label {
+  color: #e74c3c;
+}
+
+/* ====== PROGRESS BARS ====== */
+.progress-bar {
+  background: #e0e0e0;
+  border-radius: 10px;
+  height: 8px;
+  margin: 15px 0;
+  overflow: hidden;
+}
+
+.progress-fill {
+  background: linear-gradient(45deg, #4caf50, #8bc34a);
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+/* ====== DASHBOARD COMPONENTS ====== */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.dashboard-card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0e0e0;
+  min-width: 250px;
+}
+
+.dashboard-card h3 {
+  color: #2c3e50;
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+
+.metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.metric:last-child {
+  border-bottom: none;
+}
+
+.metric-value {
+  font-weight: 600;
+  color: #27ae60;
+}
+
+.metric-value.negative {
+  color: #e74c3c;
+}
+
+/* ====== STATUS INDICATORS ====== */
+.status-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.status-indicator.balanced {
+  background: #27ae60;
+}
+
+.status-indicator.imbalanced {
+  background: #e74c3c;
+}
+
+/* ====== LOADING STATES ====== */
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.loading-spinner {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #3498db;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 15px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* ====== ALERT BOXES ====== */
+.success-box {
+  background: #d4edda;
+  border: 1px solid #c3e6cb;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 10px 0;
+  color: #155724;
+}
+
+.error-box {
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+  padding: 1rem;
+  border-radius: 6px;
+  margin: 1rem 0;
+}
+
+.selection-summary {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+/* ====== PANEL HEADERS ====== */
+.panel-header {
+  background: #34495e;
+  color: white;
+  padding: 12px 20px;
+  font-weight: 600;
+  font-size: 14px;
+  border-bottom: 1px solid #2c3e50;
+}
+
+/* ====== OAUTH & CONNECTION FLOW ====== */
+.oauth-flow {
+  display: none;
+  text-align: center;
+}
+
+.current-connection {
+  background: #f8f9fa;
+  padding: 2rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+
+.completion {
+  display: none;
+  text-align: center;
+}
+
+/* ====== DASHBOARD LAYOUT ====== */
+.main-dashboard {
+  display: none;
+  height: 100vh;
+  background: #f5f5f5;
+}
+
+.main-container {
+  display: block;
+  height: calc(100vh - 60px);
+  position: relative;
+}
+
+.dashboard-panel {
+  width: 100%;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.dashboard-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  height: calc(100vh - 120px);
+}
+
+/* ====== UTILITY CLASSES ====== */
+.hidden {
+  display: none !important;
+}
+
+/* ====== RESPONSIVE DESIGN ====== */
+@media (max-width: 768px) {
+  .main-container {
+    flex-direction: column;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .company-checkboxes {
+    flex-direction: column;
+    gap: 6px;
+  }
+}
