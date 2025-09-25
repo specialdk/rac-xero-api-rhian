@@ -3529,9 +3529,820 @@
   `;
       }
 
+      // ====== YEAR-OVER-YEAR DATA LOADING - LOGICAL STRUCTURE ======
+
       async function loadYearOverYearData() {
-        // Simplified version - full implementation would follow same pattern as overview
-        showComingSoon("Year-over-Year Analysis");
+        if (activeCompanyFilters.length === 0) {
+          showNoCompaniesSelected();
+          return;
+        }
+
+        try {
+          if (activeCompanyFilters.length === 1) {
+            // Single company - show detailed YoY breakdown with monthly data
+            await loadSingleCompanyYoY();
+          } else {
+            // Multiple companies - show consolidated YoY comparison
+            await loadConsolidatedYoY();
+          }
+        } catch (error) {
+          showErrorState(error);
+        }
+      }
+
+      // ====== SINGLE COMPANY YEAR-OVER-YEAR ======
+      async function loadSingleCompanyYoY() {
+        const tenantId = activeCompanyFilters[0];
+        const connectedCompany = connectedCompanies.find(
+          (c) => c.tenantId === tenantId
+        );
+
+        if (!connectedCompany) return;
+
+        const orgName = getOrganizationName(connectedCompany.tenantName);
+
+        // Load both YoY and Monthly data in parallel
+        const [yoyResponse, monthlyResponse] = await Promise.all([
+          fetchWithErrorHandling("/api/yoy-analysis", {
+            organizationName: orgName,
+          }),
+          fetchWithErrorHandling("/api/monthly-breakdown", {
+            organizationName: orgName,
+          }),
+        ]);
+
+        let yoyData = null;
+        let monthlyData = null;
+
+        if (yoyResponse && yoyResponse.ok) {
+          yoyData = await yoyResponse.json();
+        }
+
+        if (monthlyResponse && monthlyResponse.ok) {
+          monthlyData = await monthlyResponse.json();
+        }
+
+        if (!yoyData && !monthlyData) {
+          showErrorState(
+            new Error(
+              `Failed to load YoY analysis for ${connectedCompany.tenantName}`
+            )
+          );
+          return;
+        }
+
+        renderSingleCompanyYoY(yoyData, monthlyData, connectedCompany);
+      }
+
+      function renderSingleCompanyYoY(yoyData, monthlyData, company) {
+        const dashboardElement = document.getElementById("dashboardData");
+        const companyName = company.tenantName.replace("Rirratjingu ", "");
+
+        // Extract YoY data if available
+        let yoyAnalysis = null;
+        if (yoyData && yoyData.analysis) {
+          yoyAnalysis = yoyData.analysis;
+        }
+
+        // Extract monthly data if available
+        let monthlyBreakdown = [];
+        let monthlyTotals = null;
+        if (monthlyData && monthlyData.monthlyBreakdown) {
+          monthlyBreakdown = monthlyData.monthlyBreakdown;
+          monthlyTotals = monthlyData.totals;
+        }
+
+        dashboardElement.innerHTML = `
+    <!-- SINGLE COMPANY YoY HEADER -->
+    <div class="dashboard-card">
+      <h3>Year-over-Year Analysis - ${companyName}</h3>
+      
+      ${
+        yoyAnalysis
+          ? `
+        <!-- YoY PERFORMANCE COMPARISON -->
+        <div style="margin-bottom: 25px;">
+          <h4>Performance Comparison: ${yoyAnalysis.periods.current.label} vs ${
+              yoyAnalysis.periods.previous.label
+            }</h4>
+          
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin: 20px 0;">
+            
+            <!-- REVENUE YoY -->
+            <div style="text-align: center; padding: 20px; background: ${
+              yoyAnalysis.growth.revenue >= 0 ? "#f8fff8" : "#fff8f8"
+            }; border-radius: 6px; border: 1px solid ${
+              yoyAnalysis.growth.revenue >= 0 ? "#27ae60" : "#e74c3c"
+            };">
+              <div style="font-size: 16px; font-weight: bold; color: ${
+                yoyAnalysis.growth.revenue >= 0 ? "#27ae60" : "#e74c3c"
+              }; margin-bottom: 5px;">
+                ${
+                  yoyAnalysis.growth.revenue >= 0 ? "+" : ""
+                }${yoyAnalysis.growth.revenue.toFixed(1)}%
+              </div>
+              <div style="font-size: 13px; color: #666; margin-bottom: 8px;">Revenue Growth</div>
+              <div style="font-size: 11px;">
+                <div>${
+                  yoyAnalysis.periods.current.label
+                }: $${yoyAnalysis.periods.current.revenue.toLocaleString()}</div>
+                <div>${
+                  yoyAnalysis.periods.previous.label
+                }: $${yoyAnalysis.periods.previous.revenue.toLocaleString()}</div>
+              </div>
+            </div>
+
+            <!-- EXPENSES YoY -->
+            <div style="text-align: center; padding: 20px; background: ${
+              yoyAnalysis.growth.expenses <= 0 ? "#f8fff8" : "#fff8f8"
+            }; border-radius: 6px; border: 1px solid ${
+              yoyAnalysis.growth.expenses <= 0 ? "#27ae60" : "#e74c3c"
+            };">
+              <div style="font-size: 16px; font-weight: bold; color: ${
+                yoyAnalysis.growth.expenses <= 0 ? "#27ae60" : "#e74c3c"
+              }; margin-bottom: 5px;">
+                ${
+                  yoyAnalysis.growth.expenses >= 0 ? "+" : ""
+                }${yoyAnalysis.growth.expenses.toFixed(1)}%
+              </div>
+              <div style="font-size: 13px; color: #666; margin-bottom: 8px;">Expense Growth</div>
+              <div style="font-size: 11px;">
+                <div>${yoyAnalysis.periods.current.label}: $${(
+              yoyAnalysis.periods.current.revenue -
+              yoyAnalysis.periods.current.profit
+            ).toLocaleString()}</div>
+                <div>${yoyAnalysis.periods.previous.label}: $${(
+              yoyAnalysis.periods.previous.revenue -
+              yoyAnalysis.periods.previous.profit
+            ).toLocaleString()}</div>
+              </div>
+            </div>
+
+            <!-- PROFIT YoY -->
+            <div style="text-align: center; padding: 20px; background: ${
+              yoyAnalysis.growth.profit >= 0 ? "#f8fff8" : "#fff8f8"
+            }; border-radius: 6px; border: 1px solid ${
+              yoyAnalysis.growth.profit >= 0 ? "#27ae60" : "#e74c3c"
+            };">
+              <div style="font-size: 16px; font-weight: bold; color: ${
+                yoyAnalysis.growth.profit >= 0 ? "#27ae60" : "#e74c3c"
+              }; margin-bottom: 5px;">
+                ${
+                  yoyAnalysis.growth.profit >= 0 ? "+" : ""
+                }${yoyAnalysis.growth.profit.toFixed(1)}%
+              </div>
+              <div style="font-size: 13px; color: #666; margin-bottom: 8px;">Profit Growth</div>
+              <div style="font-size: 11px;">
+                <div>${
+                  yoyAnalysis.periods.current.label
+                }: $${yoyAnalysis.periods.current.profit.toLocaleString()}</div>
+                <div>${
+                  yoyAnalysis.periods.previous.label
+                }: $${yoyAnalysis.periods.previous.profit.toLocaleString()}</div>
+              </div>
+            </div>
+
+            <!-- ASSETS YoY -->
+            <div style="text-align: center; padding: 20px; background: ${
+              yoyAnalysis.growth.assets >= 0 ? "#f8fff8" : "#fff8f8"
+            }; border-radius: 6px; border: 1px solid ${
+              yoyAnalysis.growth.assets >= 0 ? "#27ae60" : "#e74c3c"
+            };">
+              <div style="font-size: 16px; font-weight: bold; color: ${
+                yoyAnalysis.growth.assets >= 0 ? "#27ae60" : "#e74c3c"
+              }; margin-bottom: 5px;">
+                ${
+                  yoyAnalysis.growth.assets >= 0 ? "+" : ""
+                }${yoyAnalysis.growth.assets.toFixed(1)}%
+              </div>
+              <div style="font-size: 13px; color: #666; margin-bottom: 8px;">Asset Growth</div>
+              <div style="font-size: 11px;">
+                <div>${
+                  yoyAnalysis.periods.current.label
+                }: $${yoyAnalysis.periods.current.assets.toLocaleString()}</div>
+                <div>${
+                  yoyAnalysis.periods.previous.label
+                }: $${yoyAnalysis.periods.previous.assets.toLocaleString()}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- GROWTH INSIGHTS -->
+          <div style="padding: 15px; background: #f8fffe; border: 1px solid #bee5eb; border-radius: 6px;">
+            <h5 style="color: #0c5460; margin-bottom: 10px;">Year-over-Year Performance Insights</h5>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; font-size: 13px;">
+              <div>
+                <strong>Revenue Trend:</strong>
+                <div style="margin-top: 5px;">
+                  ${
+                    yoyAnalysis.growth.revenue > 15
+                      ? "Excellent growth - strong market performance"
+                      : yoyAnalysis.growth.revenue > 5
+                      ? "Good growth - steady expansion"
+                      : yoyAnalysis.growth.revenue > 0
+                      ? "Moderate growth - stable performance"
+                      : yoyAnalysis.growth.revenue > -5
+                      ? "Slight decline - monitor closely"
+                      : "Significant decline - requires immediate attention"
+                  }
+                </div>
+              </div>
+              <div>
+                <strong>Profitability Trend:</strong>
+                <div style="margin-top: 5px;">
+                  ${
+                    yoyAnalysis.growth.profit > yoyAnalysis.growth.revenue
+                      ? "Improving efficiency - profit growing faster than revenue"
+                      : yoyAnalysis.growth.profit > 0 &&
+                        yoyAnalysis.growth.revenue > 0
+                      ? "Healthy growth - both revenue and profit increasing"
+                      : yoyAnalysis.growth.profit < 0 &&
+                        yoyAnalysis.growth.revenue > 0
+                      ? "Margin pressure - revenue up but profit declining"
+                      : "Challenging period - both revenue and profit under pressure"
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `
+          : ""
+      }
+
+      ${
+        monthlyBreakdown.length > 0
+          ? `
+        <!-- MONTHLY PERFORMANCE TREND -->
+        <div>
+          <h4>Monthly Performance Breakdown (Last 12 Months)</h4>
+          
+          <!-- MONTHLY GRID -->
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0;">
+            ${monthlyBreakdown
+              .map(
+                (month, index) => `
+              <div style="border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; background: ${
+                month.netProfit >= 0 ? "#f8fff8" : "#fff8f8"
+              }; font-size: 12px;">
+                <div style="font-weight: 600; margin-bottom: 8px; color: #2c3e50; text-align: center;">${
+                  month.label
+                }</div>
+                
+                <div style="margin-bottom: 6px;">
+                  <div style="color: #666;">Revenue</div>
+                  <div style="font-weight: 600; color: #27ae60;">$${(
+                    month.revenue / 1000
+                  ).toFixed(0)}K</div>
+                </div>
+                
+                <div style="margin-bottom: 6px;">
+                  <div style="color: #666;">Expenses</div>
+                  <div style="font-weight: 600; color: #e74c3c;">$${(
+                    month.expenses / 1000
+                  ).toFixed(0)}K</div>
+                </div>
+                
+                <div style="margin-bottom: 6px;">
+                  <div style="color: #666;">Profit</div>
+                  <div style="font-weight: 600; color: ${
+                    month.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+                  };">
+                    $${(month.netProfit / 1000).toFixed(0)}K
+                  </div>
+                </div>
+
+                <div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid #f0f0f0;">
+                  <div style="color: #666;">Margin</div>
+                  <div style="font-weight: 600; color: #3498db;">
+                    ${
+                      month.revenue > 0
+                        ? ((month.netProfit / month.revenue) * 100).toFixed(1)
+                        : 0
+                    }%
+                  </div>
+                </div>
+              </div>
+            `
+              )
+              .join("")}
+          </div>
+
+          ${
+            monthlyTotals
+              ? `
+            <!-- ANNUAL TOTALS SUMMARY -->
+            <div style="border-top: 2px solid #2c3e50; padding: 20px; margin-top: 20px; background: #f8fffe;">
+              <h5>12-Month Summary</h5>
+              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 15px;">
+                <div style="text-align: center;">
+                  <div style="font-size: 20px; font-weight: bold; color: #27ae60;">
+                    $${monthlyTotals.revenue.toLocaleString()}
+                  </div>
+                  <div style="font-size: 13px; color: #666;">Total Revenue</div>
+                  <div style="font-size: 11px; color: #27ae60;">
+                    Avg: $${(monthlyTotals.revenue / 12).toLocaleString()}/month
+                  </div>
+                </div>
+                
+                <div style="text-align: center;">
+                  <div style="font-size: 20px; font-weight: bold; color: #e74c3c;">
+                    $${monthlyTotals.expenses.toLocaleString()}
+                  </div>
+                  <div style="font-size: 13px; color: #666;">Total Expenses</div>
+                  <div style="font-size: 11px; color: #e74c3c;">
+                    Avg: $${(
+                      monthlyTotals.expenses / 12
+                    ).toLocaleString()}/month
+                  </div>
+                </div>
+                
+                <div style="text-align: center;">
+                  <div style="font-size: 20px; font-weight: bold; color: ${
+                    monthlyTotals.profit >= 0 ? "#27ae60" : "#e74c3c"
+                  };">
+                    $${monthlyTotals.profit.toLocaleString()}
+                  </div>
+                  <div style="font-size: 13px; color: #666;">Net Profit</div>
+                  <div style="font-size: 11px; color: ${
+                    monthlyTotals.profit >= 0 ? "#27ae60" : "#e74c3c"
+                  };">
+                    Avg: $${(monthlyTotals.profit / 12).toLocaleString()}/month
+                  </div>
+                </div>
+                
+                <div style="text-align: center;">
+                  <div style="font-size: 20px; font-weight: bold; color: #3498db;">
+                    ${
+                      monthlyTotals.revenue > 0
+                        ? (
+                            (monthlyTotals.profit / monthlyTotals.revenue) *
+                            100
+                          ).toFixed(1)
+                        : 0
+                    }%
+                  </div>
+                  <div style="font-size: 13px; color: #666;">Average Margin</div>
+                  <div style="font-size: 11px; color: #3498db;">
+                    ${
+                      monthlyTotals.profit > 0 ? "Profitable" : "Unprofitable"
+                    } year
+                  </div>
+                </div>
+              </div>
+            </div>
+          `
+              : ""
+          }
+        </div>
+      `
+          : ""
+      }
+
+      ${
+        !yoyAnalysis && monthlyBreakdown.length === 0
+          ? `
+        <div style="text-align: center; padding: 40px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px;">
+          <h4>No YoY Data Available</h4>
+          <p>Unable to load year-over-year analysis for ${companyName}.</p>
+          <p style="font-size: 13px; margin-top: 10px;">This could indicate insufficient historical data or connectivity issues.</p>
+        </div>
+      `
+          : ""
+      }
+    </div>
+  `;
+      }
+
+      // ====== CONSOLIDATED YEAR-OVER-YEAR (MULTIPLE COMPANIES) ======
+      async function loadConsolidatedYoY() {
+        const consolidatedData = {
+          companies: [],
+          consolidated: {
+            current: {
+              revenue: 0,
+              expenses: 0,
+              profit: 0,
+              assets: 0,
+              equity: 0,
+            },
+            previous: {
+              revenue: 0,
+              expenses: 0,
+              profit: 0,
+              assets: 0,
+              equity: 0,
+            },
+            growth: {
+              revenue: 0,
+              expenses: 0,
+              profit: 0,
+              assets: 0,
+              equity: 0,
+            },
+          },
+          summary: {
+            growingCompanies: 0,
+            decliningCompanies: 0,
+            stableCompanies: 0,
+          },
+        };
+
+        // Load YoY data from each selected company
+        for (const tenantId of activeCompanyFilters) {
+          const connectedCompany = connectedCompanies.find(
+            (c) => c.tenantId === tenantId
+          );
+          if (!connectedCompany) continue;
+
+          const orgName = getOrganizationName(connectedCompany.tenantName);
+          const response = await fetchWithErrorHandling("/api/yoy-analysis", {
+            organizationName: orgName,
+          });
+
+          if (response && response.ok) {
+            const data = await response.json();
+            const companyName = connectedCompany.tenantName.replace(
+              "Rirratjingu ",
+              ""
+            );
+
+            if (data.analysis) {
+              const analysis = data.analysis;
+
+              // Track individual company performance
+              consolidatedData.companies.push({
+                name: companyName,
+                current: analysis.periods.current,
+                previous: analysis.periods.previous,
+                growth: analysis.growth,
+                status:
+                  analysis.growth.revenue > 5 && analysis.growth.profit > 0
+                    ? "growing"
+                    : analysis.growth.revenue < -5 ||
+                      analysis.growth.profit < -10
+                    ? "declining"
+                    : "stable",
+              });
+
+              // Aggregate consolidated totals
+              consolidatedData.consolidated.current.revenue +=
+                analysis.periods.current.revenue || 0;
+              consolidatedData.consolidated.current.profit +=
+                analysis.periods.current.profit || 0;
+              consolidatedData.consolidated.current.assets +=
+                analysis.periods.current.assets || 0;
+              consolidatedData.consolidated.current.equity +=
+                analysis.periods.current.equity || 0;
+              consolidatedData.consolidated.current.expenses +=
+                analysis.periods.current.revenue -
+                  analysis.periods.current.profit || 0;
+
+              consolidatedData.consolidated.previous.revenue +=
+                analysis.periods.previous.revenue || 0;
+              consolidatedData.consolidated.previous.profit +=
+                analysis.periods.previous.profit || 0;
+              consolidatedData.consolidated.previous.assets +=
+                analysis.periods.previous.assets || 0;
+              consolidatedData.consolidated.previous.equity +=
+                analysis.periods.previous.equity || 0;
+              consolidatedData.consolidated.previous.expenses +=
+                analysis.periods.previous.revenue -
+                  analysis.periods.previous.profit || 0;
+
+              // Update status counts
+              const status =
+                consolidatedData.companies[
+                  consolidatedData.companies.length - 1
+                ].status;
+              if (status === "growing")
+                consolidatedData.summary.growingCompanies++;
+              else if (status === "declining")
+                consolidatedData.summary.decliningCompanies++;
+              else consolidatedData.summary.stableCompanies++;
+            }
+          }
+        }
+
+        // Calculate consolidated growth rates
+        consolidatedData.consolidated.growth.revenue = calculateGrowthRate(
+          consolidatedData.consolidated.previous.revenue,
+          consolidatedData.consolidated.current.revenue
+        );
+        consolidatedData.consolidated.growth.expenses = calculateGrowthRate(
+          consolidatedData.consolidated.previous.expenses,
+          consolidatedData.consolidated.current.expenses
+        );
+        consolidatedData.consolidated.growth.profit = calculateGrowthRate(
+          consolidatedData.consolidated.previous.profit,
+          consolidatedData.consolidated.current.profit
+        );
+        consolidatedData.consolidated.growth.assets = calculateGrowthRate(
+          consolidatedData.consolidated.previous.assets,
+          consolidatedData.consolidated.current.assets
+        );
+        consolidatedData.consolidated.growth.equity = calculateGrowthRate(
+          consolidatedData.consolidated.previous.equity,
+          consolidatedData.consolidated.current.equity
+        );
+
+        renderConsolidatedYoY(consolidatedData);
+      }
+
+      function renderConsolidatedYoY(data) {
+        const dashboardElement = document.getElementById("dashboardData");
+
+        // Get period labels from first company if available
+        const periodLabels =
+          data.companies.length > 0
+            ? {
+                current: data.companies[0].current.label || "Current Year",
+                previous: data.companies[0].previous.label || "Previous Year",
+              }
+            : {
+                current: "Current Year",
+                previous: "Previous Year",
+              };
+
+        const consolidated = data.consolidated;
+        const healthyGrowth =
+          data.summary.growingCompanies > data.summary.decliningCompanies;
+
+        dashboardElement.innerHTML = `
+    <!-- CONSOLIDATED YoY HEADER -->
+    <div class="dashboard-card">
+      <h3>Consolidated Year-over-Year Analysis - ${
+        data.companies.length
+      } Companies</h3>
+      <div style="margin-bottom: 20px; text-align: center;">
+        <div style="font-size: 14px; color: #666;">
+          Comparing ${periodLabels.current} vs ${periodLabels.previous}
+        </div>
+      </div>
+
+      <!-- CONSOLIDATED GROWTH METRICS -->
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 25px;">
+        
+        <div style="text-align: center; padding: 20px; background: ${
+          consolidated.growth.revenue >= 0 ? "#f8fff8" : "#fff8f8"
+        }; border-radius: 6px; border: 1px solid ${
+          consolidated.growth.revenue >= 0 ? "#27ae60" : "#e74c3c"
+        };">
+          <div style="font-size: 20px; font-weight: bold; color: ${
+            consolidated.growth.revenue >= 0 ? "#27ae60" : "#e74c3c"
+          }; margin-bottom: 8px;">
+            ${
+              consolidated.growth.revenue >= 0 ? "+" : ""
+            }${consolidated.growth.revenue.toFixed(1)}%
+          </div>
+          <div style="font-size: 13px; color: #666; margin-bottom: 8px;">Revenue Growth</div>
+          <div style="font-size: 11px;">
+            <div>Current: $${consolidated.current.revenue.toLocaleString()}</div>
+            <div>Previous: $${consolidated.previous.revenue.toLocaleString()}</div>
+          </div>
+        </div>
+
+        <div style="text-align: center; padding: 20px; background: ${
+          consolidated.growth.expenses <= 0 ? "#f8fff8" : "#fff8f8"
+        }; border-radius: 6px; border: 1px solid ${
+          consolidated.growth.expenses <= 0 ? "#27ae60" : "#e74c3c"
+        };">
+          <div style="font-size: 20px; font-weight: bold; color: ${
+            consolidated.growth.expenses <= 0 ? "#27ae60" : "#e74c3c"
+          }; margin-bottom: 8px;">
+            ${
+              consolidated.growth.expenses >= 0 ? "+" : ""
+            }${consolidated.growth.expenses.toFixed(1)}%
+          </div>
+          <div style="font-size: 13px; color: #666; margin-bottom: 8px;">Expense Growth</div>
+          <div style="font-size: 11px;">
+            <div>Current: $${consolidated.current.expenses.toLocaleString()}</div>
+            <div>Previous: $${consolidated.previous.expenses.toLocaleString()}</div>
+          </div>
+        </div>
+
+        <div style="text-align: center; padding: 20px; background: ${
+          consolidated.growth.profit >= 0 ? "#f8fff8" : "#fff8f8"
+        }; border-radius: 6px; border: 1px solid ${
+          consolidated.growth.profit >= 0 ? "#27ae60" : "#e74c3c"
+        };">
+          <div style="font-size: 20px; font-weight: bold; color: ${
+            consolidated.growth.profit >= 0 ? "#27ae60" : "#e74c3c"
+          }; margin-bottom: 8px;">
+            ${
+              consolidated.growth.profit >= 0 ? "+" : ""
+            }${consolidated.growth.profit.toFixed(1)}%
+          </div>
+          <div style="font-size: 13px; color: #666; margin-bottom: 8px;">Profit Growth</div>
+          <div style="font-size: 11px;">
+            <div>Current: $${consolidated.current.profit.toLocaleString()}</div>
+            <div>Previous: $${consolidated.previous.profit.toLocaleString()}</div>
+          </div>
+        </div>
+
+        <div style="text-align: center; padding: 20px; background: ${
+          consolidated.growth.assets >= 0 ? "#f8fff8" : "#fff8f8"
+        }; border-radius: 6px; border: 1px solid ${
+          consolidated.growth.assets >= 0 ? "#27ae60" : "#e74c3c"
+        };">
+          <div style="font-size: 20px; font-weight: bold; color: ${
+            consolidated.growth.assets >= 0 ? "#27ae60" : "#e74c3c"
+          }; margin-bottom: 8px;">
+            ${
+              consolidated.growth.assets >= 0 ? "+" : ""
+            }${consolidated.growth.assets.toFixed(1)}%
+          </div>
+          <div style="font-size: 13px; color: #666; margin-bottom: 8px;">Asset Growth</div>
+          <div style="font-size: 11px;">
+            <div>Current: $${consolidated.current.assets.toLocaleString()}</div>
+            <div>Previous: $${consolidated.previous.assets.toLocaleString()}</div>
+          </div>
+        </div>
+
+        <div style="text-align: center; padding: 20px; background: #f8fffe; border-radius: 6px; border: 1px solid #3498db;">
+          <div style="font-size: 16px; font-weight: bold; color: #3498db; margin-bottom: 8px;">
+            ${
+              consolidated.current.revenue > 0
+                ? (
+                    (consolidated.current.profit /
+                      consolidated.current.revenue) *
+                    100
+                  ).toFixed(1)
+                : 0
+            }%
+          </div>
+          <div style="font-size: 13px; color: #666; margin-bottom: 8px;">Current Margin</div>
+          <div style="font-size: 11px;">
+            <div>Previous: ${
+              consolidated.previous.revenue > 0
+                ? (
+                    (consolidated.previous.profit /
+                      consolidated.previous.revenue) *
+                    100
+                  ).toFixed(1)
+                : 0
+            }%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMPANY STATUS SUMMARY -->
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px;">
+        <div style="text-align: center; padding: 15px; background: #f8fff8; border-radius: 6px; border: 1px solid #27ae60;">
+          <div style="font-size: 24px; font-weight: bold; color: #27ae60;">${
+            data.summary.growingCompanies
+          }</div>
+          <div style="font-size: 13px; color: #666;">Growing Companies</div>
+        </div>
+        <div style="text-align: center; padding: 15px; background: #fffdf5; border-radius: 6px; border: 1px solid #f39c12;">
+          <div style="font-size: 24px; font-weight: bold; color: #f39c12;">${
+            data.summary.stableCompanies
+          }</div>
+          <div style="font-size: 13px; color: #666;">Stable Companies</div>
+        </div>
+        <div style="text-align: center; padding: 15px; background: #fff8f8; border-radius: 6px; border: 1px solid #e74c3c;">
+          <div style="font-size: 24px; font-weight: bold; color: #e74c3c;">${
+            data.summary.decliningCompanies
+          }</div>
+          <div style="font-size: 13px; color: #666;">Declining Companies</div>
+        </div>
+      </div>
+
+      <!-- CONSOLIDATED INSIGHTS -->
+      <div style="padding: 15px; background: #f8fffe; border: 1px solid #bee5eb; border-radius: 6px;">
+        <h5 style="color: #0c5460; margin-bottom: 10px;">Portfolio Growth Insights</h5>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; font-size: 13px;">
+          <div>
+            <strong>Overall Trajectory:</strong>
+            <div style="margin-top: 5px;">
+              ${
+                consolidated.growth.revenue > 10 &&
+                consolidated.growth.profit > 0
+                  ? "Strong portfolio growth - revenue and profit expanding"
+                  : consolidated.growth.revenue > 0 &&
+                    consolidated.growth.profit > 0
+                  ? "Steady portfolio growth - positive trends across metrics"
+                  : consolidated.growth.revenue > 0 &&
+                    consolidated.growth.profit < 0
+                  ? "Mixed performance - revenue growing but profit declining"
+                  : "Portfolio contraction - both revenue and profit declining"
+              }
+            </div>
+          </div>
+          <div>
+            <strong>Company Performance:</strong>
+            <div style="margin-top: 5px;">
+              ${
+                data.summary.growingCompanies === data.companies.length
+                  ? "All companies showing growth"
+                  : data.summary.growingCompanies >
+                    data.summary.decliningCompanies
+                  ? "Majority of companies performing well"
+                  : "Several companies need strategic attention"
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INDIVIDUAL COMPANY YoY PERFORMANCE -->
+    <div class="dashboard-card">
+      <h3>Individual Company Year-over-Year Performance</h3>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 15px;">
+        ${data.companies
+          .map(
+            (company) => `
+          <div style="border: 1px solid ${
+            company.status === "growing"
+              ? "#27ae60"
+              : company.status === "stable"
+              ? "#f39c12"
+              : "#e74c3c"
+          }; border-radius: 6px; padding: 15px; background: ${
+              company.status === "growing"
+                ? "#f8fff8"
+                : company.status === "stable"
+                ? "#fffdf5"
+                : "#fff8f8"
+            };">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+              <strong style="font-size: 15px;">${company.name}</strong>
+              <div style="display: flex; gap: 10px; font-size: 12px; font-weight: 500;">
+                <span style="color: ${
+                  company.growth.revenue >= 0 ? "#27ae60" : "#e74c3c"
+                };">
+                  Rev: ${
+                    company.growth.revenue >= 0 ? "+" : ""
+                  }${company.growth.revenue.toFixed(1)}%
+                </span>
+                <span style="color: ${
+                  company.growth.profit >= 0 ? "#27ae60" : "#e74c3c"
+                };">
+                  Profit: ${
+                    company.growth.profit >= 0 ? "+" : ""
+                  }${company.growth.profit.toFixed(1)}%
+                </span>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 12px; margin-bottom: 12px;">
+              <div>
+                <div style="color: #666; margin-bottom: 3px;">Current Revenue</div>
+                <div style="font-weight: 600;">$${company.current.revenue.toLocaleString()}</div>
+              </div>
+              <div>
+                <div style="color: #666; margin-bottom: 3px;">Previous Revenue</div>
+                <div style="font-weight: 600;">$${company.previous.revenue.toLocaleString()}</div>
+              </div>
+              <div>
+                <div style="color: #666; margin-bottom: 3px;">Current Profit</div>
+                <div style="font-weight: 600; color: ${
+                  company.current.profit >= 0 ? "#27ae60" : "#e74c3c"
+                };">
+                  $${company.current.profit.toLocaleString()}
+                </div>
+              </div>
+              <div>
+                <div style="color: #666; margin-bottom: 3px;">Previous Profit</div>
+                <div style="font-weight: 600; color: ${
+                  company.previous.profit >= 0 ? "#27ae60" : "#e74c3c"
+                };">
+                  $${company.previous.profit.toLocaleString()}
+                </div>
+              </div>
+            </div>
+
+            <div style="font-size: 11px; text-align: center; padding: 6px; border-radius: 4px; background: ${
+              company.status === "growing"
+                ? "#e8f5e8"
+                : company.status === "stable"
+                ? "#fef9e7"
+                : "#fce8e8"
+            };">
+              Status: <span style="color: ${
+                company.status === "growing"
+                  ? "#27ae60"
+                  : company.status === "stable"
+                  ? "#f39c12"
+                  : "#e74c3c"
+              }; font-weight: 500;">
+                ${
+                  company.status === "growing"
+                    ? "Growing"
+                    : company.status === "stable"
+                    ? "Stable"
+                    : "Declining"
+                }
+              </span>
+            </div>
+          </div>
+        `
+          )
+          .join("")}
+      </div>
+    </div>
+  `;
       }
 
       async function loadAlertsData() {
