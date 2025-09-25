@@ -387,6 +387,7 @@
     </div>
 
     <!-- SINGLE PANEL DASHBOARD SECTION -->
+
     <div class="main-dashboard" id="mainDashboard">
       <div class="header">
         <h1>RAC Financial Dashboard</h1>
@@ -481,6 +482,13 @@
 
       function updateViewModeIndicator() {
         const indicator = document.getElementById("viewModeIndicator");
+
+        // Safety check - if element doesn't exist, skip this function
+        if (!indicator) {
+          console.log("viewModeIndicator element not found - skipping update");
+          return;
+        }
+
         const viewMode = getViewMode();
         const colors = {
           none: "#e74c3c",

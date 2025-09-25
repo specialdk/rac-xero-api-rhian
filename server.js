@@ -248,6 +248,14 @@ const tokenStorage = {
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json());
 
+app.use(express.static('public', {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.css')) {
+      res.setHeader('Content-Type', 'text/css');
+    }
+  }
+}));
+
 // Initialize Xero client with reports scope
 const xero = new XeroClient({
   clientId: XERO_CLIENT_ID,
