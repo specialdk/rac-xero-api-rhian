@@ -2520,7 +2520,6 @@
         }
       </div>
 
-      <!-- INDIVIDUAL COMPANY CASH POSITIONS -->
       <!-- INDIVIDUAL COMPANY CASH POSITIONS - FIXED CARD-LEVEL SCROLLING -->
       <div class="dashboard-card" style="max-height: 60vh; overflow-y: scroll; border: 1px solid #e0e0e0;">
         <h3 style="position: sticky; top: 0; background: white; padding: 15px; margin: -20px -20px 10px -20px; border-bottom: 1px solid #e0e0e0;">Individual Company Cash Positions</h3>
@@ -2767,6 +2766,8 @@
         }
       }
 
+      // ====== P&L FIXES - ERROR HANDLING AND SCROLL CONTAINER ======
+
       function renderProfitLossView(
         companies,
         revenueAccounts,
@@ -2776,22 +2777,34 @@
       ) {
         const dashboardElement = document.getElementById("dashboardData");
 
+        // Fix the error by adding safety checks
+        const safeCompanies = companies || [];
+        const safeRevenueAccounts = revenueAccounts || [];
+        const safeExpenseAccounts = expenseAccounts || [];
+        const safeTotals = totals || {
+          totalRevenue: 0,
+          totalExpenses: 0,
+          netProfit: 0,
+          profitableCompanies: 0,
+          lossCompanies: 0,
+        };
+
         const performanceStatus =
-          totals.lossCompanies === 0
+          safeTotals.lossCompanies === 0
             ? "healthy"
-            : totals.lossCompanies >= totals.profitableCompanies
+            : safeTotals.lossCompanies >= safeTotals.profitableCompanies
             ? "critical"
             : "warning";
 
         dashboardElement.innerHTML = `
-      <!-- CONSOLIDATED P&L HEADER -->
+      <!-- CONSOLIDATED P&L HEADER - NOT SCROLLABLE -->
       <div class="dashboard-card" style="margin-bottom: 20px;">
         <h3>Consolidated Profit & Loss - All Selected Companies</h3>
         <div style="margin-bottom: 15px;">
           <span style="font-size: 14px; color: #666;">
-            Companies: ${companies.length} | 
-            Revenue Accounts: ${revenueAccounts.length} | 
-            Expense Accounts: ${expenseAccounts.length} |
+            Companies: ${safeCompanies.length} | 
+            Revenue Accounts: ${safeRevenueAccounts.length} | 
+            Expense Accounts: ${safeExpenseAccounts.length} |
             Performance: <span style="color: ${
               performanceStatus === "healthy"
                 ? "#27ae60"
@@ -2814,27 +2827,27 @@
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px;">
           <div style="text-align: center; padding: 15px; background: #f8fff8; border-radius: 6px; border: 1px solid #27ae60;">
             <div style="font-size: 24px; font-weight: bold; color: #27ae60;">
-              $${totals.totalRevenue.toLocaleString()}
+              $${safeTotals.totalRevenue.toLocaleString()}
             </div>
             <div style="font-size: 12px; color: #666; margin-top: 4px;">Total Revenue</div>
           </div>
           
           <div style="text-align: center; padding: 15px; background: #fff8f8; border-radius: 6px; border: 1px solid #e74c3c;">
             <div style="font-size: 24px; font-weight: bold; color: #e74c3c;">
-              $${totals.totalExpenses.toLocaleString()}
+              $${safeTotals.totalExpenses.toLocaleString()}
             </div>
             <div style="font-size: 12px; color: #666; margin-top: 4px;">Total Expenses</div>
           </div>
 
           <div style="text-align: center; padding: 15px; background: ${
-            totals.netProfit >= 0 ? "#f8fff8" : "#fff8f8"
+            safeTotals.netProfit >= 0 ? "#f8fff8" : "#fff8f8"
           }; border-radius: 6px; border: 1px solid ${
-          totals.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+          safeTotals.netProfit >= 0 ? "#27ae60" : "#e74c3c"
         };">
             <div style="font-size: 24px; font-weight: bold; color: ${
-              totals.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+              safeTotals.netProfit >= 0 ? "#27ae60" : "#e74c3c"
             };">
-              $${totals.netProfit.toLocaleString()}
+              $${safeTotals.netProfit.toLocaleString()}
             </div>
             <div style="font-size: 12px; color: #666; margin-top: 4px;">Net Profit</div>
           </div>
@@ -2853,90 +2866,26 @@
           </div>
         </div>
 
-        <!-- CONSOLIDATED REVENUE & EXPENSES TABLE -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-          
-          <!-- REVENUE COLUMN -->
-          <div>
-            <h4 style="color: #27ae60; border-bottom: 2px solid #27ae60; padding-bottom: 8px; margin-bottom: 10px;">
-              Revenue (${revenueAccounts.length} account types)
-            </h4>
-            <div style="max-height: 40vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px;">
-              ${
-                revenueAccounts.length > 0
-                  ? revenueAccounts
-                      .map(
-                        (account) => `
-                <div style="display: flex; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px;">
-                  <span style="flex: 1; margin-right: 10px;">${
-                    account.name
-                  }</span>
-                  <span style="font-weight: 600; min-width: 120px; text-align: right; color: #27ae60;">
-                    $${account.amount.toLocaleString()}
-                  </span>
-                </div>
-              `
-                      )
-                      .join("")
-                  : '<div style="padding: 20px; text-align: center; color: #666;">No revenue accounts</div>'
-              }
-            </div>
-            <div style="border-top: 3px solid #27ae60; padding: 12px; font-weight: bold; color: #27ae60; background: #f8fff8; text-align: right;">
-              Total Revenue: $${totals.totalRevenue.toLocaleString()}
-            </div>
-          </div>
-
-          <!-- EXPENSES COLUMN -->
-          <div>
-            <h4 style="color: #e74c3c; border-bottom: 2px solid #e74c3c; padding-bottom: 8px; margin-bottom: 10px;">
-              Expenses (${expenseAccounts.length} account types)
-            </h4>
-            <div style="max-height: 40vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px;">
-              ${
-                expenseAccounts.length > 0
-                  ? expenseAccounts
-                      .map(
-                        (account) => `
-                <div style="display: flex; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px;">
-                  <span style="flex: 1; margin-right: 10px;">${
-                    account.name
-                  }</span>
-                  <span style="font-weight: 600; min-width: 120px; text-align: right; color: #e74c3c;">
-                    $${account.amount.toLocaleString()}
-                  </span>
-                </div>
-              `
-                      )
-                      .join("")
-                  : '<div style="padding: 20px; text-align: center; color: #666;">No expense accounts</div>'
-              }
-            </div>
-            <div style="border-top: 3px solid #e74c3c; padding: 12px; font-weight: bold; color: #e74c3c; background: #fff8f8; text-align: right;">
-              Total Expenses: $${totals.totalExpenses.toLocaleString()}
-            </div>
-          </div>
-        </div>
-
         <!-- NET PROFIT SUMMARY -->
-        <div style="margin-top: 20px; padding: 20px; background: ${
-          totals.netProfit >= 0 ? "#f8fff8" : "#fff8f8"
+        <div style="padding: 20px; background: ${
+          safeTotals.netProfit >= 0 ? "#f8fff8" : "#fff8f8"
         }; border-radius: 6px; border: 2px solid ${
-          totals.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+          safeTotals.netProfit >= 0 ? "#27ae60" : "#e74c3c"
         };">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
               <span style="font-weight: bold; font-size: 18px;">Consolidated Net Result:</span>
               <span style="font-weight: bold; font-size: 24px; color: ${
-                totals.netProfit >= 0 ? "#27ae60" : "#e74c3c"
+                safeTotals.netProfit >= 0 ? "#27ae60" : "#e74c3c"
               }; margin-left: 15px;">
-                $${totals.netProfit.toLocaleString()}
+                $${safeTotals.netProfit.toLocaleString()}
               </span>
             </div>
             <div style="text-align: right; font-size: 14px; color: #666;">
               <div>Profit Margin: ${profitMargin}%</div>
               <div style="margin-top: 4px;">
-                Profitable: ${totals.profitableCompanies} | Loss-making: ${
-          totals.lossCompanies
+                Profitable: ${safeTotals.profitableCompanies} | Loss-making: ${
+          safeTotals.lossCompanies
         }
               </div>
             </div>
@@ -2944,19 +2893,91 @@
         </div>
       </div>
 
-      <!-- INDIVIDUAL COMPANY P&L PERFORMANCE -->
-      <div class="dashboard-card" style="max-height: 60vh; overflow-y: scroll; border: 1px solid #e0e0e0;">
-        <h3 style="position: sticky; top: 0; background: white; padding: 15px; margin: -20px -20px 10px -20px; border-bottom: 1px solid #e0e0e0;">Individual Company P&L Performance</h3>
-        <div style="padding: 0 20px 20px 20px;">
-          ${companies
+      <!-- SCROLLABLE MAIN CARD CONTAINER - THIS IS WHERE THE SCROLL GOES -->
+      <div class="dashboard-card" style="max-height: 70vh; overflow-y: scroll; border: 1px solid #e0e0e0;">
+        
+        <!-- CONSOLIDATED REVENUE & EXPENSES TABLE - INSIDE SCROLLABLE CONTAINER -->
+        <div style="padding: 20px; border-bottom: 1px solid #e0e0e0;">
+          <h3 style="margin-bottom: 15px;">Revenue & Expense Breakdown</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            
+            <!-- REVENUE COLUMN -->
+            <div>
+              <h4 style="color: #27ae60; border-bottom: 2px solid #27ae60; padding-bottom: 8px; margin-bottom: 10px;">
+                Revenue (${safeRevenueAccounts.length} account types)
+              </h4>
+              <div style="max-height: 40vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px;">
+                ${
+                  safeRevenueAccounts.length > 0
+                    ? safeRevenueAccounts
+                        .map(
+                          (account) => `
+                  <div style="display: flex; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px;">
+                    <span style="flex: 1; margin-right: 10px;">${
+                      account.name
+                    }</span>
+                    <span style="font-weight: 600; min-width: 120px; text-align: right; color: #27ae60;">
+                      $${account.amount.toLocaleString()}
+                    </span>
+                  </div>
+                `
+                        )
+                        .join("")
+                    : '<div style="padding: 20px; text-align: center; color: #666;">No revenue accounts</div>'
+                }
+              </div>
+              <div style="border-top: 3px solid #27ae60; padding: 12px; font-weight: bold; color: #27ae60; background: #f8fff8; text-align: right;">
+                Total Revenue: $${safeTotals.totalRevenue.toLocaleString()}
+              </div>
+            </div>
+
+            <!-- EXPENSES COLUMN -->
+            <div>
+              <h4 style="color: #e74c3c; border-bottom: 2px solid #e74c3c; padding-bottom: 8px; margin-bottom: 10px;">
+                Expenses (${safeExpenseAccounts.length} account types)
+              </h4>
+              <div style="max-height: 40vh; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px;">
+                ${
+                  safeExpenseAccounts.length > 0
+                    ? safeExpenseAccounts
+                        .map(
+                          (account) => `
+                  <div style="display: flex; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px;">
+                    <span style="flex: 1; margin-right: 10px;">${
+                      account.name
+                    }</span>
+                    <span style="font-weight: 600; min-width: 120px; text-align: right; color: #e74c3c;">
+                      $${account.amount.toLocaleString()}
+                    </span>
+                  </div>
+                `
+                        )
+                        .join("")
+                    : '<div style="padding: 20px; text-align: center; color: #666;">No expense accounts</div>'
+                }
+              </div>
+              <div style="border-top: 3px solid #e74c3c; padding: 12px; font-weight: bold; color: #e74c3c; background: #fff8f8; text-align: right;">
+                Total Expenses: $${safeTotals.totalExpenses.toLocaleString()}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- INDIVIDUAL COMPANY P&L PERFORMANCE - INSIDE SAME SCROLLABLE CONTAINER -->
+        <div style="padding: 20px;">
+          <h3 style="margin-bottom: 15px;">Individual Company P&L Performance</h3>
+          
+          ${safeCompanies
             .map((company) => {
               if (company.error) {
                 return `
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; margin: 10px 0; border-radius: 6px; border: 1px solid #e74c3c; background: #fff8f8;">
                   <div>
-                    <strong style="font-size: 16px; color: #e74c3c;">${company.companyName}</strong>
+                    <strong style="font-size: 16px; color: #e74c3c;">${
+                      company.companyName
+                    }</strong>
                     <div style="font-size: 12px; color: #e74c3c; margin-top: 4px;">
-                      ${company.errorMessage}
+                      ${company.errorMessage || "Failed to load P&L data"}
                     </div>
                   </div>
                   <div style="color: #e74c3c; font-weight: bold;">❌ Error</div>
@@ -2991,54 +3012,61 @@
                 <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; font-size: 13px;">
                   <div>
                     <div style="color: #666; margin-bottom: 3px;">Revenue</div>
-                    <div style="font-weight: 600; color: #27ae60;">$${company.totalRevenue.toLocaleString()}</div>
+                    <div style="font-weight: 600; color: #27ae60;">$${(
+                      company.totalRevenue || 0
+                    ).toLocaleString()}</div>
                   </div>
                   <div>
                     <div style="color: #666; margin-bottom: 3px;">Expenses</div>
-                    <div style="font-weight: 600; color: #e74c3c;">$${company.totalExpenses.toLocaleString()}</div>
+                    <div style="font-weight: 600; color: #e74c3c;">$${(
+                      company.totalExpenses || 0
+                    ).toLocaleString()}</div>
                   </div>
                   <div>
                     <div style="color: #666; margin-bottom: 3px;">Profit Margin</div>
                     <div style="font-weight: 600;">${
-                      company.profitMargin
+                      company.profitMargin || 0
                     }%</div>
                   </div>
                   <div>
                     <div style="color: #666; margin-bottom: 3px;">Accounts</div>
                     <div style="font-weight: 600;">R:${
-                      company.revenueAccounts.length
-                    } E:${company.expenseAccounts.length}</div>
+                      (company.revenueAccounts || []).length
+                    } E:${(company.expenseAccounts || []).length}</div>
                   </div>
                 </div>
               </div>
             `;
             })
             .join("")}
+
+          <!-- P&L PERFORMANCE INSIGHTS - INSIDE SCROLLABLE CONTAINER -->
+          <div style="margin-top: 20px;">
+            ${
+              safeTotals.lossCompanies > 0
+                ? `
+              <div style="padding: 15px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px;">
+                <strong>⚠️ Performance Alert:</strong> 
+                ${safeTotals.lossCompanies} ${
+                    safeTotals.lossCompanies === 1
+                      ? "company is"
+                      : "companies are"
+                  } operating at a loss with negative profit margins. 
+                Review expense management and revenue optimization strategies for the affected ${
+                  safeTotals.lossCompanies === 1 ? "company" : "companies"
+                }.
+              </div>
+            `
+                : `
+              <div style="padding: 15px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 6px;">
+                <strong>✅ Strong Performance:</strong> 
+                All selected companies are profitable with a consolidated profit margin of ${profitMargin}% across $${safeTotals.totalRevenue.toLocaleString()} in total revenue.
+              </div>
+            `
+            }
+          </div>
         </div>
 
-        <!-- P&L PERFORMANCE INSIGHTS - STICKY FOOTER -->
-        <div style="position: sticky; bottom: 0; background: white; margin: 0 -20px -20px -20px; padding: 15px; border-top: 1px solid #e0e0e0;">
-          ${
-            totals.lossCompanies > 0
-              ? `
-            <div style="padding: 15px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px;">
-              <strong>⚠️ Performance Alert:</strong> 
-              ${totals.lossCompanies} ${
-                  totals.lossCompanies === 1 ? "company is" : "companies are"
-                } operating at a loss with negative profit margins. 
-              Review expense management and revenue optimization strategies for the affected ${
-                totals.lossCompanies === 1 ? "company" : "companies"
-              }.
-            </div>
-          `
-              : `
-            <div style="padding: 15px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 6px;">
-              <strong>✅ Strong Performance:</strong> 
-              All selected companies are profitable with a consolidated profit margin of ${profitMargin}% across $${totals.totalRevenue.toLocaleString()} in total revenue.
-            </div>
-          `
-          }
-        </div>
       </div>
     `;
       }
