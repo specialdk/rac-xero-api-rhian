@@ -26,6 +26,7 @@ const XERO_CLIENT_ID = process.env.XERO_CLIENT_ID;
 const XERO_CLIENT_SECRET = process.env.XERO_CLIENT_SECRET;
 const XERO_REDIRECT_URI = process.env.XERO_REDIRECT_URI;
 
+
 const APPROVALMAX_CLIENT_ID = process.env.APPROVALMAX_CLIENT_ID;
 const APPROVALMAX_CLIENT_SECRET = process.env.APPROVALMAX_CLIENT_SECRET;
 const APPROVALMAX_REDIRECT_URI = process.env.APPROVALMAX_REDIRECT_URI;
@@ -258,6 +259,7 @@ const xero = new XeroClient({
     "accounting.contacts",
     "accounting.settings",
     "accounting.reports.read",
+    "offline_access",  // ADD THIS LINE
   ],
 });
 
