@@ -1110,7 +1110,7 @@ app.post("/api/budgets", async (req, res) => {
 // GET Budget Summary Report - CORRECTED
 app.post("/api/budget-summary", async (req, res) => {
   try {
-    const { tenantId, organizationName, date, periods, timeframe } = req.body;
+    const { tenantId, organizationName, date, periods } = req.body;
 
     if (!organizationName && !tenantId) {
       return res
@@ -1142,12 +1142,11 @@ app.post("/api/budget-summary", async (req, res) => {
 
     await xero.setTokenSet(tokenData);
 
-    // Call Budget Summary Report
+    // Call Budget Summary Report - REMOVE timeframe parameter
     const report = await xero.accountingApi.getReportBudgetSummary(
       actualTenantId,
       date,
-      periods || 12,
-      timeframe || "MONTH"
+      periods || 12
     );
 
     res.json({
