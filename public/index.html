@@ -1372,6 +1372,7 @@
 
           const enhancedMetrics = [];
           const selectedCompanies = [];
+          let budgetData = null; // ADD THIS LINE
 
           for (const tenantId of activeCompanyFilters) {
             const connectedCompany = connectedCompanies.find(
@@ -1399,6 +1400,10 @@
                   tenantId
                 );
                 enhancedMetrics.push(enhancedData);
+                // Load budget data if this is Mining company
+                if (orgName === "Mining" && !budgetData) {
+                  budgetData = await loadBudgetData(orgName);
+                }
               } catch (error) {
                 console.error(
                   `Error loading enhanced metrics for ${connectedCompany.tenantName}:`,
@@ -1425,7 +1430,8 @@
           renderEnhancedOverview(
             consolidatedTotals,
             enhancedMetrics,
-            balancedCompanies
+            balancedCompanies,
+            budgetData
           );
         } catch (error) {
           console.error("Error in enhanced loadOverviewDataWithYoY:", error);
@@ -1547,10 +1553,128 @@
         );
       }
 
+      // ====== BUDGET DATA LOADING ======
+      async function loadBudgetData(organizationName) {
+        try {
+          // Load both budget and P&L data for Q1 FY26
+          const [budgetResponse, pnlResponse] = await Promise.all([
+            fetchWithErrorHandling("/api/budget-summary", {
+              organizationName: organizationName,
+              date: "2025-07-01",
+              periods: 3, // Q1: Jul, Aug, Sep
+            }),
+            fetchWithErrorHandling("/api/profit-loss-summary", {
+              organizationName: organizationName,
+              date: "2025-09-30", // End of Q1
+              periodMonths: 3,
+            }),
+          ]);
+
+          if (!budgetResponse || !budgetResponse.ok) {
+            console.log("Budget data not available for", organizationName);
+            return null;
+          }
+
+          const budgetData = await budgetResponse.json();
+          const pnlData =
+            pnlResponse && pnlResponse.ok ? await pnlResponse.json() : null;
+
+          // Parse budget data from report structure
+          const budgetSummary = parseBudgetReport(budgetData.report);
+
+          // Calculate variances if we have P&L data
+          if (pnlData && pnlData.summary) {
+            budgetSummary.actual = {
+              revenue: pnlData.summary.totalRevenue || 0,
+              operatingExpenses: pnlData.summary.totalExpenses || 0,
+            };
+
+            budgetSummary.variance = {
+              revenue:
+                budgetSummary.actual.revenue - budgetSummary.budget.revenue,
+              revenuePercent:
+                budgetSummary.budget.revenue > 0
+                  ? ((budgetSummary.actual.revenue -
+                      budgetSummary.budget.revenue) /
+                      budgetSummary.budget.revenue) *
+                    100
+                  : 0,
+              expenses:
+                budgetSummary.actual.operatingExpenses -
+                budgetSummary.budget.operatingExpenses,
+              expensesPercent:
+                budgetSummary.budget.operatingExpenses > 0
+                  ? ((budgetSummary.actual.operatingExpenses -
+                      budgetSummary.budget.operatingExpenses) /
+                      budgetSummary.budget.operatingExpenses) *
+                    100
+                  : 0,
+            };
+          }
+
+          return budgetSummary;
+        } catch (error) {
+          console.error("Error loading budget data:", error);
+          return null;
+        }
+      }
+
+      function parseBudgetReport(report) {
+        if (!report || !report.rows) {
+          return null;
+        }
+
+        const summary = {
+          budget: {
+            revenue: 0,
+            operatingExpenses: 0,
+            monthlyBreakdown: [],
+          },
+          actual: null,
+          variance: null,
+        };
+
+        // Find the header row to get month columns
+        const headerRow = report.rows.find((row) => row.rowType === "Header");
+        const months = headerRow
+          ? headerRow.cells.slice(1).map((cell) => cell.value)
+          : [];
+
+        // Parse sections
+        report.rows.forEach((row) => {
+          if (row.rowType === "Section") {
+            if (row.title === "Income") {
+              // Sum all income rows for first 3 months
+              row.rows.forEach((incomeRow) => {
+                if (incomeRow.cells && incomeRow.cells.length > 3) {
+                  summary.budget.revenue +=
+                    (parseFloat(incomeRow.cells[1]?.value) || 0) +
+                    (parseFloat(incomeRow.cells[2]?.value) || 0) +
+                    (parseFloat(incomeRow.cells[3]?.value) || 0);
+                }
+              });
+            } else if (row.title === "Less Operating Expenses") {
+              // Sum all operating expense rows for first 3 months
+              row.rows.forEach((expenseRow) => {
+                if (expenseRow.cells && expenseRow.cells.length > 3) {
+                  summary.budget.operatingExpenses +=
+                    Math.abs(parseFloat(expenseRow.cells[1]?.value) || 0) +
+                    Math.abs(parseFloat(expenseRow.cells[2]?.value) || 0) +
+                    Math.abs(parseFloat(expenseRow.cells[3]?.value) || 0);
+                }
+              });
+            }
+          }
+        });
+
+        return summary;
+      }
+
       function renderEnhancedOverview(
         totals,
         enhancedMetrics,
-        balancedCompanies
+        balancedCompanies,
+        budgetData
       ) {
         const dashboardElement = document.getElementById("dashboardData");
 
@@ -1627,6 +1751,8 @@
           )}
         </div>
       </div>
+
+        ${budgetData ? createBudgetCard(budgetData) : ""}
 
       <!-- COMPANY BREAKDOWN -->
       <div class="dashboard-card">
@@ -1725,6 +1851,202 @@
         };">${formattedValue}</div>
       </div>
     `;
+      }
+
+      // ====== BUDGET CARD CREATION ======
+      function createBudgetCard(budgetData) {
+        if (!budgetData || !budgetData.budget) {
+          return "";
+        }
+
+        const budget = budgetData.budget;
+        const actual = budgetData.actual;
+        const variance = budgetData.variance;
+
+        // Determine status colors
+        const revenueStatus =
+          variance && variance.revenue < 0 ? "under" : "over";
+        const expenseStatus =
+          variance && variance.expenses > 0 ? "over" : "under";
+
+        const revenueColor = revenueStatus === "under" ? "#e74c3c" : "#27ae60";
+        const expenseColor = expenseStatus === "over" ? "#e74c3c" : "#27ae60";
+
+        return `
+    <!-- BUDGET VS ACTUAL CARD -->
+    <div class="dashboard-card" style="margin: 20px 0; background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);">
+      <h3>💼 FY26 Q1 Budget Performance - Mining</h3>
+      <div style="font-size: 13px; color: #666; margin-bottom: 15px;">
+        Period: July - September 2025
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+        
+        <!-- REVENUE SECTION -->
+        <div style="border: 1px solid ${revenueColor}; border-radius: 8px; padding: 15px; background: ${
+          revenueStatus === "under" ? "#fff8f8" : "#f8fff8"
+        };">
+          <h4 style="color: ${revenueColor}; margin-bottom: 12px; border-bottom: 2px solid ${revenueColor}; padding-bottom: 6px;">
+            📈 Revenue
+          </h4>
+          
+          <div style="display: grid; gap: 10px; font-size: 13px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: #666;">Budget:</span>
+              <span style="font-weight: 600;">$${budget.revenue.toLocaleString()}</span>
+            </div>
+            
+            ${
+              actual
+                ? `
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #666;">Actual:</span>
+                <span style="font-weight: 600;">$${actual.revenue.toLocaleString()}</span>
+              </div>
+              
+              <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e0e0e0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <span style="font-weight: 600; color: ${revenueColor};">Variance:</span>
+                  <span style="font-weight: 700; color: ${revenueColor}; font-size: 15px;">
+                    ${variance.revenue >= 0 ? "+" : ""}$${Math.abs(
+                    variance.revenue
+                  ).toLocaleString()}
+                  </span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="color: #666;">Percentage:</span>
+                  <span style="font-weight: 600; color: ${revenueColor};">
+                    ${
+                      variance.revenuePercent >= 0 ? "+" : ""
+                    }${variance.revenuePercent.toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+
+              <div style="margin-top: 10px; padding: 8px; background: ${
+                revenueStatus === "under" ? "#fee" : "#efe"
+              }; border-radius: 4px; text-align: center; font-size: 12px; font-weight: 500; color: ${revenueColor};">
+                ${
+                  revenueStatus === "under"
+                    ? `⚠️ ${Math.abs(variance.revenuePercent).toFixed(
+                        0
+                      )}% UNDER Budget`
+                    : `✅ ${variance.revenuePercent.toFixed(0)}% OVER Budget`
+                }
+              </div>
+            `
+                : `
+              <div style="margin-top: 10px; padding: 8px; background: #fff3cd; border-radius: 4px; text-align: center; font-size: 12px; color: #856404;">
+                ℹ️ Actual data not available
+              </div>
+            `
+            }
+          </div>
+        </div>
+
+        <!-- EXPENSES SECTION -->
+        <div style="border: 1px solid ${expenseColor}; border-radius: 8px; padding: 15px; background: ${
+          expenseStatus === "over" ? "#fff8f8" : "#f8fff8"
+        };">
+          <h4 style="color: ${expenseColor}; margin-bottom: 12px; border-bottom: 2px solid ${expenseColor}; padding-bottom: 6px;">
+            📉 Operating Expenses
+          </h4>
+          
+          <div style="display: grid; gap: 10px; font-size: 13px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: #666;">Budget:</span>
+              <span style="font-weight: 600;">$${budget.operatingExpenses.toLocaleString()}</span>
+            </div>
+            
+            ${
+              actual
+                ? `
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #666;">Actual:</span>
+                <span style="font-weight: 600;">$${actual.operatingExpenses.toLocaleString()}</span>
+              </div>
+              
+              <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e0e0e0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <span style="font-weight: 600; color: ${expenseColor};">Variance:</span>
+                  <span style="font-weight: 700; color: ${expenseColor}; font-size: 15px;">
+                    ${variance.expenses >= 0 ? "+" : ""}$${Math.abs(
+                    variance.expenses
+                  ).toLocaleString()}
+                  </span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="color: #666;">Percentage:</span>
+                  <span style="font-weight: 600; color: ${expenseColor};">
+                    ${
+                      variance.expensesPercent >= 0 ? "+" : ""
+                    }${variance.expensesPercent.toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+
+              <div style="margin-top: 10px; padding: 8px; background: ${
+                expenseStatus === "over" ? "#fee" : "#efe"
+              }; border-radius: 4px; text-align: center; font-size: 12px; font-weight: 500; color: ${expenseColor};">
+                ${
+                  expenseStatus === "over"
+                    ? `⚠️ ${variance.expensesPercent.toFixed(0)}% OVER Budget`
+                    : `✅ ${Math.abs(variance.expensesPercent).toFixed(
+                        0
+                      )}% UNDER Budget`
+                }
+              </div>
+            `
+                : `
+              <div style="margin-top: 10px; padding: 8px; background: #fff3cd; border-radius: 4px; text-align: center; font-size: 12px; color: #856404;">
+                ℹ️ Actual data not available
+              </div>
+            `
+            }
+          </div>
+        </div>
+      </div>
+
+      ${
+        variance
+          ? `
+        <!-- BUDGET INSIGHTS -->
+        <div style="margin-top: 20px; padding: 15px; background: #f8fffe; border: 1px solid #bee5eb; border-radius: 6px;">
+          <h5 style="color: #0c5460; margin-bottom: 10px;">💡 Budget Performance Insights</h5>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; font-size: 13px;">
+            <div>
+              <strong>Overall Budget Status:</strong>
+              <div style="margin-top: 5px;">
+                ${
+                  revenueStatus === "under" && expenseStatus === "under"
+                    ? "Revenue below target but expenses well controlled - focus on revenue growth"
+                    : revenueStatus === "over" && expenseStatus === "under"
+                    ? "Excellent performance - revenue exceeding budget with controlled expenses"
+                    : revenueStatus === "under" && expenseStatus === "over"
+                    ? "⚠️ Critical - Both revenue under and expenses over budget"
+                    : "Revenue strong but expenses need attention - monitor cost control"
+                }
+              </div>
+            </div>
+            <div>
+              <strong>Key Finding:</strong>
+              <div style="margin-top: 5px; color: #e74c3c; font-weight: 500;">
+                ${
+                  revenueStatus === "under"
+                    ? `Revenue shortfall of $${Math.abs(
+                        variance.revenue
+                      ).toLocaleString()} requires investigation`
+                    : "Revenue performance exceeding expectations"
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      `
+          : ""
+      }
+    </div>
+  `;
       }
 
       // ====== TRIAL BALANCE DATA LOADING ======
