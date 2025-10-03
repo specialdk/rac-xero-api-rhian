@@ -26,7 +26,6 @@ const XERO_CLIENT_ID = process.env.XERO_CLIENT_ID;
 const XERO_CLIENT_SECRET = process.env.XERO_CLIENT_SECRET;
 const XERO_REDIRECT_URI = process.env.XERO_REDIRECT_URI;
 
-
 const APPROVALMAX_CLIENT_ID = process.env.APPROVALMAX_CLIENT_ID;
 const APPROVALMAX_CLIENT_SECRET = process.env.APPROVALMAX_CLIENT_SECRET;
 const APPROVALMAX_REDIRECT_URI = process.env.APPROVALMAX_REDIRECT_URI;
@@ -259,7 +258,7 @@ const xero = new XeroClient({
     "accounting.contacts",
     "accounting.settings",
     "accounting.reports.read",
-    "offline_access",  // ADD THIS LINE
+    "offline_access", // ADD THIS LINE
   ],
 });
 
@@ -1050,6 +1049,69 @@ app.get("/api/connection-status-enhanced", async (req, res) => {
   } catch (error) {
     console.error("❌ Error getting enhanced connection status:", error);
     res.status(500).json({ error: "Failed to get enhanced connection status" });
+  }
+});
+
+// GET Budgets
+app.post("/api/budgets", async (req, res) => {
+  try {
+    const { tenantId, organizationName, budgetId } = req.body;
+
+    // Get tenant ID if organization name provided
+    const actualTenantId =
+      tenantId || (await getTenantIdFromOrgName(organizationName));
+
+    // Get Xero access token
+    const tokenSet = await getValidTokenForTenant(actualTenantId);
+    const xero = new XeroClient();
+    await xero.setTokenSet(tokenSet);
+
+    // Call Xero Budgets API
+    let budgets;
+    if (budgetId) {
+      budgets = await xero.accountingApi.getBudget(actualTenantId, budgetId);
+    } else {
+      budgets = await xero.accountingApi.getBudgets(actualTenantId);
+    }
+
+    res.json({
+      tenantId: actualTenantId,
+      budgets: budgets.body.budgets,
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Budget API Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET Budget Summary Report (Budget vs Actual)
+app.post("/api/budget-summary", async (req, res) => {
+  try {
+    const { tenantId, organizationName, date, periods } = req.body;
+
+    const actualTenantId =
+      tenantId || (await getTenantIdFromOrgName(organizationName));
+    const tokenSet = await getValidTokenForTenant(actualTenantId);
+    const xero = new XeroClient();
+    await xero.setTokenSet(tokenSet);
+
+    // Call Budget Summary Report
+    const report = await xero.accountingApi.getReportBudgetSummary(
+      actualTenantId,
+      date,
+      periods,
+      timeframe // 'MONTH' or 'YEAR'
+    );
+
+    res.json({
+      tenantId: actualTenantId,
+      report: report.body.reports[0],
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Budget Summary Error:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 
