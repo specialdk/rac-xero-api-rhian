@@ -1052,19 +1052,40 @@ app.get("/api/connection-status-enhanced", async (req, res) => {
   }
 });
 
-// GET Budgets
+// GET Budgets - CORRECTED
 app.post("/api/budgets", async (req, res) => {
   try {
     const { tenantId, organizationName, budgetId } = req.body;
 
-    // Get tenant ID if organization name provided
-    const actualTenantId =
-      tenantId || (await getTenantIdFromOrgName(organizationName));
+    if (!organizationName && !tenantId) {
+      return res
+        .status(400)
+        .json({ error: "Organization name or tenant ID required" });
+    }
 
-    // Get Xero access token
-    const tokenSet = await getValidTokenForTenant(actualTenantId);
-    const xero = new XeroClient();
-    await xero.setTokenSet(tokenSet);
+    // Find tenant ID if organization name provided (SAME AS YOUR OTHER ENDPOINTS)
+    let actualTenantId = tenantId;
+    if (organizationName && !tenantId) {
+      const connections = await tokenStorage.getAllXeroConnections();
+      const connection = connections.find((c) =>
+        c.tenantName.toLowerCase().includes(organizationName.toLowerCase())
+      );
+      if (connection) {
+        actualTenantId = connection.tenantId;
+      } else {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+    }
+
+    // Get token (SAME AS YOUR OTHER ENDPOINTS)
+    const tokenData = await tokenStorage.getXeroToken(actualTenantId);
+    if (!tokenData) {
+      return res
+        .status(404)
+        .json({ error: "Tenant not found or token expired" });
+    }
+
+    await xero.setTokenSet(tokenData);
 
     // Call Xero Budgets API
     let budgets;
@@ -1076,7 +1097,7 @@ app.post("/api/budgets", async (req, res) => {
 
     res.json({
       tenantId: actualTenantId,
-      budgets: budgets.body.budgets,
+      budgets: budgets.body.budgets || [],
       generatedAt: new Date().toISOString(),
     });
   } catch (error) {
@@ -1085,23 +1106,47 @@ app.post("/api/budgets", async (req, res) => {
   }
 });
 
-// GET Budget Summary Report (Budget vs Actual)
+// GET Budget Summary Report - CORRECTED
 app.post("/api/budget-summary", async (req, res) => {
   try {
-    const { tenantId, organizationName, date, periods } = req.body;
+    const { tenantId, organizationName, date, periods, timeframe } = req.body;
 
-    const actualTenantId =
-      tenantId || (await getTenantIdFromOrgName(organizationName));
-    const tokenSet = await getValidTokenForTenant(actualTenantId);
-    const xero = new XeroClient();
-    await xero.setTokenSet(tokenSet);
+    if (!organizationName && !tenantId) {
+      return res
+        .status(400)
+        .json({ error: "Organization name or tenant ID required" });
+    }
+
+    // Find tenant ID if organization name provided
+    let actualTenantId = tenantId;
+    if (organizationName && !tenantId) {
+      const connections = await tokenStorage.getAllXeroConnections();
+      const connection = connections.find((c) =>
+        c.tenantName.toLowerCase().includes(organizationName.toLowerCase())
+      );
+      if (connection) {
+        actualTenantId = connection.tenantId;
+      } else {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+    }
+
+    // Get token
+    const tokenData = await tokenStorage.getXeroToken(actualTenantId);
+    if (!tokenData) {
+      return res
+        .status(404)
+        .json({ error: "Tenant not found or token expired" });
+    }
+
+    await xero.setTokenSet(tokenData);
 
     // Call Budget Summary Report
     const report = await xero.accountingApi.getReportBudgetSummary(
       actualTenantId,
       date,
-      periods,
-      timeframe // 'MONTH' or 'YEAR'
+      periods || 12,
+      timeframe || "MONTH"
     );
 
     res.json({
