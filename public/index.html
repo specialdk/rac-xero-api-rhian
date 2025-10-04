@@ -825,6 +825,351 @@
       let isOAuthInProgress = false;
       let activeCompanyFilters = [];
       let currentView = "overview";
+      let selectedPeriod = null;
+
+      // ====== PERIOD SELECTION HELPERS ======
+
+      // Get the current fiscal quarter (Jul-Sep=Q1, Oct-Dec=Q2, Jan-Mar=Q3, Apr-Jun=Q4)
+      function getCurrentFiscalQuarter() {
+        const today = new Date();
+        const month = today.getMonth(); // 0-11
+
+        if (month >= 6 && month <= 8) return "Q1"; // Jul-Sep
+        if (month >= 9 && month <= 11) return "Q2"; // Oct-Dec
+        if (month >= 0 && month <= 2) return "Q3"; // Jan-Mar
+        return "Q4"; // Apr-Jun
+      }
+
+      // Check if a quarter has actual data (at least 2 days into the quarter)
+      function quarterHasData(quarter) {
+        const today = new Date();
+        const quarterDates = getQuarterDates(quarter);
+        const quarterStart = new Date(quarterDates.start);
+
+        // Add 2 days to quarter start
+        const minDataDate = new Date(quarterStart);
+        minDataDate.setDate(minDataDate.getDate() + 2);
+
+        return today >= minDataDate;
+      }
+
+      // Get date ranges and metadata for each period type
+      function getPeriodDates(periodType) {
+        const today = new Date();
+        const fiscalYearStart = new Date(today.getFullYear(), 6, 1); // July 1 of current year
+
+        // Adjust if we're in Jan-Jun, fiscal year started last calendar year
+        if (today.getMonth() < 6) {
+          fiscalYearStart.setFullYear(fiscalYearStart.getFullYear() - 1);
+        }
+
+        switch (periodType) {
+          case "Q1":
+            return {
+              start: "2025-07-01",
+              end: "2025-10-01",
+              periodEnd: "2025-09-30",
+              label: "Q1 FY26 (Jul-Sep 2025)",
+              months: 3,
+              daysInPeriod: 92, // Jul 31 + Aug 31 + Sep 30
+              quarter: "Q1",
+            };
+
+          case "Q2":
+            return {
+              start: "2025-10-01",
+              end: "2026-01-01",
+              periodEnd: "2025-12-31",
+              label: "Q2 FY26 (Oct-Dec 2025)",
+              months: 3,
+              daysInPeriod: 92, // Oct 31 + Nov 30 + Dec 31
+              quarter: "Q2",
+            };
+
+          case "Q3":
+            return {
+              start: "2026-01-01",
+              end: "2026-04-01",
+              periodEnd: "2026-03-31",
+              label: "Q3 FY26 (Jan-Mar 2026)",
+              months: 3,
+              daysInPeriod: 90, // Jan 31 + Feb 28 + Mar 31 (non-leap year)
+              quarter: "Q3",
+            };
+
+          case "Q4":
+            return {
+              start: "2026-04-01",
+              end: "2026-07-01",
+              periodEnd: "2026-06-30",
+              label: "Q4 FY26 (Apr-Jun 2026)",
+              months: 3,
+              daysInPeriod: 91, // Apr 30 + May 31 + Jun 30
+              quarter: "Q4",
+            };
+
+          case "CM": // Current Month
+            const cmStart = new Date(today.getFullYear(), today.getMonth(), 1);
+            const cmEnd = new Date(
+              today.getFullYear(),
+              today.getMonth() + 1,
+              1
+            );
+            const cmPeriodEnd = new Date(cmEnd.getTime() - 86400000); // Last day of month
+
+            return {
+              start: cmStart.toISOString().split("T")[0],
+              end: cmEnd.toISOString().split("T")[0],
+              periodEnd: cmPeriodEnd.toISOString().split("T")[0],
+              label: `Current Month (${cmStart.toLocaleDateString("en-US", {
+                month: "short",
+                year: "numeric",
+              })})`,
+              months: 1,
+              daysInPeriod: cmPeriodEnd.getDate(),
+              quarter: getCurrentQuarterForDate(cmStart),
+            };
+
+          case "LM": // Last Month
+            const lmStart = new Date(
+              today.getFullYear(),
+              today.getMonth() - 1,
+              1
+            );
+            const lmEnd = new Date(today.getFullYear(), today.getMonth(), 1);
+            const lmPeriodEnd = new Date(lmEnd.getTime() - 86400000);
+
+            return {
+              start: lmStart.toISOString().split("T")[0],
+              end: lmEnd.toISOString().split("T")[0],
+              periodEnd: lmPeriodEnd.toISOString().split("T")[0],
+              label: `Last Month (${lmStart.toLocaleDateString("en-US", {
+                month: "short",
+                year: "numeric",
+              })})`,
+              months: 1,
+              daysInPeriod: lmPeriodEnd.getDate(),
+              quarter: getCurrentQuarterForDate(lmStart),
+            };
+
+          default:
+            return getPeriodDates("Q1"); // Default to Q1
+        }
+      }
+
+      // Helper to determine which quarter a date falls in
+      function getCurrentQuarterForDate(date) {
+        const month = date.getMonth();
+        if (month >= 6 && month <= 8) return "Q1";
+        if (month >= 9 && month <= 11) return "Q2";
+        if (month >= 0 && month <= 2) return "Q3";
+        return "Q4";
+      }
+
+      // Get quarter dates (simplified version for compatibility)
+      function getQuarterDates(quarter) {
+        return getPeriodDates(quarter);
+      }
+
+      // Calculate pro-rated budget for partial periods
+      function calculateProRatedBudget(
+        quarterBudget,
+        quarterDaysTotal,
+        daysElapsed
+      ) {
+        const dailyBudget = quarterBudget / quarterDaysTotal;
+        return dailyBudget * daysElapsed;
+      }
+
+      // Get days elapsed in current period (for partial period budget calculations)
+      function getDaysElapsedInPeriod(periodStart, periodEnd) {
+        const today = new Date();
+        const start = new Date(periodStart);
+        const end = new Date(periodEnd);
+
+        // If we're before the period, return 0
+        if (today < start) return 0;
+
+        // If we're after the period, return full period
+        if (today > end) {
+          return Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+        }
+
+        // Otherwise return days from start to today
+        return Math.ceil((today - start) / (1000 * 60 * 60 * 24));
+      }
+
+      // ====== PERIOD SELECTION HELPERS ======
+
+      // Get the current fiscal quarter (Jul-Sep=Q1, Oct-Dec=Q2, Jan-Mar=Q3, Apr-Jun=Q4)
+      function getCurrentFiscalQuarter() {
+        const today = new Date();
+        const month = today.getMonth(); // 0-11
+
+        if (month >= 6 && month <= 8) return "Q1"; // Jul-Sep
+        if (month >= 9 && month <= 11) return "Q2"; // Oct-Dec
+        if (month >= 0 && month <= 2) return "Q3"; // Jan-Mar
+        return "Q4"; // Apr-Jun
+      }
+
+      // Check if a quarter has actual data (at least 2 days into the quarter)
+      function quarterHasData(quarter) {
+        const today = new Date();
+        const quarterDates = getQuarterDates(quarter);
+        const quarterStart = new Date(quarterDates.start);
+
+        // Add 2 days to quarter start
+        const minDataDate = new Date(quarterStart);
+        minDataDate.setDate(minDataDate.getDate() + 2);
+
+        return today >= minDataDate;
+      }
+
+      // Get date ranges and metadata for each period type
+      function getPeriodDates(periodType) {
+        const today = new Date();
+        const fiscalYearStart = new Date(today.getFullYear(), 6, 1); // July 1 of current year
+
+        // Adjust if we're in Jan-Jun, fiscal year started last calendar year
+        if (today.getMonth() < 6) {
+          fiscalYearStart.setFullYear(fiscalYearStart.getFullYear() - 1);
+        }
+
+        switch (periodType) {
+          case "Q1":
+            return {
+              start: "2025-07-01",
+              end: "2025-10-01",
+              periodEnd: "2025-09-30",
+              label: "Q1 FY26 (Jul-Sep 2025)",
+              months: 3,
+              daysInPeriod: 92, // Jul 31 + Aug 31 + Sep 30
+              quarter: "Q1",
+            };
+
+          case "Q2":
+            return {
+              start: "2025-10-01",
+              end: "2026-01-01",
+              periodEnd: "2025-12-31",
+              label: "Q2 FY26 (Oct-Dec 2025)",
+              months: 3,
+              daysInPeriod: 92, // Oct 31 + Nov 30 + Dec 31
+              quarter: "Q2",
+            };
+
+          case "Q3":
+            return {
+              start: "2026-01-01",
+              end: "2026-04-01",
+              periodEnd: "2026-03-31",
+              label: "Q3 FY26 (Jan-Mar 2026)",
+              months: 3,
+              daysInPeriod: 90, // Jan 31 + Feb 28 + Mar 31 (non-leap year)
+              quarter: "Q3",
+            };
+
+          case "Q4":
+            return {
+              start: "2026-04-01",
+              end: "2026-07-01",
+              periodEnd: "2026-06-30",
+              label: "Q4 FY26 (Apr-Jun 2026)",
+              months: 3,
+              daysInPeriod: 91, // Apr 30 + May 31 + Jun 30
+              quarter: "Q4",
+            };
+
+          case "CM": // Current Month
+            const cmStart = new Date(today.getFullYear(), today.getMonth(), 1);
+            const cmEnd = new Date(
+              today.getFullYear(),
+              today.getMonth() + 1,
+              1
+            );
+            const cmPeriodEnd = new Date(cmEnd.getTime() - 86400000); // Last day of month
+
+            return {
+              start: cmStart.toISOString().split("T")[0],
+              end: cmEnd.toISOString().split("T")[0],
+              periodEnd: cmPeriodEnd.toISOString().split("T")[0],
+              label: `Current Month (${cmStart.toLocaleDateString("en-US", {
+                month: "short",
+                year: "numeric",
+              })})`,
+              months: 1,
+              daysInPeriod: cmPeriodEnd.getDate(),
+              quarter: getCurrentQuarterForDate(cmStart),
+            };
+
+          case "LM": // Last Month
+            const lmStart = new Date(
+              today.getFullYear(),
+              today.getMonth() - 1,
+              1
+            );
+            const lmEnd = new Date(today.getFullYear(), today.getMonth(), 1);
+            const lmPeriodEnd = new Date(lmEnd.getTime() - 86400000);
+
+            return {
+              start: lmStart.toISOString().split("T")[0],
+              end: lmEnd.toISOString().split("T")[0],
+              periodEnd: lmPeriodEnd.toISOString().split("T")[0],
+              label: `Last Month (${lmStart.toLocaleDateString("en-US", {
+                month: "short",
+                year: "numeric",
+              })})`,
+              months: 1,
+              daysInPeriod: lmPeriodEnd.getDate(),
+              quarter: getCurrentQuarterForDate(lmStart),
+            };
+
+          default:
+            return getPeriodDates("Q1"); // Default to Q1
+        }
+      }
+
+      // Helper to determine which quarter a date falls in
+      function getCurrentQuarterForDate(date) {
+        const month = date.getMonth();
+        if (month >= 6 && month <= 8) return "Q1";
+        if (month >= 9 && month <= 11) return "Q2";
+        if (month >= 0 && month <= 2) return "Q3";
+        return "Q4";
+      }
+
+      // Get quarter dates (simplified version for compatibility)
+      function getQuarterDates(quarter) {
+        return getPeriodDates(quarter);
+      }
+
+      // Calculate pro-rated budget for partial periods
+      function calculateProRatedBudget(
+        quarterBudget,
+        quarterDaysTotal,
+        daysElapsed
+      ) {
+        const dailyBudget = quarterBudget / quarterDaysTotal;
+        return dailyBudget * daysElapsed;
+      }
+
+      // Get days elapsed in current period (for partial period budget calculations)
+      function getDaysElapsedInPeriod(periodStart, periodEnd) {
+        const today = new Date();
+        const start = new Date(periodStart);
+        const end = new Date(periodEnd);
+
+        // If we're before the period, return 0
+        if (today < start) return 0;
+
+        // If we're after the period, return full period
+        if (today > end) {
+          return Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+        }
+
+        // Otherwise return days from start to today
+        return Math.ceil((today - start) / (1000 * 60 * 60 * 24));
+      }
 
       // ====== CONNECTION MANAGER FUNCTIONS ======
 
@@ -1100,6 +1445,9 @@
 
       async function initializeMainDashboard() {
         try {
+          // Set default period to current quarter
+          selectedPeriod = getCurrentFiscalQuarter();
+
           await loadConnectedCompanies();
           setupCompanyFilters();
           await loadDashboardData();
@@ -1297,24 +1645,68 @@
 
         if (activeCompanyFilters.length === 0) {
           dashboardElement.innerHTML = `
-        <div style="text-align: center; padding: 40px; color: #666;">
-          <h3>No Companies Selected</h3>
-          <p>Please select companies using the filters above to view financial data.</p>
-        </div>
-      `;
+      <div style="text-align: center; padding: 40px; color: #666;">
+        <h3>No Companies Selected</h3>
+        <p>Please select companies using the filters above to view financial data.</p>
+      </div>
+    `;
           return;
         }
 
         const selectedCompanyNames = getSelectedCompanyNames();
-        dashboardElement.innerHTML = `
-      <div class="loading">
-        <div class="loading-spinner"></div>
-        Loading ${currentView} data from ${
-          activeCompanyFilters.length
-        } companies:<br>
-        <small>${selectedCompanyNames.join(", ")}</small>
+
+        // Build period selector HTML based on current view
+        let periodSelectorHTML = "";
+
+        if (
+          currentView === "overview" ||
+          currentView === "p-and-l" ||
+          currentView === "cash-flow"
+        ) {
+          periodSelectorHTML = `
+      <div style="background: #f8f9fa; padding: 15px 20px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #e0e0e0;">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 15px;">
+            <label style="font-weight: 600; color: #2c3e50;">Period:</label>
+            <select id="periodSelector" onchange="handlePeriodChange(this.value)" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; background: white; font-size: 14px; cursor: pointer;">
+              <option value="Q1" ${selectedPeriod === "Q1" ? "selected" : ""} ${
+            !quarterHasData("Q1") ? 'disabled style="color: #ccc;"' : ""
+          }>Q1 FY26 (Jul-Sep)</option>
+              <option value="Q2" ${selectedPeriod === "Q2" ? "selected" : ""} ${
+            !quarterHasData("Q2") ? 'disabled style="color: #ccc;"' : ""
+          }>Q2 FY26 (Oct-Dec)</option>
+              <option value="Q3" ${selectedPeriod === "Q3" ? "selected" : ""} ${
+            !quarterHasData("Q3") ? 'disabled style="color: #ccc;"' : ""
+          }>Q3 FY26 (Jan-Mar)</option>
+              <option value="Q4" ${selectedPeriod === "Q4" ? "selected" : ""} ${
+            !quarterHasData("Q4") ? 'disabled style="color: #ccc;"' : ""
+          }>Q4 FY26 (Apr-Jun)</option>
+              <option value="CM" ${
+                selectedPeriod === "CM" ? "selected" : ""
+              }>Current Month</option>
+              <option value="LM" ${
+                selectedPeriod === "LM" ? "selected" : ""
+              }>Last Month</option>
+            </select>
+            <div style="color: #666; font-size: 13px;">
+              ${getPeriodDates(selectedPeriod).label}
+            </div>
+          </div>
+        </div>
       </div>
     `;
+        }
+
+        dashboardElement.innerHTML = `
+    ${periodSelectorHTML}
+    <div class="loading">
+      <div class="loading-spinner"></div>
+      Loading ${currentView} data from ${
+          activeCompanyFilters.length
+        } companies:<br>
+      <small>${selectedCompanyNames.join(", ")}</small>
+    </div>
+  `;
 
         try {
           switch (currentView) {
@@ -1342,6 +1734,12 @@
         } catch (error) {
           showErrorState(error);
         }
+      }
+
+      // Handle period selector changes
+      function handlePeriodChange(newPeriod) {
+        selectedPeriod = newPeriod;
+        loadDashboardData();
       }
 
       function showErrorState(error) {
@@ -1401,8 +1799,15 @@
                 );
                 enhancedMetrics.push(enhancedData);
                 // Load budget data if this is Mining company
-                if (orgName === "Mining" && !budgetData) {
-                  budgetData = await loadBudgetData(orgName);
+                if (!budgetData) {
+                  const periodDates = getPeriodDates(selectedPeriod);
+                  const companyBudget = await loadBudgetData(
+                    orgName,
+                    periodDates
+                  );
+                  if (companyBudget) {
+                    budgetData = companyBudget;
+                  }
                 }
               } catch (error) {
                 console.error(
@@ -1554,19 +1959,24 @@
       }
 
       // ====== BUDGET DATA LOADING ======
-      async function loadBudgetData(organizationName) {
+      // ====== BUDGET DATA LOADING ======
+      async function loadBudgetData(organizationName, periodDates) {
         try {
-          // Load both budget and P&L data for Q1 FY26
+          // Determine which quarter's budget to use
+          const budgetQuarter = periodDates.quarter || "Q1";
+          const budgetQuarterDates = getQuarterDates(budgetQuarter);
+
+          // Load both budget and P&L data
           const [budgetResponse, pnlResponse] = await Promise.all([
             fetchWithErrorHandling("/api/budget-summary", {
               organizationName: organizationName,
-              date: "2025-07-01",
-              periods: 3, // Q1: Jul, Aug, Sep
+              date: budgetQuarterDates.start,
+              periods: 3, // Always get full quarter budget
             }),
             fetchWithErrorHandling("/api/profit-loss-summary", {
               organizationName: organizationName,
-              date: "2025-09-30", // End of Q1
-              periodMonths: 3,
+              date: periodDates.end, // Use the period end date
+              periodMonths: periodDates.months,
             }),
           ]);
 
@@ -1581,6 +1991,51 @@
 
           // Parse budget data from report structure
           const budgetSummary = parseBudgetReport(budgetData.report);
+
+          if (!budgetSummary) {
+            return null;
+          }
+
+          // Store the original quarterly budget
+          budgetSummary.quarterlyBudget = {
+            revenue: budgetSummary.budget.revenue,
+            operatingExpenses: budgetSummary.budget.operatingExpenses,
+          };
+
+          // Pro-rate budget if needed (for CM, LM, or partial periods)
+          if (periodDates.months < 3) {
+            // For monthly periods, divide quarterly budget by 3
+            budgetSummary.budget.revenue = budgetSummary.budget.revenue / 3;
+            budgetSummary.budget.operatingExpenses =
+              budgetSummary.budget.operatingExpenses / 3;
+            budgetSummary.isProRated = true;
+            budgetSummary.proRateMethod = "monthly";
+          } else if (periodDates.daysInPeriod) {
+            // For partial periods, pro-rate by days
+            const daysElapsed = getDaysElapsedInPeriod(
+              periodDates.start,
+              periodDates.end
+            );
+            if (daysElapsed < periodDates.daysInPeriod) {
+              budgetSummary.budget.revenue = calculateProRatedBudget(
+                budgetSummary.budget.revenue,
+                periodDates.daysInPeriod,
+                daysElapsed
+              );
+              budgetSummary.budget.operatingExpenses = calculateProRatedBudget(
+                budgetSummary.budget.operatingExpenses,
+                periodDates.daysInPeriod,
+                daysElapsed
+              );
+              budgetSummary.isProRated = true;
+              budgetSummary.proRateMethod = "daily";
+              budgetSummary.daysElapsed = daysElapsed;
+              budgetSummary.totalDays = periodDates.daysInPeriod;
+            }
+          }
+
+          // Store period info
+          budgetSummary.periodLabel = periodDates.label;
 
           // Calculate variances if we have P&L data
           if (pnlData && pnlData.summary) {
@@ -1676,13 +2131,14 @@
         balancedCompanies,
         budgetData
       ) {
+        const periodDates = getPeriodDates(selectedPeriod);
         const dashboardElement = document.getElementById("dashboardData");
 
         dashboardElement.innerHTML = `
       <!-- ENHANCED FINANCIAL OVERVIEW -->
       <div class="dashboard-grid" style="grid-template-columns: repeat(3, 1fr);">
         <div class="dashboard-card">
-          <h3>📊 Financial Position</h3>
+          <h3>📊 ${periodDates.label} Financial Position</h3>
           ${createMetric(
             "Total Assets",
             `$${totals.totalAssets.toLocaleString()}`
@@ -1704,7 +2160,7 @@
         </div>
 
         <div class="dashboard-card">
-          <h3>💰 Cash & Performance</h3>
+          <h3>💰 ${periodDates.label} Performance</h3>
           ${createMetric(
             "Total Cash Position",
             `$${totals.totalCash.toLocaleString()}`
@@ -1729,7 +2185,7 @@
         </div>
 
         <div class="dashboard-card">
-          <h3>⚖️ Health & Risk</h3>
+          <h3>⚖️ ${periodDates.label} Health & Risk</h3>
           ${createMetric("Companies", enhancedMetrics.length.toString())}
           ${createMetric(
             "Balanced Books",
@@ -1756,7 +2212,7 @@
 
       <!-- COMPANY BREAKDOWN -->
       <div class="dashboard-card">
-        <h3>📈 Company Performance Breakdown</h3>
+        <h3>📈 ${periodDates.label} Company Performance</h3>
         ${enhancedMetrics.map((company) => createCompanyCard(company)).join("")}
       </div>
     `;
@@ -1875,10 +2331,22 @@
         return `
     <!-- BUDGET VS ACTUAL CARD -->
     <div class="dashboard-card" style="margin: 20px 0; background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);">
-      <h3>💼 FY26 Q1 Budget Performance - Mining</h3>
-      <div style="font-size: 13px; color: #666; margin-bottom: 15px;">
-        Period: July - September 2025
-      </div>
+      <h3>💼 ${budgetData.periodLabel} Budget Performance</h3>
+<div style="font-size: 13px; color: #666; margin-bottom: 15px;">
+  ${
+    budgetData.isProRated
+      ? `
+    <span style="background: #fff3cd; padding: 3px 8px; border-radius: 4px; font-size: 12px;">
+      ⚠️ Budget ${
+        budgetData.proRateMethod === "monthly"
+          ? "pro-rated from quarterly budget (÷3)"
+          : `pro-rated: ${budgetData.daysElapsed} of ${budgetData.totalDays} days`
+      }
+    </span>
+  `
+      : "Full period budget"
+  }
+</div>
 
       <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
         
