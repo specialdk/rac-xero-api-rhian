@@ -2248,10 +2248,10 @@
 </div>
 
       <!-- COMPANY BREAKDOWN -->
-      <div class="dashboard-card">
-        <h3>📈 ${periodDates.label} Company Performance</h3>
-        ${enhancedMetrics.map((company) => createCompanyCard(company)).join("")}
-      </div>
+<div class="dashboard-card" style="grid-column: 1 / -1;">
+  <h3>📈 ${periodDates.label} Company Performance</h3>
+  ${enhancedMetrics.map((company) => createCompanyCard(company)).join("")}
+</div>
     `;
         // UPDATE BUDGET CARDS WITH REAL DATA
         if (budgetData) {
