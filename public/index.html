@@ -1867,6 +1867,8 @@
         matchedCompany,
         tenantId
       ) {
+        const periodDates = getPeriodDates(selectedPeriod); // ADD THIS LINE
+
         const [cashResponse, ratiosResponse, profitLossResponse] =
           await Promise.all([
             fetchWithErrorHandling("/api/cash-position", {
@@ -1877,6 +1879,8 @@
             }),
             fetchWithErrorHandling("/api/profit-loss-summary", {
               organizationName: orgName,
+              date: periodDates.periodEnd, // ADD THIS
+              periodMonths: periodDates.months, // ADD THIS
             }),
           ]);
 
@@ -2273,22 +2277,46 @@
         }
 
         // Update revenue card
-document.getElementById('revenueBudget').textContent = `$${Math.round(budget.revenue).toLocaleString()}`;
-if (actual) {
-  document.getElementById('revenueActual').textContent = `$${Math.round(actual.revenue).toLocaleString()}`;
-  const varianceEl = document.getElementById('revenueVariance');
-  varianceEl.innerHTML = `${variance.revenue >= 0 ? '+' : ''}$${Math.round(Math.abs(variance.revenue)).toLocaleString()}<br><span style="font-size: 0.9em; margin-top: 4px; display: block;">(${variance.revenuePercent >= 0 ? '+' : ''}${variance.revenuePercent.toFixed(1)}%)</span>`;
-  varianceEl.className = variance.revenue >= 0 ? 'metric-value' : 'metric-value negative';
-}
+        document.getElementById("revenueBudget").textContent = `$${Math.round(
+          budget.revenue
+        ).toLocaleString()}`;
+        if (actual) {
+          document.getElementById("revenueActual").textContent = `$${Math.round(
+            actual.revenue
+          ).toLocaleString()}`;
+          const varianceEl = document.getElementById("revenueVariance");
+          varianceEl.innerHTML = `${
+            variance.revenue >= 0 ? "+" : ""
+          }$${Math.round(
+            Math.abs(variance.revenue)
+          ).toLocaleString()}<br><span style="font-size: 0.9em; margin-top: 4px; display: block;">(${
+            variance.revenuePercent >= 0 ? "+" : ""
+          }${variance.revenuePercent.toFixed(1)}%)</span>`;
+          varianceEl.className =
+            variance.revenue >= 0 ? "metric-value" : "metric-value negative";
+        }
 
-// Update expenses card
-document.getElementById('expensesBudget').textContent = `$${Math.round(budget.operatingExpenses).toLocaleString()}`;
-if (actual) {
-  document.getElementById('expensesActual').textContent = `$${Math.round(actual.operatingExpenses).toLocaleString()}`;
-  const varianceEl = document.getElementById('expensesVariance');
-  varianceEl.innerHTML = `${variance.expenses >= 0 ? '+' : ''}$${Math.round(Math.abs(variance.expenses)).toLocaleString()}<br><span style="font-size: 0.9em; margin-top: 4px; display: block;">(${variance.expensesPercent >= 0 ? '+' : ''}${variance.expensesPercent.toFixed(1)}%)</span>`;
-  varianceEl.className = variance.expenses <= 0 ? 'metric-value' : 'metric-value negative';
-}
+        // Update expenses card
+        document.getElementById("expensesBudget").textContent = `$${Math.round(
+          budget.operatingExpenses
+        ).toLocaleString()}`;
+        if (actual) {
+          document.getElementById(
+            "expensesActual"
+          ).textContent = `$${Math.round(
+            actual.operatingExpenses
+          ).toLocaleString()}`;
+          const varianceEl = document.getElementById("expensesVariance");
+          varianceEl.innerHTML = `${
+            variance.expenses >= 0 ? "+" : ""
+          }$${Math.round(
+            Math.abs(variance.expenses)
+          ).toLocaleString()}<br><span style="font-size: 0.9em; margin-top: 4px; display: block;">(${
+            variance.expensesPercent >= 0 ? "+" : ""
+          }${variance.expensesPercent.toFixed(1)}%)</span>`;
+          varianceEl.className =
+            variance.expenses <= 0 ? "metric-value" : "metric-value negative";
+        }
       }
 
       function createCompanyCard(company) {
