@@ -2024,22 +2024,37 @@
       // ====== BUDGET DATA LOADING ======
       async function loadBudgetData(organizationName, periodDates) {
         try {
-          // Determine which quarter's budget to use
           const budgetQuarter = periodDates.quarter || "Q1";
           const budgetQuarterDates = getQuarterDates(budgetQuarter);
 
-          // Load both budget and P&L data
+          // Calculate yesterday's date
+          const today = new Date();
+          const yesterday = new Date(today);
+          yesterday.setDate(yesterday.getDate() - 1);
+
+          const periodStart = new Date(periodDates.start);
+          const periodEnd = new Date(periodDates.periodEnd);
+          const hasActualData = yesterday >= periodStart;
+
+          // Use yesterday if mid-period, otherwise use period end
+          const actualEndDate =
+            yesterday < periodEnd
+              ? yesterday.toISOString().split("T")[0]
+              : periodDates.periodEnd;
+
           const [budgetResponse, pnlResponse] = await Promise.all([
             fetchWithErrorHandling("/api/budget-summary", {
               organizationName: organizationName,
               date: budgetQuarterDates.start,
-              periods: 3, // Always get full quarter budget
+              periods: 3,
             }),
-            fetchWithErrorHandling("/api/profit-loss-summary", {
-              organizationName: organizationName,
-              date: periodDates.periodEnd,
-              periodMonths: periodDates.months,
-            }),
+            hasActualData
+              ? fetchWithErrorHandling("/api/profit-loss-summary", {
+                  organizationName: organizationName,
+                  date: actualEndDate,
+                  periodMonths: periodDates.months,
+                })
+              : null,
           ]);
 
           if (!budgetResponse || !budgetResponse.ok) {
@@ -2051,7 +2066,7 @@
           const pnlData =
             pnlResponse && pnlResponse.ok ? await pnlResponse.json() : null;
 
-          // Parse budget data from report structure
+          // Parse budget data
           const budgetSummary = parseBudgetReport(
             budgetData.report,
             budgetQuarter
@@ -2061,45 +2076,44 @@
             return null;
           }
 
-          // Store the original quarterly budget
+          // Store quarterly budget
           budgetSummary.quarterlyBudget = {
             revenue: budgetSummary.budget.revenue,
             operatingExpenses: budgetSummary.budget.operatingExpenses,
           };
 
-          // Pro-rate budget if needed (for CM, LM, or partial periods)
+          // Calculate days elapsed from period start to yesterday
+          const daysElapsed = getDaysElapsedInPeriod(
+            periodDates.start,
+            actualEndDate
+          );
+
+          // Pro-rate budget based on elapsed days
           if (periodDates.months < 3) {
-            // For monthly periods, divide quarterly budget by 3
+            // Monthly period - divide quarterly budget by 3
             budgetSummary.budget.revenue = budgetSummary.budget.revenue / 3;
             budgetSummary.budget.operatingExpenses =
               budgetSummary.budget.operatingExpenses / 3;
             budgetSummary.isProRated = true;
             budgetSummary.proRateMethod = "monthly";
-          } else if (periodDates.daysInPeriod) {
-            // For partial periods, pro-rate by days
-            const daysElapsed = getDaysElapsedInPeriod(
-              periodDates.start,
-              periodDates.end
+          } else if (hasActualData && daysElapsed < periodDates.daysInPeriod) {
+            // Partial quarter - pro-rate by days elapsed
+            budgetSummary.budget.revenue = calculateProRatedBudget(
+              budgetSummary.budget.revenue,
+              periodDates.daysInPeriod,
+              daysElapsed
             );
-            if (daysElapsed < periodDates.daysInPeriod) {
-              budgetSummary.budget.revenue = calculateProRatedBudget(
-                budgetSummary.budget.revenue,
-                periodDates.daysInPeriod,
-                daysElapsed
-              );
-              budgetSummary.budget.operatingExpenses = calculateProRatedBudget(
-                budgetSummary.budget.operatingExpenses,
-                periodDates.daysInPeriod,
-                daysElapsed
-              );
-              budgetSummary.isProRated = true;
-              budgetSummary.proRateMethod = "daily";
-              budgetSummary.daysElapsed = daysElapsed;
-              budgetSummary.totalDays = periodDates.daysInPeriod;
-            }
+            budgetSummary.budget.operatingExpenses = calculateProRatedBudget(
+              budgetSummary.budget.operatingExpenses,
+              periodDates.daysInPeriod,
+              daysElapsed
+            );
+            budgetSummary.isProRated = true;
+            budgetSummary.proRateMethod = "daily";
+            budgetSummary.daysElapsed = daysElapsed;
+            budgetSummary.totalDays = periodDates.daysInPeriod;
           }
 
-          // Store period info
           budgetSummary.periodLabel = periodDates.label;
 
           // Calculate variances if we have P&L data
