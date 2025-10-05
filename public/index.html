@@ -1858,7 +1858,6 @@
                   consolidatedBudget.budget.operatingExpenses +=
                     companyBudget.budget.operatingExpenses;
 
-                  
                   // Store period info from first company with budget
                   if (!consolidatedBudget.periodLabel) {
                     consolidatedBudget.periodLabel = companyBudget.periodLabel;
@@ -1920,23 +1919,37 @@
           ).length;
 
           // Calculate budget variance using actuals from performance data
-if (consolidatedBudget.hasData) {
-  consolidatedBudget.actual = {
-    revenue: consolidatedTotals.totalRevenue,
-    operatingExpenses: consolidatedTotals.totalRevenue - consolidatedTotals.totalProfit
-  };
+          if (consolidatedBudget.hasData) {
+            consolidatedBudget.actual = {
+              revenue: consolidatedTotals.totalRevenue,
+              operatingExpenses:
+                consolidatedTotals.totalRevenue -
+                consolidatedTotals.totalProfit,
+            };
 
-  consolidatedBudget.variance = {
-    revenue: consolidatedBudget.actual.revenue - consolidatedBudget.budget.revenue,
-    revenuePercent: consolidatedBudget.budget.revenue > 0 
-      ? ((consolidatedBudget.actual.revenue - consolidatedBudget.budget.revenue) / consolidatedBudget.budget.revenue) * 100 
-      : 0,
-    expenses: consolidatedBudget.actual.operatingExpenses - consolidatedBudget.budget.operatingExpenses,
-    expensesPercent: consolidatedBudget.budget.operatingExpenses > 0
-      ? ((consolidatedBudget.actual.operatingExpenses - consolidatedBudget.budget.operatingExpenses) / consolidatedBudget.budget.operatingExpenses) * 100
-      : 0
-  };
-}
+            consolidatedBudget.variance = {
+              revenue:
+                consolidatedBudget.actual.revenue -
+                consolidatedBudget.budget.revenue,
+              revenuePercent:
+                consolidatedBudget.budget.revenue > 0
+                  ? ((consolidatedBudget.actual.revenue -
+                      consolidatedBudget.budget.revenue) /
+                      consolidatedBudget.budget.revenue) *
+                    100
+                  : 0,
+              expenses:
+                consolidatedBudget.actual.operatingExpenses -
+                consolidatedBudget.budget.operatingExpenses,
+              expensesPercent:
+                consolidatedBudget.budget.operatingExpenses > 0
+                  ? ((consolidatedBudget.actual.operatingExpenses -
+                      consolidatedBudget.budget.operatingExpenses) /
+                      consolidatedBudget.budget.operatingExpenses) *
+                    100
+                  : 0,
+            };
+          }
 
           renderEnhancedOverview(
             consolidatedTotals,
@@ -2070,84 +2083,106 @@ if (consolidatedBudget.hasData) {
 
       // ====== BUDGET DATA LOADING ======
       async function loadBudgetData(organizationName, periodDates) {
-  try {
-    const budgetQuarter = periodDates.quarter || "Q1";
-    const budgetQuarterDates = getQuarterDates(budgetQuarter);
+        try {
+          const budgetQuarter = periodDates.quarter || "Q1";
+          const budgetQuarterDates = getQuarterDates(budgetQuarter);
 
-    // Calculate yesterday's date
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    const periodStart = new Date(periodDates.start);
-    
-    // Only load BUDGET data
-    const budgetResponse = await fetchWithErrorHandling("/api/budget-summary", {
-      organizationName: organizationName,
-      date: budgetQuarterDates.start,
-      periods: 3,
-    });
+          // Calculate yesterday's date
+          const today = new Date();
+          const yesterday = new Date(today);
+          yesterday.setDate(yesterday.getDate() - 1);
 
-    if (!budgetResponse || !budgetResponse.ok) {
-      console.log("Budget data not available for", organizationName);
-      return null;
-    }
+          const periodStart = new Date(periodDates.start);
 
-    const budgetData = await budgetResponse.json();
+          // Only load BUDGET data
+          const budgetResponse = await fetchWithErrorHandling(
+            "/api/budget-summary",
+            {
+              organizationName: organizationName,
+              date: budgetQuarterDates.start,
+              periods: 3,
+            }
+          );
 
-    // Parse budget data
-    const budgetSummary = parseBudgetReport(budgetData.report, budgetQuarter);
+          if (!budgetResponse || !budgetResponse.ok) {
+            console.log("Budget data not available for", organizationName);
+            return null;
+          }
 
-    if (!budgetSummary) {
-      return null;
-    }
+          const budgetData = await budgetResponse.json();
 
-    // Store quarterly budget
-    budgetSummary.quarterlyBudget = {
-      revenue: budgetSummary.budget.revenue,
-      operatingExpenses: budgetSummary.budget.operatingExpenses,
-    };
+          // Parse budget data
+          const budgetSummary = parseBudgetReport(
+            budgetData.report,
+            budgetQuarter
+          );
 
-    // Calculate days elapsed from period start to yesterday
-    let daysElapsed = 0;
-    if (yesterday >= periodStart) {
-      const startMidnight = new Date(periodStart.getFullYear(), periodStart.getMonth(), periodStart.getDate());
-      const yesterdayMidnight = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
-      const diffTime = yesterdayMidnight - startMidnight;
-      daysElapsed = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    }
+          if (!budgetSummary) {
+            return null;
+          }
 
-    // Pro-rate budget based on elapsed days
-    if (periodDates.months < 3) {
-      budgetSummary.budget.revenue = budgetSummary.budget.revenue / 3;
-      budgetSummary.budget.operatingExpenses = budgetSummary.budget.operatingExpenses / 3;
-      budgetSummary.isProRated = true;
-      budgetSummary.proRateMethod = "monthly";
-    } else if (daysElapsed > 0 && daysElapsed < periodDates.daysInPeriod) {
-      budgetSummary.budget.revenue = calculateProRatedBudget(
-        budgetSummary.budget.revenue,
-        periodDates.daysInPeriod,
-        daysElapsed
-      );
-      budgetSummary.budget.operatingExpenses = calculateProRatedBudget(
-        budgetSummary.budget.operatingExpenses,
-        periodDates.daysInPeriod,
-        daysElapsed
-      );
-      budgetSummary.isProRated = true;
-      budgetSummary.proRateMethod = "daily";
-      budgetSummary.daysElapsed = daysElapsed;
-      budgetSummary.totalDays = periodDates.daysInPeriod;
-    }
+          // Store quarterly budget
+          budgetSummary.quarterlyBudget = {
+            revenue: budgetSummary.budget.revenue,
+            operatingExpenses: budgetSummary.budget.operatingExpenses,
+          };
 
-    budgetSummary.periodLabel = periodDates.label;
+          // Calculate days elapsed from period start to yesterday
+          // Calculate days elapsed ONLY if period is incomplete
+          let daysElapsed = 0;
+          const periodEndDate = new Date(periodDates.periodEnd);
 
-    return budgetSummary;
-  } catch (error) {
-    console.error("Error loading budget data:", error);
-    return null;
-  }
-}
+          if (yesterday >= periodStart && yesterday < periodEndDate) {
+            // Period is in progress - calculate pro-rating
+            const startMidnight = new Date(
+              periodStart.getFullYear(),
+              periodStart.getMonth(),
+              periodStart.getDate()
+            );
+            const yesterdayMidnight = new Date(
+              yesterday.getFullYear(),
+              yesterday.getMonth(),
+              yesterday.getDate()
+            );
+            const diffTime = yesterdayMidnight - startMidnight;
+            daysElapsed = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+          }
+
+          // Pro-rate budget based on elapsed days
+          if (periodDates.months < 3) {
+            budgetSummary.budget.revenue = budgetSummary.budget.revenue / 3;
+            budgetSummary.budget.operatingExpenses =
+              budgetSummary.budget.operatingExpenses / 3;
+            budgetSummary.isProRated = true;
+            budgetSummary.proRateMethod = "monthly";
+          } else if (
+            daysElapsed > 0 &&
+            daysElapsed < periodDates.daysInPeriod
+          ) {
+            budgetSummary.budget.revenue = calculateProRatedBudget(
+              budgetSummary.budget.revenue,
+              periodDates.daysInPeriod,
+              daysElapsed
+            );
+            budgetSummary.budget.operatingExpenses = calculateProRatedBudget(
+              budgetSummary.budget.operatingExpenses,
+              periodDates.daysInPeriod,
+              daysElapsed
+            );
+            budgetSummary.isProRated = true;
+            budgetSummary.proRateMethod = "daily";
+            budgetSummary.daysElapsed = daysElapsed;
+            budgetSummary.totalDays = periodDates.daysInPeriod;
+          }
+
+          budgetSummary.periodLabel = periodDates.label;
+
+          return budgetSummary;
+        } catch (error) {
+          console.error("Error loading budget data:", error);
+          return null;
+        }
+      }
 
       function parseBudgetReport(report, quarter) {
         if (!report || !report.rows) {
