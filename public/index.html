@@ -2032,15 +2032,6 @@
           const yesterday = new Date(today);
           yesterday.setDate(yesterday.getDate() - 1);
 
-          // Right after calculating yesterday
-          console.log("Budget debug:", {
-            organizationName,
-            periodStart: periodDates.start,
-            periodEnd: periodDates.periodEnd,
-            yesterday: yesterday.toISOString().split("T")[0],
-            actualEndDate,
-            hasActualData,
-          });
           const periodStart = new Date(periodDates.start);
           const periodEnd = new Date(periodDates.periodEnd);
           const hasActualData = yesterday >= periodStart;
@@ -2050,6 +2041,15 @@
             yesterday < periodEnd
               ? yesterday.toISOString().split("T")[0]
               : periodDates.periodEnd;
+
+          // Debug logging
+          console.log("Budget loading for:", organizationName, {
+            periodStart: periodDates.start,
+            periodEnd: periodDates.periodEnd,
+            yesterday: yesterday.toISOString().split("T")[0],
+            actualEndDate,
+            hasActualData,
+          });
 
           const [budgetResponse, pnlResponse] = await Promise.all([
             fetchWithErrorHandling("/api/budget-summary", {
@@ -2082,6 +2082,7 @@
           );
 
           if (!budgetSummary) {
+            console.log("Failed to parse budget report for", organizationName);
             return null;
           }
 
@@ -2091,7 +2092,7 @@
             operatingExpenses: budgetSummary.budget.operatingExpenses,
           };
 
-          // Calculate days elapsed from period start to yesterday (not using getDaysElapsedInPeriod)
+          // Calculate days elapsed from period start to yesterday
           let daysElapsed = 0;
           if (hasActualData) {
             const startMidnight = new Date(
@@ -2108,12 +2109,11 @@
             daysElapsed = Math.floor(diffTime / (1000 * 60 * 60 * 24));
           }
 
-          console.log(
-            "Days elapsed:",
+          console.log("Days calculation:", {
             daysElapsed,
-            "of",
-            periodDates.daysInPeriod
-          );
+            totalDays: periodDates.daysInPeriod,
+            isPartialPeriod: daysElapsed < periodDates.daysInPeriod,
+          });
 
           // Pro-rate budget based on elapsed days
           if (periodDates.months < 3) {
@@ -2142,6 +2142,13 @@
           }
 
           budgetSummary.periodLabel = periodDates.label;
+
+          console.log("Budget after pro-rating:", {
+            revenue: budgetSummary.budget.revenue,
+            expenses: budgetSummary.budget.operatingExpenses,
+            isProRated: budgetSummary.isProRated,
+            method: budgetSummary.proRateMethod,
+          });
 
           // Calculate variances if we have P&L data
           if (pnlData && pnlData.summary) {
