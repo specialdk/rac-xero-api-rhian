@@ -1764,7 +1764,23 @@
 
           const enhancedMetrics = [];
           const selectedCompanies = [];
-          let budgetData = null; // ADD THIS LINE
+
+          // Initialize consolidated budget structure
+          let consolidatedBudget = {
+            budget: {
+              revenue: 0,
+              operatingExpenses: 0,
+            },
+            actual: {
+              revenue: 0,
+              operatingExpenses: 0,
+            },
+            hasData: false,
+            periodLabel: null,
+            isProRated: false,
+            daysElapsed: 0,
+            totalDays: 0,
+          };
 
           for (const tenantId of activeCompanyFilters) {
             const connectedCompany = connectedCompanies.find(
@@ -1792,15 +1808,35 @@
                   tenantId
                 );
                 enhancedMetrics.push(enhancedData);
-                // Load budget data if this is Mining company
-                if (!budgetData) {
-                  const periodDates = getPeriodDates(selectedPeriod);
-                  const companyBudget = await loadBudgetData(
-                    orgName,
-                    periodDates
-                  );
-                  if (companyBudget) {
-                    budgetData = companyBudget;
+
+                // Load budget data for THIS company
+                const periodDates = getPeriodDates(selectedPeriod);
+                const companyBudget = await loadBudgetData(
+                  orgName,
+                  periodDates
+                );
+
+                // Add this company's budget to consolidated totals
+                if (companyBudget) {
+                  consolidatedBudget.hasData = true;
+                  consolidatedBudget.budget.revenue +=
+                    companyBudget.budget.revenue;
+                  consolidatedBudget.budget.operatingExpenses +=
+                    companyBudget.budget.operatingExpenses;
+
+                  if (companyBudget.actual) {
+                    consolidatedBudget.actual.revenue +=
+                      companyBudget.actual.revenue;
+                    consolidatedBudget.actual.operatingExpenses +=
+                      companyBudget.actual.operatingExpenses;
+                  }
+
+                  // Store period info from first company with budget
+                  if (!consolidatedBudget.periodLabel) {
+                    consolidatedBudget.periodLabel = companyBudget.periodLabel;
+                    consolidatedBudget.isProRated = companyBudget.isProRated;
+                    consolidatedBudget.daysElapsed = companyBudget.daysElapsed;
+                    consolidatedBudget.totalDays = companyBudget.totalDays;
                   }
                 }
               } catch (error) {
@@ -1820,6 +1856,35 @@
             }
           }
 
+          // Calculate consolidated variance if we have budget data
+          if (
+            consolidatedBudget.hasData &&
+            consolidatedBudget.actual.revenue > 0
+          ) {
+            consolidatedBudget.variance = {
+              revenue:
+                consolidatedBudget.actual.revenue -
+                consolidatedBudget.budget.revenue,
+              revenuePercent:
+                consolidatedBudget.budget.revenue > 0
+                  ? ((consolidatedBudget.actual.revenue -
+                      consolidatedBudget.budget.revenue) /
+                      consolidatedBudget.budget.revenue) *
+                    100
+                  : 0,
+              expenses:
+                consolidatedBudget.actual.operatingExpenses -
+                consolidatedBudget.budget.operatingExpenses,
+              expensesPercent:
+                consolidatedBudget.budget.operatingExpenses > 0
+                  ? ((consolidatedBudget.actual.operatingExpenses -
+                      consolidatedBudget.budget.operatingExpenses) /
+                      consolidatedBudget.budget.operatingExpenses) *
+                    100
+                  : 0,
+            };
+          }
+
           const consolidatedTotals =
             calculateConsolidatedTotals(enhancedMetrics);
           const balancedCompanies = enhancedMetrics.filter(
@@ -1830,7 +1895,7 @@
             consolidatedTotals,
             enhancedMetrics,
             balancedCompanies,
-            budgetData
+            consolidatedBudget.hasData ? consolidatedBudget : null
           );
         } catch (error) {
           console.error("Error in enhanced loadOverviewDataWithYoY:", error);
