@@ -1884,7 +1884,7 @@
             }),
             fetchWithErrorHandling("/api/profit-loss-summary", {
               organizationName: organizationName,
-              date: periodDates.end, // Use the period end date
+              date: periodDates.periodEnd,
               periodMonths: periodDates.months,
             }),
           ]);
