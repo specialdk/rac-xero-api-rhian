@@ -983,29 +983,41 @@
 
       // Get days elapsed in current period (for partial period budget calculations)
       // Get days elapsed in current period (for partial period budget calculations)
-function getDaysElapsedInPeriod(periodStart, periodEnd) {
-  const today = new Date();
-  const start = new Date(periodStart);
-  const end = new Date(periodEnd);
+      function getDaysElapsedInPeriod(periodStart, periodEnd) {
+        const today = new Date();
+        const start = new Date(periodStart);
+        const end = new Date(periodEnd);
 
-  // Normalize to midnight for accurate day counting
-  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const startMidnight = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-  const endMidnight = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+        // Normalize to midnight for accurate day counting
+        const todayMidnight = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate()
+        );
+        const startMidnight = new Date(
+          start.getFullYear(),
+          start.getMonth(),
+          start.getDate()
+        );
+        const endMidnight = new Date(
+          end.getFullYear(),
+          end.getMonth(),
+          end.getDate()
+        );
 
-  // If we're before the period, return 0
-  if (todayMidnight < startMidnight) return 0;
+        // If we're before the period, return 0
+        if (todayMidnight < startMidnight) return 0;
 
-  // If we're after the period, return full period length
-  if (todayMidnight > endMidnight) {
-    const diffTime = endMidnight - startMidnight;
-    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  }
+        // If we're after the period, return full period length
+        if (todayMidnight > endMidnight) {
+          const diffTime = endMidnight - startMidnight;
+          return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        }
 
-  // Otherwise return days from start to today
-  const diffTime = todayMidnight - startMidnight;
-  return Math.floor(diffTime / (1000 * 60 * 60 * 24));
-}
+        // Otherwise return days from start to today
+        const diffTime = todayMidnight - startMidnight;
+        return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      }
 
       // Budget utility functions
       // Parse Xero budget report (same logic as MCP tool)
@@ -2138,46 +2150,66 @@ function getDaysElapsedInPeriod(periodStart, periodEnd) {
         ${enhancedMetrics.map((company) => createCompanyCard(company)).join("")}
       </div>
     `;
-    // UPDATE BUDGET CARDS WITH REAL DATA
-if (budgetData) {
-  updateBudgetCardValues(budgetData, periodDates);
-}
+        // UPDATE BUDGET CARDS WITH REAL DATA
+        if (budgetData) {
+          updateBudgetCardValues(budgetData, periodDates);
+        }
       }
 
       function updateBudgetCardValues(budgetData, periodDates) {
-  if (!budgetData || !budgetData.budget) return;
-  
-  const budget = budgetData.budget;
-  const actual = budgetData.actual;
-  const variance = budgetData.variance;
-  
-  // Update period labels with pro-rating info
-  if (budgetData.isProRated && budgetData.daysElapsed) {
-    const proRateText = `${periodDates.label} (Pro-rated: ${budgetData.daysElapsed} of ${budgetData.totalDays} days)`;
-    document.getElementById('revenuePeriodLabel').textContent = proRateText;
-    document.getElementById('expensesPeriodLabel').textContent = proRateText;
-  }
-  
-  // Update revenue card
-  document.getElementById('revenueBudget').textContent = `$${budget.revenue.toLocaleString()}`;
-  if (actual) {
-    document.getElementById('revenueActual').textContent = `$${actual.revenue.toLocaleString()}`;
-    const varianceText = `${variance.revenue >= 0 ? '+' : ''}$${Math.abs(variance.revenue).toLocaleString()} (${variance.revenuePercent >= 0 ? '+' : ''}${variance.revenuePercent.toFixed(1)}%)`;
-    const varianceEl = document.getElementById('revenueVariance');
-    varianceEl.textContent = varianceText;
-    varianceEl.className = variance.revenue >= 0 ? 'metric-value' : 'metric-value negative';
-  }
-  
-  // Update expenses card  
-  document.getElementById('expensesBudget').textContent = `$${budget.operatingExpenses.toLocaleString()}`;
-  if (actual) {
-    document.getElementById('expensesActual').textContent = `$${actual.operatingExpenses.toLocaleString()}`;
-    const varianceText = `${variance.expenses >= 0 ? '+' : ''}$${Math.abs(variance.expenses).toLocaleString()} (${variance.expensesPercent >= 0 ? '+' : ''}${variance.expensesPercent.toFixed(1)}%)`;
-    const varianceEl = document.getElementById('expensesVariance');
-    varianceEl.textContent = varianceText;
-    varianceEl.className = variance.expenses <= 0 ? 'metric-value' : 'metric-value negative';
-  }
-}
+        if (!budgetData || !budgetData.budget) return;
+
+        const budget = budgetData.budget;
+        const actual = budgetData.actual;
+        const variance = budgetData.variance;
+
+        // Update period labels with pro-rating info
+        if (budgetData.isProRated && budgetData.daysElapsed) {
+          const proRateText = `${periodDates.label} (Pro-rated: ${budgetData.daysElapsed} of ${budgetData.totalDays} days)`;
+          document.getElementById("revenuePeriodLabel").textContent =
+            proRateText;
+          document.getElementById("expensesPeriodLabel").textContent =
+            proRateText;
+        }
+
+        // Update revenue card
+        document.getElementById(
+          "revenueBudget"
+        ).textContent = `$${budget.revenue.toLocaleString()}`;
+        if (actual) {
+          document.getElementById(
+            "revenueActual"
+          ).textContent = `$${actual.revenue.toLocaleString()}`;
+          const varianceText = `${variance.revenue >= 0 ? "+" : ""}$${Math.abs(
+            variance.revenue
+          ).toLocaleString()} (${
+            variance.revenuePercent >= 0 ? "+" : ""
+          }${variance.revenuePercent.toFixed(1)}%)`;
+          const varianceEl = document.getElementById("revenueVariance");
+          varianceEl.textContent = varianceText;
+          varianceEl.className =
+            variance.revenue >= 0 ? "metric-value" : "metric-value negative";
+        }
+
+        // Update expenses card
+        document.getElementById(
+          "expensesBudget"
+        ).textContent = `$${budget.operatingExpenses.toLocaleString()}`;
+        if (actual) {
+          document.getElementById(
+            "expensesActual"
+          ).textContent = `$${actual.operatingExpenses.toLocaleString()}`;
+          const varianceText = `${variance.expenses >= 0 ? "+" : ""}$${Math.abs(
+            variance.expenses
+          ).toLocaleString()} (${
+            variance.expensesPercent >= 0 ? "+" : ""
+          }${variance.expensesPercent.toFixed(1)}%)`;
+          const varianceEl = document.getElementById("expensesVariance");
+          varianceEl.textContent = varianceText;
+          varianceEl.className =
+            variance.expenses <= 0 ? "metric-value" : "metric-value negative";
+        }
+      }
 
       function createMetric(label, value, isNegative = false, id = "") {
         return `
