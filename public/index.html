@@ -2223,8 +2223,12 @@
 
       function parseBudgetReport(report, quarter) {
         if (!report || !report.rows) {
+          console.log("❌ No report or rows");
           return null;
         }
+
+        console.log("Parsing budget report for quarter:", quarter);
+        console.log("Report structure:", report);
 
         // Determine which column indices to use based on quarter
         const quarterColumns = {
@@ -2235,6 +2239,7 @@
         };
 
         const columns = quarterColumns[quarter] || quarterColumns["Q1"];
+        console.log("Using columns:", columns, "for quarter:", quarter);
 
         const summary = {
           budget: {
@@ -2248,6 +2253,8 @@
         // Parse sections - ONLY use the summary row totals
         for (const section of report.rows) {
           if (section.rowType === "Section") {
+            console.log("Found section:", section.title);
+
             if (section.title === "Income") {
               // Find ONLY the "Total Income" summary row
               const totalRow = section.rows.find(
@@ -2255,11 +2262,21 @@
                   r.rowType === "SummaryRow" &&
                   r.cells[0].value === "Total Income"
               );
+
+              console.log("Income total row:", totalRow);
+
               if (totalRow) {
-                summary.budget.revenue =
-                  parseFloat(totalRow.cells[columns[0]]?.value || 0) +
-                  parseFloat(totalRow.cells[columns[1]]?.value || 0) +
-                  parseFloat(totalRow.cells[columns[2]]?.value || 0);
+                const val1 = parseFloat(totalRow.cells[columns[0]]?.value || 0);
+                const val2 = parseFloat(totalRow.cells[columns[1]]?.value || 0);
+                const val3 = parseFloat(totalRow.cells[columns[2]]?.value || 0);
+
+                console.log("Income values from columns:", {
+                  col1: val1,
+                  col2: val2,
+                  col3: val3,
+                });
+
+                summary.budget.revenue = val1 + val2 + val3;
               }
             } else if (section.title === "Less Operating Expenses") {
               // Find ONLY the "Total Operating Expenses" summary row
@@ -2268,15 +2285,33 @@
                   r.rowType === "SummaryRow" &&
                   r.cells[0].value === "Total Operating Expenses"
               );
+
+              console.log("Expenses total row:", totalRow);
+
               if (totalRow) {
-                summary.budget.operatingExpenses =
-                  Math.abs(parseFloat(totalRow.cells[columns[0]]?.value || 0)) +
-                  Math.abs(parseFloat(totalRow.cells[columns[1]]?.value || 0)) +
-                  Math.abs(parseFloat(totalRow.cells[columns[2]]?.value || 0));
+                const val1 = Math.abs(
+                  parseFloat(totalRow.cells[columns[0]]?.value || 0)
+                );
+                const val2 = Math.abs(
+                  parseFloat(totalRow.cells[columns[1]]?.value || 0)
+                );
+                const val3 = Math.abs(
+                  parseFloat(totalRow.cells[columns[2]]?.value || 0)
+                );
+
+                console.log("Expense values from columns:", {
+                  col1: val1,
+                  col2: val2,
+                  col3: val3,
+                });
+
+                summary.budget.operatingExpenses = val1 + val2 + val3;
               }
             }
           }
         }
+
+        console.log("Final parsed budget:", summary.budget);
 
         return summary;
       }
