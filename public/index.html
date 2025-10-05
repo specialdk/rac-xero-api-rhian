@@ -1445,6 +1445,7 @@
                    ${isChecked ? "checked" : ""}
                    onchange="handleCompanyFilterChange('${company.tenantId}')">
             <label for="filter-${company.tenantId}" 
+                   style="color: white;"
                    onclick="toggleCompanyFilterByLabel('${
                      company.tenantId
                    }')">${shortName}</label>
@@ -1464,7 +1465,7 @@
         🔄 LOAD DATA
       </button>
       
-      <span id="dataLoadStatus" style="font-size: 12px; color: #666; font-style: italic;"></span>
+      <span id="dataLoadStatus" style="font-size: 12px; color: white; font-style: italic;"></span>
     </div>
   `;
       }
