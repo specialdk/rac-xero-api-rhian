@@ -1992,8 +1992,6 @@
         }
 
         // Determine which column indices to use based on quarter
-        // Column 0 = Account name
-        // Columns 1-12 = Jul, Aug, Sep, Oct, Nov, Dec, Jan, Feb, Mar, Apr, May, Jun
         const quarterColumns = {
           Q1: [1, 2, 3], // Jul, Aug, Sep
           Q2: [4, 5, 6], // Oct, Nov, Dec
@@ -2007,56 +2005,43 @@
           budget: {
             revenue: 0,
             operatingExpenses: 0,
-            monthlyBreakdown: [],
           },
           actual: null,
           variance: null,
         };
 
-        // Find the header row to get month columns
-        const headerRow = report.rows.find((row) => row.rowType === "Header");
-        const months = headerRow
-          ? headerRow.cells.slice(1).map((cell) => cell.value)
-          : [];
-
-        // Parse sections
-        report.rows.forEach((row) => {
-          if (row.rowType === "Section") {
-            if (row.title === "Income") {
-              // Sum income rows for the 3 months of this quarter
-              row.rows.forEach((incomeRow) => {
-                if (
-                  incomeRow.cells &&
-                  incomeRow.cells.length > Math.max(...columns)
-                ) {
-                  summary.budget.revenue +=
-                    (parseFloat(incomeRow.cells[columns[0]]?.value) || 0) +
-                    (parseFloat(incomeRow.cells[columns[1]]?.value) || 0) +
-                    (parseFloat(incomeRow.cells[columns[2]]?.value) || 0);
-                }
-              });
-            } else if (row.title === "Less Operating Expenses") {
-              // Sum operating expense rows for the 3 months of this quarter
-              row.rows.forEach((expenseRow) => {
-                if (
-                  expenseRow.cells &&
-                  expenseRow.cells.length > Math.max(...columns)
-                ) {
-                  summary.budget.operatingExpenses +=
-                    Math.abs(
-                      parseFloat(expenseRow.cells[columns[0]]?.value) || 0
-                    ) +
-                    Math.abs(
-                      parseFloat(expenseRow.cells[columns[1]]?.value) || 0
-                    ) +
-                    Math.abs(
-                      parseFloat(expenseRow.cells[columns[2]]?.value) || 0
-                    );
-                }
-              });
+        // Parse sections - ONLY use the summary row totals
+        for (const section of report.rows) {
+          if (section.rowType === "Section") {
+            if (section.title === "Income") {
+              // Find ONLY the "Total Income" summary row
+              const totalRow = section.rows.find(
+                (r) =>
+                  r.rowType === "SummaryRow" &&
+                  r.cells[0].value === "Total Income"
+              );
+              if (totalRow) {
+                summary.budget.revenue =
+                  parseFloat(totalRow.cells[columns[0]]?.value || 0) +
+                  parseFloat(totalRow.cells[columns[1]]?.value || 0) +
+                  parseFloat(totalRow.cells[columns[2]]?.value || 0);
+              }
+            } else if (section.title === "Less Operating Expenses") {
+              // Find ONLY the "Total Operating Expenses" summary row
+              const totalRow = section.rows.find(
+                (r) =>
+                  r.rowType === "SummaryRow" &&
+                  r.cells[0].value === "Total Operating Expenses"
+              );
+              if (totalRow) {
+                summary.budget.operatingExpenses =
+                  Math.abs(parseFloat(totalRow.cells[columns[0]]?.value || 0)) +
+                  Math.abs(parseFloat(totalRow.cells[columns[1]]?.value || 0)) +
+                  Math.abs(parseFloat(totalRow.cells[columns[2]]?.value || 0));
+              }
             }
           }
-        });
+        }
 
         return summary;
       }
