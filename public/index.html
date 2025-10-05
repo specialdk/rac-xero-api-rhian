@@ -982,193 +982,69 @@
       }
 
       // Get days elapsed in current period (for partial period budget calculations)
-      function getDaysElapsedInPeriod(periodStart, periodEnd) {
-        const today = new Date();
-        const start = new Date(periodStart);
-        const end = new Date(periodEnd);
-
-        // If we're before the period, return 0
-        if (today < start) return 0;
-
-        // If we're after the period, return full period
-        if (today > end) {
-          return Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-        }
-
-        // Otherwise return days from start to today
-        return Math.ceil((today - start) / (1000 * 60 * 60 * 24));
-      }
-
-      // ====== PERIOD SELECTION HELPERS ======
-
-      // Get the current fiscal quarter (Jul-Sep=Q1, Oct-Dec=Q2, Jan-Mar=Q3, Apr-Jun=Q4)
-      function getCurrentFiscalQuarter() {
-        const today = new Date();
-        const month = today.getMonth(); // 0-11
-
-        if (month >= 6 && month <= 8) return "Q1"; // Jul-Sep
-        if (month >= 9 && month <= 11) return "Q2"; // Oct-Dec
-        if (month >= 0 && month <= 2) return "Q3"; // Jan-Mar
-        return "Q4"; // Apr-Jun
-      }
-
-      // Check if a quarter has actual data (at least 2 days into the quarter)
-      function quarterHasData(quarter) {
-        const today = new Date();
-        const quarterDates = getQuarterDates(quarter);
-        const quarterStart = new Date(quarterDates.start);
-
-        // Add 2 days to quarter start
-        const minDataDate = new Date(quarterStart);
-        minDataDate.setDate(minDataDate.getDate() + 2);
-
-        return today >= minDataDate;
-      }
-
-      // Get date ranges and metadata for each period type
-      function getPeriodDates(periodType) {
-        const today = new Date();
-        const fiscalYearStart = new Date(today.getFullYear(), 6, 1); // July 1 of current year
-
-        // Adjust if we're in Jan-Jun, fiscal year started last calendar year
-        if (today.getMonth() < 6) {
-          fiscalYearStart.setFullYear(fiscalYearStart.getFullYear() - 1);
-        }
-
-        switch (periodType) {
-          case "Q1":
-            return {
-              start: "2025-07-01",
-              end: "2025-10-01",
-              periodEnd: "2025-09-30",
-              label: "Q1 FY26 (Jul-Sep 2025)",
-              months: 3,
-              daysInPeriod: 92, // Jul 31 + Aug 31 + Sep 30
-              quarter: "Q1",
-            };
-
-          case "Q2":
-            return {
-              start: "2025-10-01",
-              end: "2026-01-01",
-              periodEnd: "2025-12-31",
-              label: "Q2 FY26 (Oct-Dec 2025)",
-              months: 3,
-              daysInPeriod: 92, // Oct 31 + Nov 30 + Dec 31
-              quarter: "Q2",
-            };
-
-          case "Q3":
-            return {
-              start: "2026-01-01",
-              end: "2026-04-01",
-              periodEnd: "2026-03-31",
-              label: "Q3 FY26 (Jan-Mar 2026)",
-              months: 3,
-              daysInPeriod: 90, // Jan 31 + Feb 28 + Mar 31 (non-leap year)
-              quarter: "Q3",
-            };
-
-          case "Q4":
-            return {
-              start: "2026-04-01",
-              end: "2026-07-01",
-              periodEnd: "2026-06-30",
-              label: "Q4 FY26 (Apr-Jun 2026)",
-              months: 3,
-              daysInPeriod: 91, // Apr 30 + May 31 + Jun 30
-              quarter: "Q4",
-            };
-
-          case "CM": // Current Month
-            const cmStart = new Date(today.getFullYear(), today.getMonth(), 1);
-            const cmEnd = new Date(
-              today.getFullYear(),
-              today.getMonth() + 1,
-              1
-            );
-            const cmPeriodEnd = new Date(cmEnd.getTime() - 86400000); // Last day of month
-
-            return {
-              start: cmStart.toISOString().split("T")[0],
-              end: cmEnd.toISOString().split("T")[0],
-              periodEnd: cmPeriodEnd.toISOString().split("T")[0],
-              label: `Current Month (${cmStart.toLocaleDateString("en-US", {
-                month: "short",
-                year: "numeric",
-              })})`,
-              months: 1,
-              daysInPeriod: cmPeriodEnd.getDate(),
-              quarter: getCurrentQuarterForDate(cmStart),
-            };
-
-          case "LM": // Last Month
-            const lmStart = new Date(
-              today.getFullYear(),
-              today.getMonth() - 1,
-              1
-            );
-            const lmEnd = new Date(today.getFullYear(), today.getMonth(), 1);
-            const lmPeriodEnd = new Date(lmEnd.getTime() - 86400000);
-
-            return {
-              start: lmStart.toISOString().split("T")[0],
-              end: lmEnd.toISOString().split("T")[0],
-              periodEnd: lmPeriodEnd.toISOString().split("T")[0],
-              label: `Last Month (${lmStart.toLocaleDateString("en-US", {
-                month: "short",
-                year: "numeric",
-              })})`,
-              months: 1,
-              daysInPeriod: lmPeriodEnd.getDate(),
-              quarter: getCurrentQuarterForDate(lmStart),
-            };
-
-          default:
-            return getPeriodDates("Q1"); // Default to Q1
-        }
-      }
-
-      // Helper to determine which quarter a date falls in
-      function getCurrentQuarterForDate(date) {
-        const month = date.getMonth();
-        if (month >= 6 && month <= 8) return "Q1";
-        if (month >= 9 && month <= 11) return "Q2";
-        if (month >= 0 && month <= 2) return "Q3";
-        return "Q4";
-      }
-
-      // Get quarter dates (simplified version for compatibility)
-      function getQuarterDates(quarter) {
-        return getPeriodDates(quarter);
-      }
-
-      // Calculate pro-rated budget for partial periods
-      function calculateProRatedBudget(
-        quarterBudget,
-        quarterDaysTotal,
-        daysElapsed
-      ) {
-        const dailyBudget = quarterBudget / quarterDaysTotal;
-        return dailyBudget * daysElapsed;
-      }
-
       // Get days elapsed in current period (for partial period budget calculations)
-      function getDaysElapsedInPeriod(periodStart, periodEnd) {
-        const today = new Date();
-        const start = new Date(periodStart);
-        const end = new Date(periodEnd);
+function getDaysElapsedInPeriod(periodStart, periodEnd) {
+  const today = new Date();
+  const start = new Date(periodStart);
+  const end = new Date(periodEnd);
 
-        // If we're before the period, return 0
-        if (today < start) return 0;
+  // Normalize to midnight for accurate day counting
+  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const startMidnight = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const endMidnight = new Date(end.getFullYear(), end.getMonth(), end.getDate());
 
-        // If we're after the period, return full period
-        if (today > end) {
-          return Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+  // If we're before the period, return 0
+  if (todayMidnight < startMidnight) return 0;
+
+  // If we're after the period, return full period length
+  if (todayMidnight > endMidnight) {
+    const diffTime = endMidnight - startMidnight;
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  }
+
+  // Otherwise return days from start to today
+  const diffTime = todayMidnight - startMidnight;
+  return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+}
+
+      // Budget utility functions
+      // Parse Xero budget report (same logic as MCP tool)
+      function parseBudgetReport(report) {
+        const rows = report.rows;
+        let revenue = 0;
+        let operatingExpenses = 0;
+
+        for (const section of rows) {
+          if (section.rowType === "Section") {
+            if (section.title === "Income") {
+              const totalRow = section.rows.find(
+                (r) =>
+                  r.rowType === "SummaryRow" &&
+                  r.cells[0].value === "Total Income"
+              );
+              if (totalRow) {
+                revenue =
+                  parseFloat(totalRow.cells[1].value || 0) +
+                  parseFloat(totalRow.cells[2].value || 0) +
+                  parseFloat(totalRow.cells[3].value || 0);
+              }
+            } else if (section.title === "Less Operating Expenses") {
+              const totalRow = section.rows.find(
+                (r) =>
+                  r.rowType === "SummaryRow" &&
+                  r.cells[0].value === "Total Operating Expenses"
+              );
+              if (totalRow) {
+                operatingExpenses =
+                  parseFloat(totalRow.cells[1].value || 0) +
+                  parseFloat(totalRow.cells[2].value || 0) +
+                  parseFloat(totalRow.cells[3].value || 0);
+              }
+            }
+          }
         }
 
-        // Otherwise return days from start to today
-        return Math.ceil((today - start) / (1000 * 60 * 60 * 24));
+        return { revenue, operatingExpenses };
       }
 
       // ====== CONNECTION MANAGER FUNCTIONS ======
@@ -2162,7 +2038,7 @@
 
         dashboardElement.innerHTML = `
       <!-- ENHANCED FINANCIAL OVERVIEW -->
-      <div class="dashboard-grid" style="grid-template-columns: repeat(3, 1fr);">
+      <div class="dashboard-grid" style="grid-template-columns: repeat(5, 1fr);">
         <div class="dashboard-card">
           <h3>📊 ${periodDates.label} Financial Position</h3>
           ${createMetric(
@@ -2232,9 +2108,29 @@
             balancedCompanies !== enhancedMetrics.length
           )}
         </div>
-      </div>
 
-        ${budgetData ? createBudgetCard(budgetData) : ""}
+        <div class="dashboard-card" id="revenueBudgetCard">
+          <h3>💵 Revenue vs Budget</h3>
+          <div style="font-size: 0.85em; color: #666; margin-bottom: 10px;" id="revenuePeriodLabel">
+            ${periodDates.label} (Pro-rated: 4 of 92 days)
+          </div>
+          ${createMetric("Budget", "$0", false, "revenueBudget")}
+          ${createMetric("Actual", "$0", false, "revenueActual")}
+          ${createMetric("Variance", "$0 (0%)", false, "revenueVariance")}
+          <div id="revenueVarianceBar" style="height: 6px; border-radius: 3px; margin-top: 10px; background: #e0e0e0;"></div>
+        </div>
+
+        <div class="dashboard-card" id="expensesBudgetCard">
+          <h3>💳 Expenses vs Budget</h3>
+          <div style="font-size: 0.85em; color: #666; margin-bottom: 10px;" id="expensesPeriodLabel">
+            ${periodDates.label} (Pro-rated: 4 of 92 days)
+          </div>
+          ${createMetric("Budget", "$0", false, "expensesBudget")}
+          ${createMetric("Actual", "$0", false, "expensesActual")}
+          ${createMetric("Variance", "$0 (0%)", false, "expensesVariance")}
+          <div id="expensesVarianceBar" style="height: 6px; border-radius: 3px; margin-top: 10px; background: #e0e0e0;"></div>
+        </div>
+      </div>
 
       <!-- COMPANY BREAKDOWN -->
       <div class="dashboard-card">
@@ -2242,17 +2138,56 @@
         ${enhancedMetrics.map((company) => createCompanyCard(company)).join("")}
       </div>
     `;
+    // UPDATE BUDGET CARDS WITH REAL DATA
+if (budgetData) {
+  updateBudgetCardValues(budgetData, periodDates);
+}
       }
 
-      function createMetric(label, value, isNegative = false) {
+      function updateBudgetCardValues(budgetData, periodDates) {
+  if (!budgetData || !budgetData.budget) return;
+  
+  const budget = budgetData.budget;
+  const actual = budgetData.actual;
+  const variance = budgetData.variance;
+  
+  // Update period labels with pro-rating info
+  if (budgetData.isProRated && budgetData.daysElapsed) {
+    const proRateText = `${periodDates.label} (Pro-rated: ${budgetData.daysElapsed} of ${budgetData.totalDays} days)`;
+    document.getElementById('revenuePeriodLabel').textContent = proRateText;
+    document.getElementById('expensesPeriodLabel').textContent = proRateText;
+  }
+  
+  // Update revenue card
+  document.getElementById('revenueBudget').textContent = `$${budget.revenue.toLocaleString()}`;
+  if (actual) {
+    document.getElementById('revenueActual').textContent = `$${actual.revenue.toLocaleString()}`;
+    const varianceText = `${variance.revenue >= 0 ? '+' : ''}$${Math.abs(variance.revenue).toLocaleString()} (${variance.revenuePercent >= 0 ? '+' : ''}${variance.revenuePercent.toFixed(1)}%)`;
+    const varianceEl = document.getElementById('revenueVariance');
+    varianceEl.textContent = varianceText;
+    varianceEl.className = variance.revenue >= 0 ? 'metric-value' : 'metric-value negative';
+  }
+  
+  // Update expenses card  
+  document.getElementById('expensesBudget').textContent = `$${budget.operatingExpenses.toLocaleString()}`;
+  if (actual) {
+    document.getElementById('expensesActual').textContent = `$${actual.operatingExpenses.toLocaleString()}`;
+    const varianceText = `${variance.expenses >= 0 ? '+' : ''}$${Math.abs(variance.expenses).toLocaleString()} (${variance.expensesPercent >= 0 ? '+' : ''}${variance.expensesPercent.toFixed(1)}%)`;
+    const varianceEl = document.getElementById('expensesVariance');
+    varianceEl.textContent = varianceText;
+    varianceEl.className = variance.expenses <= 0 ? 'metric-value' : 'metric-value negative';
+  }
+}
+
+      function createMetric(label, value, isNegative = false, id = "") {
         return `
-      <div class="metric">
-        <span>${label}</span>
-        <span class="metric-value ${
-          isNegative ? "negative" : ""
-        }">${value}</span>
-      </div>
-    `;
+    <div class="metric">
+      <span>${label}</span>
+      <span class="metric-value ${isNegative ? "negative" : ""}" ${
+          id ? `id="${id}"` : ""
+        }>${value}</span>
+    </div>
+  `;
       }
 
       function createCompanyCard(company) {
