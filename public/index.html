@@ -1021,43 +1021,61 @@
 
       // Budget utility functions
       // Parse Xero budget report (same logic as MCP tool)
-      function parseBudgetReport(report) {
-        const rows = report.rows;
-        let revenue = 0;
-        let operatingExpenses = 0;
+      function parseBudgetReport(report, quarter) {
+  if (!report || !report.rows) {
+    return null;
+  }
 
-        for (const section of rows) {
-          if (section.rowType === "Section") {
-            if (section.title === "Income") {
-              const totalRow = section.rows.find(
-                (r) =>
-                  r.rowType === "SummaryRow" &&
-                  r.cells[0].value === "Total Income"
-              );
-              if (totalRow) {
-                revenue =
-                  parseFloat(totalRow.cells[1].value || 0) +
-                  parseFloat(totalRow.cells[2].value || 0) +
-                  parseFloat(totalRow.cells[3].value || 0);
-              }
-            } else if (section.title === "Less Operating Expenses") {
-              const totalRow = section.rows.find(
-                (r) =>
-                  r.rowType === "SummaryRow" &&
-                  r.cells[0].value === "Total Operating Expenses"
-              );
-              if (totalRow) {
-                operatingExpenses =
-                  parseFloat(totalRow.cells[1].value || 0) +
-                  parseFloat(totalRow.cells[2].value || 0) +
-                  parseFloat(totalRow.cells[3].value || 0);
-              }
-            }
-          }
+  // Determine which column indices to use based on quarter
+  const quarterColumns = {
+    Q1: [1, 2, 3], // Jul, Aug, Sep
+    Q2: [4, 5, 6], // Oct, Nov, Dec
+    Q3: [7, 8, 9], // Jan, Feb, Mar
+    Q4: [10, 11, 12], // Apr, May, Jun
+  };
+
+  const columns = quarterColumns[quarter] || quarterColumns["Q1"];
+
+  const summary = {
+    budget: {
+      revenue: 0,
+      operatingExpenses: 0,
+    },
+    actual: null,
+    variance: null,
+  };
+
+  // Parse sections - ONLY use the summary row totals
+  for (const section of report.rows) {
+    if (section.rowType === "Section") {
+      if (section.title === "Income") {
+        // Find ONLY the "Total Income" summary row
+        const totalRow = section.rows.find(
+          (r) => r.rowType === "SummaryRow" && r.cells[0].value === "Total Income"
+        );
+        if (totalRow) {
+          summary.budget.revenue =
+            parseFloat(totalRow.cells[columns[0]]?.value || 0) +
+            parseFloat(totalRow.cells[columns[1]]?.value || 0) +
+            parseFloat(totalRow.cells[columns[2]]?.value || 0);
         }
-
-        return { revenue, operatingExpenses };
+      } else if (section.title === "Less Operating Expenses") {
+        // Find ONLY the "Total Operating Expenses" summary row
+        const totalRow = section.rows.find(
+          (r) => r.rowType === "SummaryRow" && r.cells[0].value === "Total Operating Expenses"
+        );
+        if (totalRow) {
+          summary.budget.operatingExpenses =
+            Math.abs(parseFloat(totalRow.cells[columns[0]]?.value || 0)) +
+            Math.abs(parseFloat(totalRow.cells[columns[1]]?.value || 0)) +
+            Math.abs(parseFloat(totalRow.cells[columns[2]]?.value || 0));
+        }
       }
+    }
+  }
+
+  return summary;
+}
 
       // ====== CONNECTION MANAGER FUNCTIONS ======
 
