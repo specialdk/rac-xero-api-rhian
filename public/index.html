@@ -2032,6 +2032,15 @@
           const yesterday = new Date(today);
           yesterday.setDate(yesterday.getDate() - 1);
 
+          // Right after calculating yesterday
+          console.log("Budget debug:", {
+            organizationName,
+            periodStart: periodDates.start,
+            periodEnd: periodDates.periodEnd,
+            yesterday: yesterday.toISOString().split("T")[0],
+            actualEndDate,
+            hasActualData,
+          });
           const periodStart = new Date(periodDates.start);
           const periodEnd = new Date(periodDates.periodEnd);
           const hasActualData = yesterday >= periodStart;
@@ -2082,10 +2091,28 @@
             operatingExpenses: budgetSummary.budget.operatingExpenses,
           };
 
-          // Calculate days elapsed from period start to yesterday
-          const daysElapsed = getDaysElapsedInPeriod(
-            periodDates.start,
-            actualEndDate
+          // Calculate days elapsed from period start to yesterday (not using getDaysElapsedInPeriod)
+          let daysElapsed = 0;
+          if (hasActualData) {
+            const startMidnight = new Date(
+              periodStart.getFullYear(),
+              periodStart.getMonth(),
+              periodStart.getDate()
+            );
+            const yesterdayMidnight = new Date(
+              yesterday.getFullYear(),
+              yesterday.getMonth(),
+              yesterday.getDate()
+            );
+            const diffTime = yesterdayMidnight - startMidnight;
+            daysElapsed = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+          }
+
+          console.log(
+            "Days elapsed:",
+            daysElapsed,
+            "of",
+            periodDates.daysInPeriod
           );
 
           // Pro-rate budget based on elapsed days
