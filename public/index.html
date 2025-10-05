@@ -378,7 +378,7 @@
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         border: 1px solid #e0e0e0;
         min-width: 250px;
-        min-height: 220px; /* Add this to ensure consistent height */
+        min-height: 220px; /* ADD THIS LINE */
         display: flex;
         flex-direction: column;
       }
@@ -1356,6 +1356,7 @@
 
       // ====== DASHBOARD INITIALIZATION ======
 
+      // ====== REPLACE initializeMainDashboard() ======
       async function initializeMainDashboard() {
         try {
           // Set default period to current quarter
@@ -1363,7 +1364,20 @@
 
           await loadConnectedCompanies();
           setupCompanyFilters();
-          await loadDashboardData();
+
+          // Show initial message instead of auto-loading
+          const dashboardElement = document.getElementById("dashboardData");
+          dashboardElement.innerHTML = `
+      <div style="text-align: center; padding: 60px; color: #666;">
+        <h3>📊 RAC Financial Dashboard</h3>
+        <p style="margin: 20px 0;">Select companies from the filters above, then click <strong>LOAD DATA</strong> to view financial information.</p>
+        <p style="font-size: 14px; color: #999;">
+          ${connectedCompanies.length} companies connected and ready
+        </p>
+      </div>
+    `;
+
+          updateLoadStatus();
         } catch (error) {
           console.error("Error initializing dashboard:", error);
         }
@@ -1394,6 +1408,7 @@
         }
       }
 
+      // ====== REPLACE setupCompanyFilters() ======
       function setupCompanyFilters() {
         const filtersContainer = document.getElementById("companyFilters");
 
@@ -1403,25 +1418,58 @@
           return;
         }
 
-        filtersContainer.innerHTML = connectedCompanies
-          .map((company) => {
-            const shortName = company.tenantName
-              .replace("Rirratjingu ", "")
-              .replace(" Pty Ltd", "");
-            return `
-          <div class="company-checkbox-item balanced">
-            <input type="checkbox" id="filter-${company.tenantId}" checked 
+        filtersContainer.innerHTML = `
+    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <!-- Helper buttons -->
+      <button onclick="selectAllCompanies()" style="padding: 4px 8px; font-size: 12px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer;">
+        Select All
+      </button>
+      <button onclick="deselectAllCompanies()" style="padding: 4px 8px; font-size: 12px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">
+        Clear All
+      </button>
+      
+      <!-- Separator -->
+      <div style="border-left: 1px solid #ddd; height: 20px; margin: 0 5px;"></div>
+      
+      <!-- Company checkboxes -->
+      ${connectedCompanies
+        .map((company) => {
+          const shortName = company.tenantName
+            .replace("Rirratjingu ", "")
+            .replace(" Pty Ltd", "");
+          const isChecked = activeCompanyFilters.includes(company.tenantId);
+          return `
+          <div class="company-checkbox-item">
+            <input type="checkbox" 
+                   id="filter-${company.tenantId}" 
+                   ${isChecked ? "checked" : ""}
                    onchange="handleCompanyFilterChange('${company.tenantId}')">
             <label for="filter-${company.tenantId}" 
-                   onclick="toggleCompanyFilterByLabel('${company.tenantId}')">${shortName}</label>
+                   onclick="toggleCompanyFilterByLabel('${
+                     company.tenantId
+                   }')">${shortName}</label>
           </div>
         `;
-          })
-          .join("");
+        })
+        .join("")}
+      
+      <!-- Separator -->
+      <div style="border-left: 1px solid #ddd; height: 20px; margin: 0 5px;"></div>
+      
+      <!-- LOAD button -->
+      <button id="loadDataBtn" onclick="loadDashboardData()" 
+              style="padding: 6px 16px; font-size: 13px; font-weight: 600; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s;"
+              onmouseover="this.style.background='#2980b9'" 
+              onmouseout="this.style.background='#3498db'">
+        🔄 LOAD DATA
+      </button>
+      
+      <span id="dataLoadStatus" style="font-size: 12px; color: #666; font-style: italic;"></span>
+    </div>
+  `;
       }
 
-      // ====== UTILITY FUNCTIONS ======
-
+      // ====== REPLACE handleCompanyFilterChange() ======
       function handleCompanyFilterChange(tenantId) {
         const checkbox = document.getElementById(`filter-${tenantId}`);
 
@@ -1435,7 +1483,38 @@
           );
         }
 
-        loadDashboardData();
+        // Don't auto-reload - let user click LOAD button
+        updateLoadStatus();
+      }
+
+      // ====== ADD NEW HELPER FUNCTIONS ======
+      function selectAllCompanies() {
+        activeCompanyFilters = connectedCompanies.map((c) => c.tenantId);
+        connectedCompanies.forEach((company) => {
+          document.getElementById(`filter-${company.tenantId}`).checked = true;
+        });
+        updateLoadStatus();
+      }
+
+      function deselectAllCompanies() {
+        activeCompanyFilters = [];
+        connectedCompanies.forEach((company) => {
+          document.getElementById(`filter-${company.tenantId}`).checked = false;
+        });
+        updateLoadStatus();
+      }
+
+      function updateLoadStatus() {
+        const statusEl = document.getElementById("dataLoadStatus");
+        if (!statusEl) return; // Element not ready yet
+
+        if (activeCompanyFilters.length === 0) {
+          statusEl.textContent = "⚠️ No companies selected";
+          statusEl.style.color = "#e74c3c";
+        } else {
+          statusEl.textContent = `${activeCompanyFilters.length} selected - click LOAD to refresh`;
+          statusEl.style.color = "#f39c12";
+        }
       }
 
       function toggleCompanyFilterByLabel(tenantId) {
@@ -1649,10 +1728,11 @@
         }
       }
 
-      // Handle period selector changes
+      // ====== REPLACE handlePeriodChange() ======
       function handlePeriodChange(newPeriod) {
         selectedPeriod = newPeriod;
-        loadDashboardData();
+        // Don't auto-reload - let user click LOAD button
+        updateLoadStatus();
       }
 
       function showErrorState(error) {
@@ -2049,6 +2129,17 @@
         return summary;
       }
 
+      function createMetric(label, value, isNegative = false, id = "") {
+        return `
+    <div class="metric">
+      <span>${label}</span>
+      <span class="metric-value ${isNegative ? "negative" : ""}" ${
+          id ? `id="${id}"` : ""
+        }>${value}</span>
+    </div>
+  `;
+      }
+
       function renderEnhancedOverview(
         totals,
         enhancedMetrics,
@@ -2166,6 +2257,7 @@
         }
       }
 
+      // ====== ADD updateBudgetCardValues() function (with fixes from earlier) ======
       function updateBudgetCardValues(budgetData, periodDates) {
         if (!budgetData || !budgetData.budget) return;
 
