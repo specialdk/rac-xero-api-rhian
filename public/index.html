@@ -2224,27 +2224,24 @@
         </div>
 
         <div class="dashboard-card" id="revenueBudgetCard">
-          <h3>💵 Revenue vs Budget</h3>
-          <div style="font-size: 0.85em; color: #666; margin-bottom: 10px;" id="revenuePeriodLabel">
-            ${periodDates.label} (Pro-rated: 4 of 92 days)
-          </div>
-          ${createMetric("Budget", "$0", false, "revenueBudget")}
-          ${createMetric("Actual", "$0", false, "revenueActual")}
-          ${createMetric("Variance", "$0 (0%)", false, "revenueVariance")}
-          <div id="revenueVarianceBar" style="height: 6px; border-radius: 3px; margin-top: 10px; background: #e0e0e0;"></div>
-        </div>
+  <h3>💵 Revenue vs Budget</h3>
+  <div style="font-size: 0.85em; color: #666; margin-bottom: 10px;" id="revenuePeriodLabel">
+    ${periodDates.label} (Pro-rated: 4 of 92 days)
+  </div>
+  ${createMetric("Budget", "$0", false, "revenueBudget")}
+  ${createMetric("Actual", "$0", false, "revenueActual")}
+  ${createMetric("Variance", "$0 (0%)", false, "revenueVariance")}
+</div>
 
         <div class="dashboard-card" id="expensesBudgetCard">
-          <h3>💳 Expenses vs Budget</h3>
-          <div style="font-size: 0.85em; color: #666; margin-bottom: 10px;" id="expensesPeriodLabel">
-            ${periodDates.label} (Pro-rated: 4 of 92 days)
-          </div>
-          ${createMetric("Budget", "$0", false, "expensesBudget")}
-          ${createMetric("Actual", "$0", false, "expensesActual")}
-          ${createMetric("Variance", "$0 (0%)", false, "expensesVariance")}
-          <div id="expensesVarianceBar" style="height: 6px; border-radius: 3px; margin-top: 10px; background: #e0e0e0;"></div>
-        </div>
-      </div>
+  <h3>💳 Expenses vs Budget</h3>
+  <div style="font-size: 0.85em; color: #666; margin-bottom: 10px;" id="expensesPeriodLabel">
+    ${periodDates.label} (Pro-rated: 4 of 92 days)
+  </div>
+  ${createMetric("Budget", "$0", false, "expensesBudget")}
+  ${createMetric("Actual", "$0", false, "expensesActual")}
+  ${createMetric("Variance", "$0 (0%)", false, "expensesVariance")}
+</div>
 
       <!-- COMPANY BREAKDOWN -->
       <div class="dashboard-card">
@@ -2276,48 +2273,22 @@
         }
 
         // Update revenue card
-        document.getElementById("revenueBudget").textContent = `$${Math.round(
-          budget.revenue
-        ).toLocaleString()}`;
-        if (actual) {
-          document.getElementById("revenueActual").textContent = `$${Math.round(
-            actual.revenue
-          ).toLocaleString()}`;
-          // Split variance: dollar amount on one line, percentage on next line
-          const varianceEl = document.getElementById("revenueVariance");
-          varianceEl.innerHTML = `${
-            variance.revenue >= 0 ? "+" : ""
-          }$${Math.round(
-            Math.abs(variance.revenue)
-          ).toLocaleString()}<br><span style="font-size: 0.9em;">(${
-            variance.revenuePercent >= 0 ? "+" : ""
-          }${variance.revenuePercent.toFixed(1)}%)</span>`;
-          varianceEl.className =
-            variance.revenue >= 0 ? "metric-value" : "metric-value negative";
-        }
+document.getElementById('revenueBudget').textContent = `$${Math.round(budget.revenue).toLocaleString()}`;
+if (actual) {
+  document.getElementById('revenueActual').textContent = `$${Math.round(actual.revenue).toLocaleString()}`;
+  const varianceEl = document.getElementById('revenueVariance');
+  varianceEl.innerHTML = `${variance.revenue >= 0 ? '+' : ''}$${Math.round(Math.abs(variance.revenue)).toLocaleString()}<br><span style="font-size: 0.9em; margin-top: 4px; display: block;">(${variance.revenuePercent >= 0 ? '+' : ''}${variance.revenuePercent.toFixed(1)}%)</span>`;
+  varianceEl.className = variance.revenue >= 0 ? 'metric-value' : 'metric-value negative';
+}
 
-        // Update expenses card
-        document.getElementById("expensesBudget").textContent = `$${Math.round(
-          budget.operatingExpenses
-        ).toLocaleString()}`;
-        if (actual) {
-          document.getElementById(
-            "expensesActual"
-          ).textContent = `$${Math.round(
-            actual.operatingExpenses
-          ).toLocaleString()}`;
-          // Split variance: dollar amount on one line, percentage on next line
-          const varianceEl = document.getElementById("expensesVariance");
-          varianceEl.innerHTML = `${
-            variance.expenses >= 0 ? "+" : ""
-          }$${Math.round(
-            Math.abs(variance.expenses)
-          ).toLocaleString()}<br><span style="font-size: 0.9em;">(${
-            variance.expensesPercent >= 0 ? "+" : ""
-          }${variance.expensesPercent.toFixed(1)}%)</span>`;
-          varianceEl.className =
-            variance.expenses <= 0 ? "metric-value" : "metric-value negative";
-        }
+// Update expenses card
+document.getElementById('expensesBudget').textContent = `$${Math.round(budget.operatingExpenses).toLocaleString()}`;
+if (actual) {
+  document.getElementById('expensesActual').textContent = `$${Math.round(actual.operatingExpenses).toLocaleString()}`;
+  const varianceEl = document.getElementById('expensesVariance');
+  varianceEl.innerHTML = `${variance.expenses >= 0 ? '+' : ''}$${Math.round(Math.abs(variance.expenses)).toLocaleString()}<br><span style="font-size: 0.9em; margin-top: 4px; display: block;">(${variance.expensesPercent >= 0 ? '+' : ''}${variance.expensesPercent.toFixed(1)}%)</span>`;
+  varianceEl.className = variance.expenses <= 0 ? 'metric-value' : 'metric-value negative';
+}
       }
 
       function createCompanyCard(company) {
