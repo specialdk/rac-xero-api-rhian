@@ -1311,14 +1311,35 @@
           const dashContent = document.querySelector(".dashboard-content");
 
           console.log("Main dashboard height:", mainDash.offsetHeight);
+          console.log(
+            "Main container:",
+            document.querySelector(".main-container")
+          );
+          console.log(
+            "Main container height:",
+            document.querySelector(".main-container").offsetHeight
+          );
+          console.log(
+            "Main container display:",
+            window.getComputedStyle(document.querySelector(".main-container"))
+              .display
+          );
+
+          const panel = document.querySelector(".dashboard-panel");
+          console.log("Dashboard panel height:", panel.offsetHeight);
+          console.log(
+            "Dashboard panel display:",
+            window.getComputedStyle(panel).display
+          );
+          console.log(
+            "Dashboard panel flex-direction:",
+            window.getComputedStyle(panel).flexDirection
+          );
+
           console.log("Dashboard content height:", dashContent.offsetHeight);
           console.log(
             "Dashboard content scrollHeight:",
             dashContent.scrollHeight
-          );
-          console.log(
-            "Dashboard content overflow-y:",
-            window.getComputedStyle(dashContent).overflowY
           );
 
           // Show initial message...
