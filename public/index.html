@@ -2235,7 +2235,18 @@
           }
         }
 
-        return summary;
+        console.log("Budget summary for", organizationName, ":", {
+          quarter: budgetQuarter,
+          periodStart: periodDates.start,
+          periodEnd: periodDates.periodEnd,
+          daysElapsed,
+          isProRated: budgetSummary.isProRated,
+          proRateMethod: budgetSummary.proRateMethod,
+          revenue: budgetSummary.budget.revenue,
+          expenses: budgetSummary.budget.operatingExpenses,
+        });
+
+        return budgetSummary;
       }
 
       function createMetric(label, value, isNegative = false, id = "") {
