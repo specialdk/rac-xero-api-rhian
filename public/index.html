@@ -289,10 +289,11 @@
 
       /* ====== DASHBOARD PANEL ====== */
       .dashboard-panel {
+        flex: 1; /* CHANGE from height: 100% */
         display: flex;
         flex-direction: column;
-        height: 100%;
         background: #fafafa;
+        min-height: 0; /* ADD THIS */
       }
 
       .panel-header {
