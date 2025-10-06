@@ -249,11 +249,15 @@
 
       /* ====== MAIN DASHBOARD LAYOUT ====== */
       .main-dashboard {
-        display: none;
+        display: flex; /* CHANGE from 'none' - handle visibility with JS instead */
+        flex-direction: column; /* ADD THIS */
         height: 100vh;
         background: #f5f5f5;
       }
 
+      .main-dashboard.hidden {
+        display: none;
+      }
       .header {
         background: #2c3e50;
         color: white;
@@ -303,9 +307,10 @@
       .dashboard-content {
         flex: 1;
         overflow-y: auto;
+        overflow-x: hidden; /* ADD THIS */
         padding: 20px;
-        height: calc(100vh - 120px);
-        min-height: 0; /* ADD THIS */
+        min-height: 0;
+        /* REMOVE: height: calc(100vh - 120px); - let flex handle it */
       }
 
       /* ====== COMPANY FILTERS ====== */
@@ -1263,7 +1268,7 @@
         localStorage.setItem("racCompaniesConnected", "true");
 
         document.getElementById("connectionManager").style.display = "none";
-        document.getElementById("mainDashboard").style.display = "block";
+        document.getElementById("mainDashboard").style.display = "flex";
 
         initializeMainDashboard();
       }
