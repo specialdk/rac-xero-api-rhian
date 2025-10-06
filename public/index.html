@@ -2275,14 +2275,22 @@
         const actual = budgetData.actual;
         const variance = budgetData.variance;
 
-        // Update period labels with pro-rating info
+        // Update period labels with pro-rating info OR standard label
         if (budgetData.isProRated && budgetData.daysElapsed) {
           const proRateText = `${periodDates.label} (Pro-rated: ${budgetData.daysElapsed} of ${budgetData.totalDays} days)`;
           document.getElementById("revenuePeriodLabel").textContent =
             proRateText;
           document.getElementById("expensesPeriodLabel").textContent =
             proRateText;
+        } else {
+          // Complete period - no pro-rating
+          document.getElementById("revenuePeriodLabel").textContent =
+            periodDates.label;
+          document.getElementById("expensesPeriodLabel").textContent =
+            periodDates.label;
         }
+
+        // ... rest of function stays the same
 
         // Update revenue card
         document.getElementById("revenueBudget").textContent = `$${Math.round(
