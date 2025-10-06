@@ -1303,11 +1303,27 @@
       // ====== REPLACE initializeMainDashboard() ======
       async function initializeMainDashboard() {
         try {
-          // Set default period to current quarter
           selectedPeriod = getCurrentFiscalQuarter();
 
           await loadConnectedCompanies();
           setupCompanyFilters();
+
+          // DEBUG: Check heights
+          const mainDash = document.getElementById("mainDashboard");
+          const dashContent = document.querySelector(".dashboard-content");
+
+          console.log("Main dashboard height:", mainDash.offsetHeight);
+          console.log("Dashboard content height:", dashContent.offsetHeight);
+          console.log(
+            "Dashboard content scrollHeight:",
+            dashContent.scrollHeight
+          );
+          console.log(
+            "Dashboard content overflow-y:",
+            window.getComputedStyle(dashContent).overflowY
+          );
+
+          // Show initial message...
 
           // Show initial message instead of auto-loading
           const dashboardElement = document.getElementById("dashboardData");
