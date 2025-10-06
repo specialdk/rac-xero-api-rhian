@@ -305,6 +305,7 @@
         overflow-y: auto;
         padding: 20px;
         height: calc(100vh - 120px);
+        min-height: 0; /* ADD THIS */
       }
 
       /* ====== COMPANY FILTERS ====== */
@@ -2258,9 +2259,7 @@
       <!-- COMPANY BREAKDOWN -->
 <div class="dashboard-card" style="grid-column: 1 / -1;">
   <h3>📈 ${periodDates.label} Company Performance</h3>
-  <div style="max-height: 500px; overflow-y: auto; padding-right: 10px;">
-    ${enhancedMetrics.map((company) => createCompanyCard(company)).join("")}
-  </div>
+  ${enhancedMetrics.map((company) => createCompanyCard(company)).join("")}
 </div>
     `;
         // UPDATE BUDGET CARDS WITH REAL DATA
