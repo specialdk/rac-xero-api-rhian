@@ -2342,7 +2342,9 @@
           )}
           ${createMetric(
             "Debt/Equity Ratio",
-            totals.debtToEquityRatio.toFixed(2)
+            totals.debtToEquityRatio
+              ? totals.debtToEquityRatio.toFixed(2)
+              : "0.00"
           )}
           <div class="status-badge ${
             balancedCompanies === enhancedMetrics.length ? "healthy" : "warning"
