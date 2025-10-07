@@ -2219,153 +2219,138 @@
         const dashboardElement = document.getElementById("dashboardData");
 
         dashboardElement.innerHTML = `
-      <!-- ENHANCED FINANCIAL OVERVIEW -->
-      <div class="dashboard-grid" style="grid-template-columns: repeat(5, 1fr);">
-  <div class="dashboard-card">
-    <h3>📊 ${periodDates.label} Financial Position</h3>
-    ${createMetric("Total Assets", `$${totals.totalAssets.toLocaleString()}`)}
-    ${createMetric(
-      "Total Liabilities",
-      `$${totals.totalLiabilities.toLocaleString()}`
-    )}
-    ${createMetric("Net Equity", `$${totals.totalEquity.toLocaleString()}`)}
-    ${createMetric(
-      "Net Worth",
-      `$${(totals.totalAssets - totals.totalLiabilities).toLocaleString()}`
-    )}
-    
-    <div style="margin-top: 15px; display: flex; gap: 5px; align-items: flex-end; height: 60px; border-top: 1px solid #eee; padding-top: 10px;">
-      <div style="flex: 1; text-align: center; font-size: 10px; color: #666;">Assets</div>
-      <div style="flex: 1; text-align: center; font-size: 10px; color: #666;">Liabilities</div>
-      <div style="flex: 1; text-align: center; font-size: 10px; color: #666;">Equity</div>
-    </div>
-  </div>
+    <!-- ENHANCED FINANCIAL OVERVIEW -->
+    <div class="dashboard-grid" style="grid-template-columns: repeat(5, 1fr);">
+      
+      <!-- Card 1: Financial Position -->
+      <div class="dashboard-card">
+        <h3>📊 ${periodDates.label} Financial Position</h3>
+        ${createMetric(
+          "Total Assets",
+          `$${totals.totalAssets.toLocaleString()}`
+        )}
+        ${createMetric(
+          "Total Liabilities",
+          `$${totals.totalLiabilities.toLocaleString()}`
+        )}
+        ${createMetric("Net Equity", `$${totals.totalEquity.toLocaleString()}`)}
+        ${createMetric(
+          "Net Worth",
+          `$${(totals.totalAssets - totals.totalLiabilities).toLocaleString()}`
+        )}
+      </div>
 
-  <div class="dashboard-card">
-    <h3>🔥 ${periodDates.label} Performance</h3>
-    ${createMetric(
-      "Total Cash Position",
-      `$${totals.totalCash.toLocaleString()}`
-    )}
-    ${createMetric(
-      "Annual Revenue",
-      `$${totals.totalRevenue.toLocaleString()}`
-    )}
-    ${createMetric(
-      "Net Profit",
-      `$${totals.totalProfit.toLocaleString()}`,
-      totals.totalProfit < 0
-    )}
-    ${createMetric(
-      "Profit Margin",
-      `${totals.profitMargin.toFixed(1)}%`,
-      totals.totalProfit < 0
-    )}
-    
-    <div style="margin-top: 15px; display: flex; gap: 5px; align-items: flex-end; height: 60px; border-top: 1px solid #eee; padding-top: 10px;">
-      <div style="flex: 1; text-align: center; font-size: 10px; color: #666;">Revenue</div>
-      <div style="flex: 1; text-align: center; font-size: 10px; color: #666;">Expenses</div>
-      <div style="flex: 1; text-align: center; font-size: 10px; color: #666;">Profit</div>
-    </div>
-  </div>
+      <!-- Card 2: Performance -->
+      <div class="dashboard-card">
+        <h3>🔥 ${periodDates.label} Performance</h3>
+        ${createMetric(
+          "Total Cash Position",
+          `$${totals.totalCash.toLocaleString()}`
+        )}
+        ${createMetric(
+          "Annual Revenue",
+          `$${totals.totalRevenue.toLocaleString()}`
+        )}
+        ${createMetric(
+          "Net Profit",
+          `$${totals.totalProfit.toLocaleString()}`,
+          totals.totalProfit < 0
+        )}
+        ${createMetric(
+          "Profit Margin",
+          `${totals.profitMargin.toFixed(1)}%`,
+          totals.totalProfit < 0
+        )}
+      </div>
 
-  <div class="dashboard-card">
-    <h3>⚕️ ${periodDates.label} Health & Risk</h3>
-    ${createMetric("Companies", enhancedMetrics.length)}
-    ${createMetric(
-      "Balanced Books",
-      `${balancedCompanies}/${enhancedMetrics.length}`
-    )}
-    ${createMetric(
-      "Debt/Equity Ratio",
-      totals.debtToEquityRatio ? totals.debtToEquityRatio.toFixed(2) : "0.00"
-    )}
-    <div class="status-badge ${
-      balancedCompanies === enhancedMetrics.length ? "healthy" : "warning"
-    }">
-      ${
-        balancedCompanies === enhancedMetrics.length
-          ? "✅ Healthy"
-          : "⚠️ Review Needed"
-      }
-    </div>
-    
-    <div style="margin-top: 15px; display: flex; gap: 5px; align-items: flex-end; height: 60px; border-top: 1px solid #eee; padding-top: 10px;">
-      <div style="flex: 1; text-align: center; font-size: 10px; color: #666;">Balanced</div>
-      <div style="flex: 1; text-align: center; font-size: 10px; color: #666;">Imbalanced</div>
-    </div>
-  </div>
+      <!-- Card 3: Health & Risk -->
+      <div class="dashboard-card">
+        <h3>⚕️ ${periodDates.label} Health & Risk</h3>
+        ${createMetric("Companies", enhancedMetrics.length)}
+        ${createMetric(
+          "Balanced Books",
+          `${balancedCompanies}/${enhancedMetrics.length}`
+        )}
+        ${createMetric(
+          "Debt/Equity Ratio",
+          totals.debtToEquityRatio
+            ? totals.debtToEquityRatio.toFixed(2)
+            : "0.00"
+        )}
+        <div class="status-badge ${
+          balancedCompanies === enhancedMetrics.length ? "healthy" : "warning"
+        }">
+          ${
+            balancedCompanies === enhancedMetrics.length
+              ? "✅ Healthy"
+              : "⚠️ Review Needed"
+          }
+        </div>
+      </div>
 
-  <div class="dashboard-card" id="revenueBudgetCard">
-    <h3>💵 Revenue vs Budget</h3>
-    <div style="font-size: 0.85em; color: #666; margin-bottom: 10px;" id="revenuePeriodLabel">${
-      periodDates.label
-    }</div>
-    ${createMetric("Budget", "$0", false, "revenueBudget")}
-    ${createMetric("Actual", "$0", false, "revenueActual")}
-    ${createMetric("Variance", "$0 (0%)", false, "revenueVariance")}
-    
-    <div id="revenueChart" style="margin-top: 15px; display: flex; gap: 5px; align-items: flex-end; height: 60px; border-top: 1px solid #eee; padding-top: 10px;">
-      <div style="flex: 1; text-align: center; font-size: 10px; color: #666;">Budget</div>
-      <div style="flex: 1; text-align: center; font-size: 10px; color: #666;">Actual</div>
-    </div>
-  </div>
+      <!-- Card 4: Revenue Budget -->
+      <div class="dashboard-card" id="revenueBudgetCard">
+        <h3>💵 Revenue vs Budget</h3>
+        <div style="font-size: 0.85em; color: #666; margin-bottom: 10px;" id="revenuePeriodLabel">${
+          periodDates.label
+        }</div>
+        ${createMetric("Budget", "$0", false, "revenueBudget")}
+        ${createMetric("Actual", "$0", false, "revenueActual")}
+        ${createMetric("Variance", "$0 (0%)", false, "revenueVariance")}
+      </div>
 
-  <div class="dashboard-card" id="expensesBudgetCard">
-    <h3>💳 Expenses vs Budget</h3>
-    <div style="font-size: 0.85em; color: #666; margin-bottom: 10px;" id="expensesPeriodLabel">${
-      periodDates.label
-    }</div>
-    ${createMetric("Budget", "$0", false, "expensesBudget")}
-    ${createMetric("Actual", "$0", false, "expensesActual")}
-    ${createMetric("Variance", "$0 (0%)", false, "expensesVariance")}
-    
-    <div id="expensesChart" style="margin-top: 15px; display: flex; gap: 5px; align-items: flex-end; height: 60px; border-top: 1px solid #eee; padding-top: 10px;">
-      <div style="flex: 1; text-align: center; font-size: 10px; color: #666;">Budget</div>
-      <div style="flex: 1; text-align: center; font-size: 10px; color: #666;">Actual</div>
+      <!-- Card 5: Expenses Budget -->
+      <div class="dashboard-card" id="expensesBudgetCard">
+        <h3>💳 Expenses vs Budget</h3>
+        <div style="font-size: 0.85em; color: #666; margin-bottom: 10px;" id="expensesPeriodLabel">${
+          periodDates.label
+        }</div>
+        ${createMetric("Budget", "$0", false, "expensesBudget")}
+        ${createMetric("Actual", "$0", false, "expensesActual")}
+        ${createMetric("Variance", "$0 (0%)", false, "expensesVariance")}
+      </div>
+
     </div>
-  </div>
-</div>
 
 <!-- VERTICAL BAR CHARTS - One for each card above -->
 <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 20px;">
   
   <!-- Chart 1: Financial Position -->
-  <div class="dashboard-card" style="min-height: 200px;">
+  <div class="dashboard-card" style="min-height: 300px;">
     <h4 style="font-size: 13px; margin-bottom: 10px; text-align: center;">Financial Position</h4>
-    <div id="chart-financial-position" style="display: flex; gap: 5px; align-items: flex-end; height: 140px; padding: 10px;">
+    <div id="chart-financial-position" style="display: flex; gap: 5px; align-items: flex-end; height: 240px; padding: 10px;">
       <!-- Chart will be inserted here -->
     </div>
   </div>
 
   <!-- Chart 2: Performance -->
-  <div class="dashboard-card" style="min-height: 200px;">
+  <div class="dashboard-card" style="min-height: 300px;">
     <h4 style="font-size: 13px; margin-bottom: 10px; text-align: center;">Performance</h4>
-    <div id="chart-performance" style="display: flex; gap: 5px; align-items: flex-end; height: 140px; padding: 10px;">
+    <div id="chart-performance" style="display: flex; gap: 5px; align-items: flex-end; height: 240px; padding: 10px;">
       <!-- Chart will be inserted here -->
     </div>
   </div>
 
   <!-- Chart 3: Health & Risk -->
-  <div class="dashboard-card" style="min-height: 200px;">
+  <div class="dashboard-card" style="min-height: 300px;">
     <h4 style="font-size: 13px; margin-bottom: 10px; text-align: center;">Health & Risk</h4>
-    <div id="chart-health-risk" style="display: flex; gap: 5px; align-items: flex-end; height: 140px; padding: 10px;">
+    <div id="chart-health-risk" style="display: flex; gap: 5px; align-items: flex-end; height: 240px; padding: 10px;">
       <!-- Chart will be inserted here -->
     </div>
   </div>
 
   <!-- Chart 4: Revenue vs Budget -->
-  <div class="dashboard-card" style="min-height: 200px;">
+  <div class="dashboard-card" style="min-height: 300px;">
     <h4 style="font-size: 13px; margin-bottom: 10px; text-align: center;">Revenue vs Budget</h4>
-    <div id="chart-revenue-budget" style="display: flex; gap: 5px; align-items: flex-end; height: 140px; padding: 10px;">
+    <div id="chart-revenue-budget" style="display: flex; gap: 5px; align-items: flex-end; height: 240px; padding: 10px;">
       <!-- Chart will be inserted here -->
     </div>
   </div>
 
   <!-- Chart 5: Expenses vs Budget -->
-  <div class="dashboard-card" style="min-height: 200px;">
+  <div class="dashboard-card" style="min-height: 300px;">
     <h4 style="font-size: 13px; margin-bottom: 10px; text-align: center;">Expenses vs Budget</h4>
-    <div id="chart-expenses-budget" style="display: flex; gap: 5px; align-items: flex-end; height: 140px; padding: 10px;">
+    <div id="chart-expenses-budget" style="display: flex; gap: 5px; align-items: flex-end; height: 240px; padding: 10px;">
       <!-- Chart will be inserted here -->
     </div>
   </div>
@@ -2561,18 +2546,22 @@
 
           container.innerHTML = data
             .map((item) => {
-              const height = (Math.abs(item.value) / maxValue) * 100;
+              // Calculate height as percentage, with minimum 5% for visibility
+              const heightPercent = Math.max(
+                (Math.abs(item.value) / maxValue) * 100,
+                5
+              );
               const displayValue = isCountMode
                 ? item.value
-                : `$${(item.value / 1000).toFixed(0)}K`;
+                : `$${(item.value / 1000000).toFixed(1)}M`; // Changed to millions for clarity
 
               return `
-      <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
-        <div style="font-size: 11px; font-weight: 600; color: ${item.color}; margin-bottom: 4px; min-height: 16px;">
+      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;">
+        <div style="font-size: 11px; font-weight: 600; color: ${item.color}; margin-bottom: 4px;">
           ${displayValue}
         </div>
-        <div style="width: 100%; height: ${height}%; background: ${item.color}; border-radius: 4px 4px 0 0; min-height: 5px; transition: all 0.3s ease;"></div>
-        <div style="font-size: 10px; color: #666; margin-top: 4px; text-align: center;">
+        <div style="width: 80%; height: ${heightPercent}%; background: ${item.color}; border-radius: 4px 4px 0 0; min-height: 10px; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>
+        <div style="font-size: 10px; color: #666; margin-top: 6px; text-align: center; line-height: 1.2;">
           ${item.label}
         </div>
       </div>
