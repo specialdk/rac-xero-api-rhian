@@ -760,6 +760,13 @@
           <button class="back-to-connections" onclick="backToConnections()">
             🔙 Manage Connections
           </button>
+          <button
+            class="back-to-connections"
+            onclick="refreshConnectionStatus()"
+            style="background: #f39c12; margin-left: 5px"
+          >
+            🔄 Check Connections
+          </button>
         </div>
       </div>
 
@@ -1389,6 +1396,67 @@
         }
       }
 
+      // ====== REFRESH CONNECTION STATUS ======
+      async function refreshConnectionStatus() {
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = "⏳ Checking...";
+        btn.disabled = true;
+
+        try {
+          const response = await fetch("/api/connection-status");
+          const connections = await response.json();
+
+          // Update connected companies list
+          connectedCompanies = connections.filter((conn) => conn.connected);
+
+          // Find any selected companies that are no longer connected
+          const disconnectedSelected = [];
+          activeCompanyFilters.forEach((tenantId) => {
+            const company = connectedCompanies.find(
+              (c) => c.tenantId === tenantId
+            );
+            if (!company) {
+              const disconnected = connections.find(
+                (c) => c.tenantId === tenantId
+              );
+              if (disconnected) {
+                disconnectedSelected.push(disconnected.tenantName);
+              }
+            }
+          });
+
+          // Update UI
+          setupCompanyFilters();
+          document.getElementById("connectedCount").textContent =
+            connectedCompanies.length;
+
+          // Show alert if any selected companies are disconnected
+          if (disconnectedSelected.length > 0) {
+            alert(
+              `⚠️ Connection expired for:\n\n${disconnectedSelected.join(
+                "\n"
+              )}\n\nPlease reconnect in Connection Manager.`
+            );
+          } else if (connectedCompanies.length > 0) {
+            // Show success message
+            const statusEl = document.getElementById("dataLoadStatus");
+            if (statusEl) {
+              statusEl.textContent = "✅ All connections active";
+              statusEl.style.color = "#27ae60";
+              setTimeout(() => {
+                updateLoadStatus(); // Reset to normal message
+              }, 3000);
+            }
+          }
+        } catch (error) {
+          console.error("Error checking connections:", error);
+          alert("Failed to check connection status. Please try again.");
+        } finally {
+          btn.textContent = originalText;
+          btn.disabled = false;
+        }
+      }
       // ====== REPLACE setupCompanyFilters() ======
       function setupCompanyFilters() {
         const filtersContainer = document.getElementById("companyFilters");
@@ -1398,6 +1466,21 @@
             '<div style="color: #e74c3c;">No companies connected</div>';
           return;
         }
+
+        // GET ALL POSSIBLE COMPANIES (connected + disconnected but selected)
+        const allPossibleCompanies = [...connectedCompanies];
+
+        // Add any previously selected but now disconnected companies
+        activeCompanyFilters.forEach((tenantId) => {
+          if (!connectedCompanies.find((c) => c.tenantId === tenantId)) {
+            // This company was selected but is now disconnected
+            allPossibleCompanies.push({
+              tenantId: tenantId,
+              tenantName: "Unknown Company",
+              connected: false,
+            });
+          }
+        });
 
         filtersContainer.innerHTML = `
     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
@@ -1412,24 +1495,31 @@
       <!-- Separator -->
       <div style="border-left: 1px solid #ddd; height: 20px; margin: 0 5px;"></div>
       
-      <!-- Company checkboxes -->
+      <!-- Company checkboxes with status indicators -->
       ${connectedCompanies
         .map((company) => {
           const shortName = company.tenantName
             .replace("Rirratjingu ", "")
             .replace(" Pty Ltd", "");
           const isChecked = activeCompanyFilters.includes(company.tenantId);
+          const isConnected = company.connected !== false;
+          const statusIcon = isConnected ? "🟢" : "🔴";
+          const tooltip = isConnected
+            ? "Connected"
+            : "Connection expired - refresh needed";
+
           return `
-          <div class="company-checkbox-item">
+          <div class="company-checkbox-item" title="${tooltip}">
             <input type="checkbox" 
                    id="filter-${company.tenantId}" 
                    ${isChecked ? "checked" : ""}
+                   ${!isConnected ? "disabled" : ""}
                    onchange="handleCompanyFilterChange('${company.tenantId}')">
             <label for="filter-${company.tenantId}" 
-                   style="color: white;"
-                   onclick="toggleCompanyFilterByLabel('${
-                     company.tenantId
-                   }')">${shortName}</label>
+                   style="color: white; ${!isConnected ? "opacity: 0.5;" : ""}"
+                   onclick="toggleCompanyFilterByLabel('${company.tenantId}')">
+              ${statusIcon} ${shortName}
+            </label>
           </div>
         `;
         })
@@ -1617,6 +1707,7 @@
       async function loadDashboardData() {
         const dashboardElement = document.getElementById("dashboardData");
 
+        // CHECK: No companies selected
         if (activeCompanyFilters.length === 0) {
           dashboardElement.innerHTML = `
       <div style="text-align: center; padding: 40px; color: #666;">
@@ -1626,6 +1717,48 @@
     `;
           return;
         }
+
+        // NEW: CHECK connection status for selected companies
+        const disconnectedSelected = [];
+        for (const tenantId of activeCompanyFilters) {
+          const company = connectedCompanies.find(
+            (c) => c.tenantId === tenantId
+          );
+          if (!company || company.connected === false) {
+            const companyName = company?.tenantName || "Unknown Company";
+            disconnectedSelected.push(
+              companyName.replace("Rirratjingu ", "").replace(" Pty Ltd", "")
+            );
+          }
+        }
+
+        if (disconnectedSelected.length > 0) {
+          dashboardElement.innerHTML = `
+      <div style="text-align: center; padding: 40px;">
+        <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 20px; border-radius: 8px; max-width: 500px; margin: 0 auto;">
+          <h3 style="color: #856404; margin-bottom: 15px;">⚠️ Connection Issue</h3>
+          <p style="color: #856404; margin-bottom: 15px;">
+            The following companies have expired connections:
+          </p>
+          <ul style="color: #856404; text-align: left; margin: 0 auto; display: inline-block;">
+            ${disconnectedSelected
+              .map((name) => `<li><strong>${name}</strong></li>`)
+              .join("")}
+          </ul>
+          <p style="color: #856404; margin-top: 15px;">
+            Please click <strong>"Check Connections"</strong> or <strong>"Manage Connections"</strong> to reconnect.
+          </p>
+          <button onclick="refreshConnectionStatus()" 
+                  style="margin-top: 15px; padding: 10px 20px; background: #f39c12; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
+            🔄 Check Connections Now
+          </button>
+        </div>
+      </div>
+    `;
+          return;
+        }
+
+        // Rest of your existing loadDashboardData() code continues...
 
         const selectedCompanyNames = getSelectedCompanyNames();
 
@@ -1643,6 +1776,12 @@
           <div style="display: flex; align-items: center; gap: 15px;">
             <label style="font-weight: 600; color: #2c3e50;">Period:</label>
             <select id="periodSelector" onchange="handlePeriodChange(this.value)" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; background: white; font-size: 14px; cursor: pointer;">
+            <option value="CurrentFY" ${
+              selectedPeriod === "CurrentFY" ? "selected" : ""
+            }>Current FY (YTD)</option>
+          <option value="Q1" ${
+            selectedPeriod === "Q1" ? "selected" : ""
+          } ...>Q1 FY26 (Jul-Sep)</option>
               <option value="Q1" ${selectedPeriod === "Q1" ? "selected" : ""} ${
             !quarterHasData("Q1") ? 'disabled style="color: #ccc;"' : ""
           }>Q1 FY26 (Jul-Sep)</option>
