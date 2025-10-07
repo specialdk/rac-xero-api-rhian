@@ -2229,6 +2229,7 @@
           )}
         </div>
 
+        
         <div class="dashboard-card">
           <h3>💰 ${periodDates.label} Performance</h3>
           ${createMetric(
@@ -2297,6 +2298,12 @@
   ${createMetric("Variance", "$0 (0%)", false, "expensesVariance")}
 </div>
 
+<!-- Budget Variance Visualization Card -->
+<div class="dashboard-card" style="grid-column: span 2;">
+  <h3>📊 Q2 FY26 Budget vs Actual</h3>
+  <div id="budgetVarianceChart"></div>
+</div>
+
       <!-- COMPANY BREAKDOWN -->
 <div class="dashboard-card" style="grid-column: 1 / -1;">
   <h3>📈 ${periodDates.label} Company Performance</h3>
@@ -2306,6 +2313,7 @@
         // UPDATE BUDGET CARDS WITH REAL DATA
         if (budgetData) {
           updateBudgetCardValues(budgetData, periodDates);
+          renderBudgetVarianceChart(budgetData); // ADD THIS LINE
         }
       }
 
@@ -2375,6 +2383,72 @@
           varianceEl.className =
             variance.expenses <= 0 ? "metric-value" : "metric-value negative";
         }
+      }
+
+      function renderBudgetVarianceChart(budgetData) {
+        if (!budgetData || !budgetData.variance) return;
+
+        const container = document.getElementById("budgetVarianceChart");
+        if (!container) return;
+
+        const revenueVariance = budgetData.variance.revenue;
+        const expenseVariance = -budgetData.variance.expenses; // Negative because under budget is good
+
+        const chartData = [
+          {
+            name: "Revenue Budget",
+            value: budgetData.budget.revenue,
+            fill: "#3498db",
+          },
+          {
+            name: "Revenue Variance",
+            value: revenueVariance,
+            fill: revenueVariance >= 0 ? "#2ecc71" : "#e74c3c",
+          },
+          {
+            name: "Expense Budget",
+            value: budgetData.budget.operatingExpenses,
+            fill: "#95a5a6",
+          },
+          {
+            name: "Expense Variance",
+            value: expenseVariance,
+            fill: expenseVariance >= 0 ? "#2ecc71" : "#e74c3c",
+          },
+        ];
+
+        // Simple HTML bar chart (no external libraries needed)
+        const maxValue = Math.max(...chartData.map((d) => Math.abs(d.value)));
+
+        container.innerHTML = `
+    <div style="display: flex; flex-direction: column; gap: 15px; padding: 10px;">
+      ${chartData
+        .map(
+          (item) => `
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="min-width: 120px; font-size: 12px; font-weight: 500;">${
+            item.name
+          }</div>
+          <div style="flex: 1; height: 30px; background: #f0f0f0; border-radius: 4px; position: relative; overflow: hidden;">
+            <div style="width: ${
+              (Math.abs(item.value) / maxValue) * 100
+            }%; height: 100%; background: ${
+            item.fill
+          }; transition: width 0.5s;"></div>
+          </div>
+          <div style="min-width: 100px; text-align: right; font-size: 13px; font-weight: 600; color: ${
+            item.fill
+          };">
+            ${item.value >= 0 ? "+" : ""}$${Math.round(
+            item.value
+          ).toLocaleString()}
+          </div>
+        </div>
+      `
+        )
+        .join("")}
+    </div>
+  `;
       }
 
       function createCompanyCard(company) {
