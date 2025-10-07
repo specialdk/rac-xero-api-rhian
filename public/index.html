@@ -2447,7 +2447,7 @@
 
         // ====== RENDER VERTICAL BAR CHARTS ======
         function renderVerticalBarCharts(totals, budgetData) {
-          // Chart 1: Financial Position (Assets, Liabilities, Equity)
+          // Chart 1: Financial Position (Assets, Liabilities, Net Worth)
           renderChart("chart-financial-position", [
             { label: "Assets", value: totals.totalAssets, color: "#27ae60" },
             {
@@ -2455,7 +2455,11 @@
               value: totals.totalLiabilities,
               color: "#e74c3c",
             },
-            { label: "Equity", value: totals.totalEquity, color: "#3498db" },
+            {
+              label: "Net Worth",
+              value: totals.totalAssets - totals.totalLiabilities,
+              color: "#3498db",
+            },
           ]);
 
           // Chart 2: Performance (Revenue, Expenses, Profit)
@@ -2533,6 +2537,7 @@
         }
 
         // ====== GENERIC CHART RENDERING FUNCTION ======
+        // ====== GENERIC CHART RENDERING FUNCTION ======
         function renderChart(containerId, data, isCountMode = false) {
           const container = document.getElementById(containerId);
           if (!container) return;
@@ -2546,22 +2551,34 @@
 
           container.innerHTML = data
             .map((item) => {
-              // Calculate height as percentage, with minimum 5% for visibility
-              const heightPercent = Math.max(
-                (Math.abs(item.value) / maxValue) * 100,
-                5
-              );
+              // Calculate height as percentage - NO minimum height constraint
+              const heightPercent = (Math.abs(item.value) / maxValue) * 100;
+
+              // Format display value
               const displayValue = isCountMode
                 ? item.value
-                : `$${(item.value / 1000000).toFixed(1)}M`; // Changed to millions for clarity
+                : item.value >= 1000000
+                ? `$${(item.value / 1000000).toFixed(1)}M`
+                : `$${(item.value / 1000).toFixed(0)}K`;
 
               return `
       <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;">
-        <div style="font-size: 11px; font-weight: 600; color: ${item.color}; margin-bottom: 4px;">
+        <div style="font-size: 11px; font-weight: 600; color: ${
+          item.color
+        }; margin-bottom: 8px; white-space: nowrap;">
           ${displayValue}
         </div>
-        <div style="width: 80%; height: ${heightPercent}%; background: ${item.color}; border-radius: 4px 4px 0 0; min-height: 10px; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>
-        <div style="font-size: 10px; color: #666; margin-top: 6px; text-align: center; line-height: 1.2;">
+        <div style="
+          width: 70%; 
+          height: ${heightPercent}%; 
+          background: linear-gradient(to top, ${item.color}, ${item.color}dd); 
+          border-radius: 4px 4px 0 0; 
+          min-height: ${heightPercent < 3 ? "8px" : "0px"};
+          transition: all 0.3s ease; 
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          border: 1px solid ${item.color};
+        "></div>
+        <div style="font-size: 10px; color: #666; margin-top: 8px; text-align: center; line-height: 1.2; font-weight: 500;">
           ${item.label}
         </div>
       </div>
