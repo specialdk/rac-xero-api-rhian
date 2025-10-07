@@ -2039,15 +2039,16 @@
         );
 
         // Calculate derived metrics
+        // Calculate derived metrics
         totals.profitMargin =
           totals.totalRevenue !== 0
-            ? ((totals.totalProfit / totals.totalRevenue) * 100).toFixed(1)
-            : "0.0";
+            ? (totals.totalProfit / totals.totalRevenue) * 100 // Remove .toFixed(1)
+            : 0;
 
         totals.debtToEquityRatio =
           totals.totalEquity !== 0
-            ? (totals.totalLiabilities / totals.totalEquity).toFixed(2)
-            : "0.00";
+            ? totals.totalLiabilities / totals.totalEquity // Remove .toFixed(2)
+            : 0;
 
         return totals;
       }
