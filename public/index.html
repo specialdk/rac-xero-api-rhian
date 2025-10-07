@@ -766,20 +766,6 @@
       <div class="main-container">
         <div class="dashboard-panel">
           <div class="panel-header">
-            <div class="toolbar">
-              <button class="active" onclick="setView('overview', this)">
-                Overview
-              </button>
-              <button onclick="setView('trial-balance', this)">
-                Trial Balance
-              </button>
-              <button onclick="setView('cash-flow', this)">Cash Flow</button>
-              <button onclick="setView('p-and-l', this)">P&L</button>
-              <button onclick="setView('year-over-year', this)">
-                YoY Analysis
-              </button>
-              <button onclick="setView('alerts', this)">Alerts</button>
-            </div>
             <span class="status-indicator balanced" id="dashboardStatus"></span>
             Financial Dashboard - Live Data
 
@@ -797,6 +783,21 @@
                 <!-- Company checkboxes populated by JavaScript -->
               </div>
             </div>
+          </div>
+
+          <div class="toolbar">
+            <button class="active" onclick="setView('overview', this)">
+              Overview
+            </button>
+            <button onclick="setView('trial-balance', this)">
+              Trial Balance
+            </button>
+            <button onclick="setView('cash-flow', this)">Cash Flow</button>
+            <button onclick="setView('p-and-l', this)">P&L</button>
+            <button onclick="setView('year-over-year', this)">
+              YoY Analysis
+            </button>
+            <button onclick="setView('alerts', this)">Alerts</button>
           </div>
 
           <div class="dashboard-content">
