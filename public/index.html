@@ -2005,7 +2005,7 @@
       }
 
       function calculateConsolidatedTotals(enhancedMetrics) {
-        return enhancedMetrics.reduce(
+        const totals = enhancedMetrics.reduce(
           (acc, company) => {
             if (company.error) return acc;
             acc.totalAssets += company.totalAssets || 0;
@@ -2025,6 +2025,19 @@
             totalProfit: 0,
           }
         );
+
+        // Calculate derived metrics
+        totals.profitMargin =
+          totals.totalRevenue !== 0
+            ? (totals.totalProfit / totals.totalRevenue) * 100 // Remove .toFixed(1)
+            : 0;
+
+        totals.debtToEquityRatio =
+          totals.totalEquity !== 0
+            ? totals.totalLiabilities / totals.totalEquity // Remove .toFixed(2)
+            : 0;
+
+        return totals;
       }
 
       // ====== BUDGET DATA LOADING ======
