@@ -2268,7 +2268,7 @@
             ).toLocaleString()}`
           )}
 
-          <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #e0e0e0; display: flex; gap: 5px; align-items: flex-end; height: 60px;">
+          <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0; display: flex; gap: 5px; align-items: flex-end; height: 60px;">
             ${createVerticalBar(
               "Assets",
               totals.totalAssets,
@@ -2312,7 +2312,7 @@
             totals.totalProfit < 0
           )}
 
-          <div style="margin-top: 15px; display: flex; gap: 5px; align-items: flex-end; height: 60px;">
+          <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0; display: flex; gap: 5px; align-items: flex-end; height: 60px;">
             ${createVerticalBar(
               "Revenue",
               totals.totalRevenue,
@@ -2358,7 +2358,7 @@
             }
           </div>
 
-          <div style="margin-top: 15px; display: flex; gap: 5px; align-items: flex-end; height: 60px;">
+          <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0; display: flex; gap: 5px; align-items: flex-end; height: 60px;">
             ${createVerticalBar(
               "Balanced",
               balancedCompanies,
@@ -2384,7 +2384,9 @@
           ${createMetric("Actual", "$0", false, "revenueActual")}
           ${createMetric("Variance", "$0 (0%)", false, "revenueVariance")}
 
-          <div id="revenueChart" style="margin-top: 15px; display: flex; gap: 5px; align-items: flex-end; height: 60px;"></div>
+          <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0; display: flex; gap: 5px; align-items: flex-end; height: 60px;">
+          <div id="revenueChart" style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 80px;">
+            </div>
         </div>
 
         <!-- EXPENSES VS BUDGET CARD -->
@@ -2397,7 +2399,8 @@
           ${createMetric("Actual", "$0", false, "expensesActual")}
           ${createMetric("Variance", "$0 (0%)", false, "expensesVariance")}
 
-          <div id="expensesChart" style="margin-top: 15px; display: flex; gap: 5px; align-items: flex-end; height: 60px;"></div>
+          <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0; display: flex; gap: 5px; align-items: flex-end; height: 60px;">
+          <div id="expensesChart" style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 80px;">
         </div>
       </div>
 
