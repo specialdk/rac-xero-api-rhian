@@ -370,14 +370,13 @@
       }
 
       /* ====== DASHBOARD GRID & CARDS ====== */
-      /* NEW */
       .dashboard-grid {
         display: grid;
         grid-template-columns: repeat(5, minmax(200px, 1fr));
-        grid-auto-rows: minmax(420px, auto); /* ADD THIS LINE */
         gap: 10px;
         margin-bottom: 20px;
       }
+
       .dashboard-card {
         background: white;
         border-radius: 8px;
@@ -2269,7 +2268,7 @@
             ).toLocaleString()}`
           )}
 
-          <div style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 80px;">
+          <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #e0e0e0; display: flex; gap: 5px; align-items: flex-end; height: 60px;">
             ${createVerticalBar(
               "Assets",
               totals.totalAssets,
@@ -2313,7 +2312,7 @@
             totals.totalProfit < 0
           )}
 
-          <div style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 80px;">
+          <div style="margin-top: 15px; display: flex; gap: 5px; align-items: flex-end; height: 60px;">
             ${createVerticalBar(
               "Revenue",
               totals.totalRevenue,
@@ -2358,7 +2357,8 @@
                 : "⚠️ Review Needed"
             }
           </div>
-          <div style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 80px;">
+
+          <div style="margin-top: 15px; display: flex; gap: 5px; align-items: flex-end; height: 60px;">
             ${createVerticalBar(
               "Balanced",
               balancedCompanies,
@@ -2384,10 +2384,7 @@
           ${createMetric("Actual", "$0", false, "revenueActual")}
           ${createMetric("Variance", "$0 (0%)", false, "revenueVariance")}
 
-        <div style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 80px;">
-          <!-- NEW - add the ID -->
-<div id="revenueChart" style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 80px;">
-</div>
+          <div id="revenueChart" style="margin-top: 15px; display: flex; gap: 5px; align-items: flex-end; height: 60px;"></div>
         </div>
 
         <!-- EXPENSES VS BUDGET CARD -->
@@ -2400,15 +2397,7 @@
           ${createMetric("Actual", "$0", false, "expensesActual")}
           ${createMetric("Variance", "$0 (0%)", false, "expensesVariance")}
 
-          
-        <div style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 80px;">
-          <!-- OLD - empty div -->
-<div style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 80px;">
-</div>
-
-<!-- NEW - add the ID -->
-<div id="expensesChart" style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 80px;">
-</div>
+          <div id="expensesChart" style="margin-top: 15px; display: flex; gap: 5px; align-items: flex-end; height: 60px;"></div>
         </div>
       </div>
 
