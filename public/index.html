@@ -374,7 +374,7 @@
       .dashboard-grid {
         display: grid;
         grid-template-columns: repeat(5, minmax(200px, 1fr));
-        grid-auto-rows: minmax(320px, auto); /* ADD THIS LINE */
+        grid-auto-rows: minmax(420px, auto); /* ADD THIS LINE */
         gap: 10px;
         margin-bottom: 20px;
       }
@@ -2225,9 +2225,23 @@
 
       function createVerticalBar(label, value, maxValue, color) {
         const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
+
+        // Format value as M/K
+        let displayValue;
+        if (value >= 1000000) {
+          displayValue = `$${(value / 1000000).toFixed(2)}M`;
+        } else if (value >= 1000) {
+          displayValue = `$${(value / 1000).toFixed(0)}K`;
+        } else {
+          displayValue = `$${Math.round(value)}`;
+        }
+
+        // Only show label if bar is tall enough (>20% height)
+        const showLabel = percentage > 20;
+
         return `
     <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;">
-      <div style="width: 100%; height: 60px; display: flex; align-items: flex-end; justify-content: center;">
+      <div style="width: 100%; height: 120px; display: flex; align-items: flex-end; justify-content: center;">
         <div style="width: 80%; height: ${percentage}%; background: ${color}; border-radius: 4px 4px 0 0; transition: height 0.5s; min-height: 2px;"></div>
       </div>
       <div style="font-size: 10px; color: #666; text-align: center; white-space: nowrap;">${label}</div>
@@ -2269,7 +2283,8 @@
             ).toLocaleString()}`
           )}
 
-          <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #e0e0e0; display: flex; gap: 5px; align-items: flex-end; height: 60px;">
+          // Change from height: 60px to height: 120px in all these:
+          <div style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 120px;">
             ${createVerticalBar(
               "Assets",
               totals.totalAssets,
@@ -2313,7 +2328,8 @@
             totals.totalProfit < 0
           )}
 
-          <div style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 40px; padding-top: 10px;">
+          // Change from height: 60px to height: 120px in all these:
+          <div style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 120px;">
             ${createVerticalBar(
               "Revenue",
               totals.totalRevenue,
@@ -2359,7 +2375,8 @@
             }
           </div>
 
-          <div style="margin-top: 15px; display: flex; gap: 5px; align-items: flex-end; height: 60px;">
+          // Change from height: 60px to height: 120px in all these:
+          <div style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 120px;">
             ${createVerticalBar(
               "Balanced",
               balancedCompanies,
@@ -2385,7 +2402,8 @@
           ${createMetric("Actual", "$0", false, "revenueActual")}
           ${createMetric("Variance", "$0 (0%)", false, "revenueVariance")}
 
-          <div id="revenueChart" style="margin-top: 15px; display: flex; gap: 5px; align-items: flex-end; height: 60px;"></div>
+          // Change from height: 60px to height: 120px in all these:
+        <div style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 120px;">
         </div>
 
         <!-- EXPENSES VS BUDGET CARD -->
@@ -2398,7 +2416,8 @@
           ${createMetric("Actual", "$0", false, "expensesActual")}
           ${createMetric("Variance", "$0 (0%)", false, "expensesVariance")}
 
-          <div id="expensesChart" style="margin-top: 15px; display: flex; gap: 5px; align-items: flex-end; height: 60px;"></div>
+          // Change from height: 60px to height: 120px in all these:
+          <div style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 120px;">
         </div>
       </div>
 
