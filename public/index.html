@@ -2017,27 +2017,38 @@
       }
 
       function calculateConsolidatedTotals(enhancedMetrics) {
-        return enhancedMetrics.reduce(
-          (acc, company) => {
-            if (company.error) return acc;
-            acc.totalAssets += company.totalAssets || 0;
-            acc.totalLiabilities += company.totalLiabilities || 0;
-            acc.totalEquity += company.totalEquity || 0;
-            acc.totalCash += company.cashPosition || 0;
-            acc.totalRevenue += company.revenue || 0;
-            acc.totalProfit += company.netProfit || 0;
-            return acc;
-          },
-          {
-            totalAssets: 0,
-            totalLiabilities: 0,
-            totalEquity: 0,
-            totalCash: 0,
-            totalRevenue: 0,
-            totalProfit: 0,
-          }
-        );
-      }
+  const totals = enhancedMetrics.reduce(
+    (acc, company) => {
+      if (company.error) return acc;
+      acc.totalAssets += company.totalAssets || 0;
+      acc.totalLiabilities += company.totalLiabilities || 0;
+      acc.totalEquity += company.totalEquity || 0;
+      acc.totalCash += company.cashPosition || 0;
+      acc.totalRevenue += company.revenue || 0;
+      acc.totalProfit += company.netProfit || 0;
+      return acc;
+    },
+    {
+      totalAssets: 0,
+      totalLiabilities: 0,
+      totalEquity: 0,
+      totalCash: 0,
+      totalRevenue: 0,
+      totalProfit: 0,
+    }
+  );
+
+  // Calculate derived metrics
+  totals.profitMargin = totals.totalRevenue !== 0 
+    ? ((totals.totalProfit / totals.totalRevenue) * 100).toFixed(1) 
+    : '0.0';
+    
+  totals.debtToEquityRatio = totals.totalEquity !== 0 
+    ? (totals.totalLiabilities / totals.totalEquity).toFixed(2) 
+    : '0.00';
+
+  return totals;
+}
 
       // ====== BUDGET DATA LOADING ======
       async function loadBudgetData(organizationName, periodDates) {
