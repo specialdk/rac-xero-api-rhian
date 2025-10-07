@@ -2225,37 +2225,10 @@
 
       function createVerticalBar(label, value, maxValue, color) {
         const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
-
-        // Format value as M/K
-        let displayValue;
-        if (value >= 1000000) {
-          displayValue = `$${(value / 1000000).toFixed(2)}M`;
-        } else if (value >= 1000) {
-          displayValue = `$${(value / 1000).toFixed(0)}K`;
-        } else {
-          displayValue = `$${Math.round(value)}`;
-        }
-
-        // Only show label if bar is tall enough (>20% height)
-        const showLabel = percentage > 20;
-
         return `
     <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;">
-      <div style="width: 100%; height: 120px; display: flex; align-items: flex-end; justify-content: center; position: relative;">
-        <div style="width: 80%; height: ${percentage}%; background: ${color}; border-radius: 4px 4px 0 0; transition: height 0.5s; min-height: ${
-          showLabel ? "30px" : "2px"
-        }; position: relative; display: flex; align-items: center; justify-content: center;">
-          ${
-            showLabel
-              ? `<span style="color: white; font-size: 11px; font-weight: 600; text-align: center; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">${displayValue}</span>`
-              : ""
-          }
-        </div>
-        ${
-          !showLabel && percentage > 0
-            ? `<span style="position: absolute; top: -20px; font-size: 10px; font-weight: 600; color: ${color};">${displayValue}</span>`
-            : ""
-        }
+      <div style="width: 100%; height: 60px; display: flex; align-items: flex-end; justify-content: center;">
+        <div style="width: 80%; height: ${percentage}%; background: ${color}; border-radius: 4px 4px 0 0; transition: height 0.5s; min-height: 2px;"></div>
       </div>
       <div style="font-size: 10px; color: #666; text-align: center; white-space: nowrap;">${label}</div>
     </div>
@@ -2296,8 +2269,7 @@
             ).toLocaleString()}`
           )}
 
-          // Change from height: 60px to height: 120px in all these:
-          <div style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 120px;">
+          <div style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 80px;">
             ${createVerticalBar(
               "Assets",
               totals.totalAssets,
@@ -2341,8 +2313,7 @@
             totals.totalProfit < 0
           )}
 
-          // Change from height: 60px to height: 120px in all these:
-          <div style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 120px;">
+          <div style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 80px;">
             ${createVerticalBar(
               "Revenue",
               totals.totalRevenue,
@@ -2387,9 +2358,7 @@
                 : "⚠️ Review Needed"
             }
           </div>
-
-          // Change from height: 60px to height: 120px in all these:
-          <div style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 120px;">
+          <div style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 80px;">
             ${createVerticalBar(
               "Balanced",
               balancedCompanies,
@@ -2415,8 +2384,10 @@
           ${createMetric("Actual", "$0", false, "revenueActual")}
           ${createMetric("Variance", "$0 (0%)", false, "revenueVariance")}
 
-          // Change from height: 60px to height: 120px in all these:
-        <div style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 120px;">
+        <div style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 80px;">
+          <!-- NEW - add the ID -->
+<div id="revenueChart" style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 80px;">
+</div>
         </div>
 
         <!-- EXPENSES VS BUDGET CARD -->
@@ -2429,8 +2400,15 @@
           ${createMetric("Actual", "$0", false, "expensesActual")}
           ${createMetric("Variance", "$0 (0%)", false, "expensesVariance")}
 
-          // Change from height: 60px to height: 120px in all these:
-          <div style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 120px;">
+          
+        <div style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 80px;">
+          <!-- OLD - empty div -->
+<div style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 80px;">
+</div>
+
+<!-- NEW - add the ID -->
+<div id="expensesChart" style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 80px;">
+</div>
         </div>
       </div>
 
@@ -2441,13 +2419,9 @@
       </div>
           `;
         // UPDATE BUDGET CARDS WITH REAL DATA
-        // NEW - defer until after DOM is updated
         if (budgetData) {
-          // Use setTimeout to let the browser finish rendering the HTML first
-          setTimeout(() => {
-            updateBudgetCardValues(budgetData, periodDates);
-            renderBudgetVarianceChart(budgetData);
-          }, 0);
+          updateBudgetCardValues(budgetData, periodDates);
+          renderBudgetVarianceChart(budgetData); // ADD THIS LINE
         }
       }
 
