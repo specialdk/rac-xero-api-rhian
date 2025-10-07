@@ -2224,13 +2224,13 @@
       function createVerticalBar(label, value, maxValue, color) {
         const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
         return `
-          <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
-            <div style="flex: 1; width: 100%; display: flex; align-items: flex-end;">
-              <div style="width: 100%; height: ${percentage}%; background: ${color}; border-radius: 4px 4px 0 0; transition: height 0.5s;"></div>
-            </div>
-            <div style="font-size: 10px; color: #666; margin-top: 4px; text-align: center;">${label}</div>
-          </div>
-        `;
+    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+      <div style="width: 100%; height: 60px; display: flex; align-items: flex-end; justify-content: center;">
+        <div style="width: 80%; height: ${percentage}%; background: ${color}; border-radius: 4px 4px 0 0; transition: height 0.5s; min-height: 2px;"></div>
+      </div>
+      <div style="font-size: 10px; color: #666; text-align: center; white-space: nowrap;">${label}</div>
+    </div>
+  `;
       }
 
       function renderEnhancedOverview(
@@ -2267,27 +2267,26 @@
             ).toLocaleString()}`
           )}
 
-          <div style="margin-top: 15px; display: flex; gap: 5px; align-items: flex-end; height: 60px;">
-            ${createVerticalBar(
-              "Assets",
-              totals.totalAssets,
-              Math.max(totals.totalAssets, totals.totalLiabilities),
-              "#3498db"
-            )}
-            ${createVerticalBar(
-              "Liabilities",
-              totals.totalLiabilities,
-              Math.max(totals.totalAssets, totals.totalLiabilities),
-              "#e74c3c"
-            )}
-            ${createVerticalBar(
-              "Equity",
-              totals.totalEquity,
-              Math.max(totals.totalAssets, totals.totalLiabilities),
-              "#2ecc71"
-            )}
-          </div>
-        </div>
+          <div style="margin-top: 15px; display: flex; gap: 5px;">
+  ${createVerticalBar(
+    "Assets",
+    totals.totalAssets,
+    Math.max(totals.totalAssets, totals.totalLiabilities, totals.totalEquity),
+    "#3498db"
+  )}
+  ${createVerticalBar(
+    "Liabilities",
+    totals.totalLiabilities,
+    Math.max(totals.totalAssets, totals.totalLiabilities, totals.totalEquity),
+    "#e74c3c"
+  )}
+  ${createVerticalBar(
+    "Equity",
+    totals.totalEquity,
+    Math.max(totals.totalAssets, totals.totalLiabilities, totals.totalEquity),
+    "#2ecc71"
+  )}
+</div>
 
         <!-- PERFORMANCE CARD -->
         <div class="dashboard-card">
