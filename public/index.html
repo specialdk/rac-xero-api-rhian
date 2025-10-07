@@ -2327,18 +2327,50 @@
   </div>
 </div>
 
-<!-- Budget Variance Visualization Card -->
-<div class="dashboard-card" style="grid-column: span 2;">
-  <h3>📊 Q2 FY26 Budget vs Actual</h3>
-  <div id="budgetVarianceChart"></div>
-</div>
+<!-- VERTICAL BAR CHARTS - One for each card above -->
+<div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 20px;">
+  
+  <!-- Chart 1: Financial Position -->
+  <div class="dashboard-card" style="min-height: 200px;">
+    <h4 style="font-size: 13px; margin-bottom: 10px; text-align: center;">Financial Position</h4>
+    <div id="chart-financial-position" style="display: flex; gap: 5px; align-items: flex-end; height: 140px; padding: 10px;">
+      <!-- Chart will be inserted here -->
+    </div>
+  </div>
 
-<!-- Budget Variance Visualization Card -->
-<div class="dashboard-card" style="grid-column: span 2;">
-  <h3>📊 Q2 FY26 Budget vs Actual</h3>
-  <div id="budgetVarianceChart"></div>
-</div>
+  <!-- Chart 2: Performance -->
+  <div class="dashboard-card" style="min-height: 200px;">
+    <h4 style="font-size: 13px; margin-bottom: 10px; text-align: center;">Performance</h4>
+    <div id="chart-performance" style="display: flex; gap: 5px; align-items: flex-end; height: 140px; padding: 10px;">
+      <!-- Chart will be inserted here -->
+    </div>
+  </div>
 
+  <!-- Chart 3: Health & Risk -->
+  <div class="dashboard-card" style="min-height: 200px;">
+    <h4 style="font-size: 13px; margin-bottom: 10px; text-align: center;">Health & Risk</h4>
+    <div id="chart-health-risk" style="display: flex; gap: 5px; align-items: flex-end; height: 140px; padding: 10px;">
+      <!-- Chart will be inserted here -->
+    </div>
+  </div>
+
+  <!-- Chart 4: Revenue vs Budget -->
+  <div class="dashboard-card" style="min-height: 200px;">
+    <h4 style="font-size: 13px; margin-bottom: 10px; text-align: center;">Revenue vs Budget</h4>
+    <div id="chart-revenue-budget" style="display: flex; gap: 5px; align-items: flex-end; height: 140px; padding: 10px;">
+      <!-- Chart will be inserted here -->
+    </div>
+  </div>
+
+  <!-- Chart 5: Expenses vs Budget -->
+  <div class="dashboard-card" style="min-height: 200px;">
+    <h4 style="font-size: 13px; margin-bottom: 10px; text-align: center;">Expenses vs Budget</h4>
+    <div id="chart-expenses-budget" style="display: flex; gap: 5px; align-items: flex-end; height: 140px; padding: 10px;">
+      <!-- Chart will be inserted here -->
+    </div>
+  </div>
+
+</div>
 
 <!-- COMPANY BREAKDOWN -->
 <div class="dashboard-card" style="grid-column: 1 / -1;">
@@ -2349,78 +2381,204 @@
 </div>
 
     `;
+
         // UPDATE BUDGET CARDS WITH REAL DATA
         if (budgetData) {
           updateBudgetCardValues(budgetData, periodDates);
-          renderBudgetVarianceChart(budgetData); // ADD THIS LINE
-        }
-      }
-
-      // ====== ADD updateBudgetCardValues() function (with fixes from earlier) ======
-      function updateBudgetCardValues(budgetData, periodDates) {
-        if (!budgetData || !budgetData.budget) return;
-
-        const budget = budgetData.budget;
-        const actual = budgetData.actual;
-        const variance = budgetData.variance;
-
-        // Update period labels with pro-rating info OR standard label
-        if (budgetData.isProRated && budgetData.daysElapsed) {
-          const proRateText = `${periodDates.label} (Pro-rated: ${budgetData.daysElapsed} of ${budgetData.totalDays} days)`;
-          document.getElementById("revenuePeriodLabel").textContent =
-            proRateText;
-          document.getElementById("expensesPeriodLabel").textContent =
-            proRateText;
-        } else {
-          // Complete period - no pro-rating
-          document.getElementById("revenuePeriodLabel").textContent =
-            periodDates.label;
-          document.getElementById("expensesPeriodLabel").textContent =
-            periodDates.label;
         }
 
-        // ... rest of function stays the same
+        // RENDER VERTICAL BAR CHARTS
+        renderVerticalBarCharts(totals, budgetData);
 
-        // Update revenue card
-        document.getElementById("revenueBudget").textContent = `$${Math.round(
-          budget.revenue
-        ).toLocaleString()}`;
-        if (actual) {
-          document.getElementById("revenueActual").textContent = `$${Math.round(
-            actual.revenue
+        // ====== ADD updateBudgetCardValues() function (with fixes from earlier) ======
+        function updateBudgetCardValues(budgetData, periodDates) {
+          if (!budgetData || !budgetData.budget) return;
+
+          const budget = budgetData.budget;
+          const actual = budgetData.actual;
+          const variance = budgetData.variance;
+
+          // Update period labels with pro-rating info OR standard label
+          if (budgetData.isProRated && budgetData.daysElapsed) {
+            const proRateText = `${periodDates.label} (Pro-rated: ${budgetData.daysElapsed} of ${budgetData.totalDays} days)`;
+            document.getElementById("revenuePeriodLabel").textContent =
+              proRateText;
+            document.getElementById("expensesPeriodLabel").textContent =
+              proRateText;
+          } else {
+            // Complete period - no pro-rating
+            document.getElementById("revenuePeriodLabel").textContent =
+              periodDates.label;
+            document.getElementById("expensesPeriodLabel").textContent =
+              periodDates.label;
+          }
+
+          // ... rest of function stays the same
+
+          // Update revenue card
+          document.getElementById("revenueBudget").textContent = `$${Math.round(
+            budget.revenue
           ).toLocaleString()}`;
-          const varianceEl = document.getElementById("revenueVariance");
-          varianceEl.innerHTML = `${
-            variance.revenue >= 0 ? "+" : ""
-          }$${Math.round(
-            Math.abs(variance.revenue)
-          ).toLocaleString()}<br><span style="font-size: 0.9em; margin-top: 4px; display: block;">(${
-            variance.revenuePercent >= 0 ? "+" : ""
-          }${variance.revenuePercent.toFixed(1)}%)</span>`;
-          varianceEl.className =
-            variance.revenue >= 0 ? "metric-value" : "metric-value negative";
-        }
+          if (actual) {
+            document.getElementById(
+              "revenueActual"
+            ).textContent = `$${Math.round(actual.revenue).toLocaleString()}`;
+            const varianceEl = document.getElementById("revenueVariance");
+            varianceEl.innerHTML = `${
+              variance.revenue >= 0 ? "+" : ""
+            }$${Math.round(
+              Math.abs(variance.revenue)
+            ).toLocaleString()}<br><span style="font-size: 0.9em; margin-top: 4px; display: block;">(${
+              variance.revenuePercent >= 0 ? "+" : ""
+            }${variance.revenuePercent.toFixed(1)}%)</span>`;
+            varianceEl.className =
+              variance.revenue >= 0 ? "metric-value" : "metric-value negative";
+          }
 
-        // Update expenses card
-        document.getElementById("expensesBudget").textContent = `$${Math.round(
-          budget.operatingExpenses
-        ).toLocaleString()}`;
-        if (actual) {
+          // Update expenses card
           document.getElementById(
-            "expensesActual"
+            "expensesBudget"
           ).textContent = `$${Math.round(
-            actual.operatingExpenses
+            budget.operatingExpenses
           ).toLocaleString()}`;
-          const varianceEl = document.getElementById("expensesVariance");
-          varianceEl.innerHTML = `${
-            variance.expenses >= 0 ? "+" : ""
-          }$${Math.round(
-            Math.abs(variance.expenses)
-          ).toLocaleString()}<br><span style="font-size: 0.9em; margin-top: 4px; display: block;">(${
-            variance.expensesPercent >= 0 ? "+" : ""
-          }${variance.expensesPercent.toFixed(1)}%)</span>`;
-          varianceEl.className =
-            variance.expenses <= 0 ? "metric-value" : "metric-value negative";
+          if (actual) {
+            document.getElementById(
+              "expensesActual"
+            ).textContent = `$${Math.round(
+              actual.operatingExpenses
+            ).toLocaleString()}`;
+            const varianceEl = document.getElementById("expensesVariance");
+            varianceEl.innerHTML = `${
+              variance.expenses >= 0 ? "+" : ""
+            }$${Math.round(
+              Math.abs(variance.expenses)
+            ).toLocaleString()}<br><span style="font-size: 0.9em; margin-top: 4px; display: block;">(${
+              variance.expensesPercent >= 0 ? "+" : ""
+            }${variance.expensesPercent.toFixed(1)}%)</span>`;
+            varianceEl.className =
+              variance.expenses <= 0 ? "metric-value" : "metric-value negative";
+          }
+        }
+
+        // ====== RENDER VERTICAL BAR CHARTS ======
+        function renderVerticalBarCharts(totals, budgetData) {
+          // Chart 1: Financial Position (Assets, Liabilities, Equity)
+          renderChart("chart-financial-position", [
+            { label: "Assets", value: totals.totalAssets, color: "#27ae60" },
+            {
+              label: "Liabilities",
+              value: totals.totalLiabilities,
+              color: "#e74c3c",
+            },
+            { label: "Equity", value: totals.totalEquity, color: "#3498db" },
+          ]);
+
+          // Chart 2: Performance (Revenue, Expenses, Profit)
+          const expenses = totals.totalRevenue - totals.totalProfit;
+          renderChart("chart-performance", [
+            { label: "Revenue", value: totals.totalRevenue, color: "#27ae60" },
+            { label: "Expenses", value: expenses, color: "#e74c3c" },
+            {
+              label: "Profit",
+              value: totals.totalProfit,
+              color: totals.totalProfit >= 0 ? "#3498db" : "#e74c3c",
+            },
+          ]);
+
+          // Chart 3: Health & Risk (Balanced vs Imbalanced companies)
+          const balancedMetrics = document.querySelectorAll(".metric");
+          let balanced = 0,
+            total = 0;
+          balancedMetrics.forEach((metric) => {
+            if (metric.textContent.includes("Balanced Books")) {
+              const text =
+                metric.querySelector(".metric-value")?.textContent || "0/0";
+              [balanced, total] = text.split("/").map((n) => parseInt(n) || 0);
+            }
+          });
+          const imbalanced = total - balanced;
+
+          renderChart(
+            "chart-health-risk",
+            [
+              { label: "Balanced", value: balanced, color: "#27ae60" },
+              { label: "Imbalanced", value: imbalanced, color: "#e74c3c" },
+            ],
+            true
+          );
+
+          // Chart 4: Revenue vs Budget
+          if (budgetData && budgetData.budget) {
+            renderChart("chart-revenue-budget", [
+              {
+                label: "Budget",
+                value: budgetData.budget.revenue,
+                color: "#3498db",
+              },
+              {
+                label: "Actual",
+                value: budgetData.actual.revenue,
+                color:
+                  budgetData.actual.revenue >= budgetData.budget.revenue
+                    ? "#27ae60"
+                    : "#e74c3c",
+              },
+            ]);
+          }
+
+          // Chart 5: Expenses vs Budget
+          if (budgetData && budgetData.budget) {
+            renderChart("chart-expenses-budget", [
+              {
+                label: "Budget",
+                value: budgetData.budget.operatingExpenses,
+                color: "#95a5a6",
+              },
+              {
+                label: "Actual",
+                value: budgetData.actual.operatingExpenses,
+                color:
+                  budgetData.actual.operatingExpenses <=
+                  budgetData.budget.operatingExpenses
+                    ? "#27ae60"
+                    : "#e74c3c",
+              },
+            ]);
+          }
+        }
+
+        // ====== GENERIC CHART RENDERING FUNCTION ======
+        function renderChart(containerId, data, isCountMode = false) {
+          const container = document.getElementById(containerId);
+          if (!container) return;
+
+          const maxValue = Math.max(...data.map((d) => Math.abs(d.value)));
+          if (maxValue === 0) {
+            container.innerHTML =
+              '<div style="text-align: center; color: #999; font-size: 12px; padding: 20px;">No data</div>';
+            return;
+          }
+
+          container.innerHTML = data
+            .map((item) => {
+              const height = (Math.abs(item.value) / maxValue) * 100;
+              const displayValue = isCountMode
+                ? item.value
+                : `$${(item.value / 1000).toFixed(0)}K`;
+
+              return `
+      <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+        <div style="font-size: 11px; font-weight: 600; color: ${item.color}; margin-bottom: 4px; min-height: 16px;">
+          ${displayValue}
+        </div>
+        <div style="width: 100%; height: ${height}%; background: ${item.color}; border-radius: 4px 4px 0 0; min-height: 5px; transition: all 0.3s ease;"></div>
+        <div style="font-size: 10px; color: #666; margin-top: 4px; text-align: center;">
+          ${item.label}
+        </div>
+      </div>
+    `;
+            })
+            .join("");
         }
       }
 
