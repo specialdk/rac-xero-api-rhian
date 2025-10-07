@@ -2267,26 +2267,27 @@
             ).toLocaleString()}`
           )}
 
-          <div style="margin-top: 15px; display: flex; gap: 5px;">
-  ${createVerticalBar(
-    "Assets",
-    totals.totalAssets,
-    Math.max(totals.totalAssets, totals.totalLiabilities, totals.totalEquity),
-    "#3498db"
-  )}
-  ${createVerticalBar(
-    "Liabilities",
-    totals.totalLiabilities,
-    Math.max(totals.totalAssets, totals.totalLiabilities, totals.totalEquity),
-    "#e74c3c"
-  )}
-  ${createVerticalBar(
-    "Equity",
-    totals.totalEquity,
-    Math.max(totals.totalAssets, totals.totalLiabilities, totals.totalEquity),
-    "#2ecc71"
-  )}
-</div>
+          <div style="margin-top: 15px; display: flex; gap: 5px; align-items: flex-end; height: 60px;">
+            ${createVerticalBar(
+              "Assets",
+              totals.totalAssets,
+              Math.max(totals.totalAssets, totals.totalLiabilities),
+              "#3498db"
+            )}
+            ${createVerticalBar(
+              "Liabilities",
+              totals.totalLiabilities,
+              Math.max(totals.totalAssets, totals.totalLiabilities),
+              "#e74c3c"
+            )}
+            ${createVerticalBar(
+              "Equity",
+              totals.totalEquity,
+              Math.max(totals.totalAssets, totals.totalLiabilities),
+              "#2ecc71"
+            )}
+          </div>
+        </div>
 
         <!-- PERFORMANCE CARD -->
         <div class="dashboard-card">
