@@ -2537,7 +2537,7 @@
         }
 
         // ====== GENERIC CHART RENDERING FUNCTION ======
-        // ====== GENERIC CHART RENDERING FUNCTION ======
+
         function renderChart(containerId, data, isCountMode = false) {
           const container = document.getElementById(containerId);
           if (!container) return;
@@ -2549,36 +2549,43 @@
             return;
           }
 
+          // Get the actual available height for bars (container height minus space for labels)
+          const containerHeight = 240; // matches the container height
+          const labelSpace = 60; // space for value label + text label
+          const availableHeight = containerHeight - labelSpace;
+
           container.innerHTML = data
             .map((item) => {
-              // Calculate height as percentage - NO minimum height constraint
-              const heightPercent = (Math.abs(item.value) / maxValue) * 100;
+              // Calculate actual pixel height based on available space
+              const barHeightPx = Math.max(
+                (Math.abs(item.value) / maxValue) * availableHeight,
+                5
+              );
 
               // Format display value
               const displayValue = isCountMode
                 ? item.value
                 : item.value >= 1000000
                 ? `$${(item.value / 1000000).toFixed(1)}M`
-                : `$${(item.value / 1000).toFixed(0)}K`;
+                : item.value >= 1000
+                ? `$${(item.value / 1000).toFixed(0)}K`
+                : `$${item.value.toFixed(0)}`;
 
               return `
-      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;">
-        <div style="font-size: 11px; font-weight: 600; color: ${
-          item.color
-        }; margin-bottom: 8px; white-space: nowrap;">
+      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: ${containerHeight}px;">
+        <div style="font-size: 11px; font-weight: 600; color: ${item.color}; margin-bottom: 4px; white-space: nowrap;">
           ${displayValue}
         </div>
         <div style="
-          width: 70%; 
-          height: ${heightPercent}%; 
+          width: 60px; 
+          height: ${barHeightPx}px; 
           background: linear-gradient(to top, ${item.color}, ${item.color}dd); 
           border-radius: 4px 4px 0 0; 
-          min-height: ${heightPercent < 3 ? "8px" : "0px"};
           transition: all 0.3s ease; 
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          box-shadow: 0 2px 4px rgba(0,0,0,0.15);
           border: 1px solid ${item.color};
         "></div>
-        <div style="font-size: 10px; color: #666; margin-top: 8px; text-align: center; line-height: 1.2; font-weight: 500;">
+        <div style="font-size: 10px; color: #666; margin-top: 6px; text-align: center; line-height: 1.2; font-weight: 500;">
           ${item.label}
         </div>
       </div>
