@@ -790,6 +790,26 @@
                 <!-- Company checkboxes populated by JavaScript -->
               </div>
             </div>
+
+            <!-- ADD THIS: Scroll Mode Toggle -->
+            <button
+              id="scrollModeToggle"
+              onclick="toggleScrollMode()"
+              style="
+                float: right;
+                padding: 4px 10px;
+                font-size: 11px;
+                background: #3498db;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                transition: all 0.2s;
+              "
+              title="Toggle full-page scrolling"
+            >
+              📜 Enable Full Scroll
+            </button>
           </div>
 
           <div class="toolbar">
@@ -1315,45 +1335,6 @@
           await loadConnectedCompanies();
           setupCompanyFilters();
 
-          // DEBUG: Check heights
-          const mainDash = document.getElementById("mainDashboard");
-          const dashContent = document.querySelector(".dashboard-content");
-
-          console.log("Main dashboard height:", mainDash.offsetHeight);
-          console.log(
-            "Main container:",
-            document.querySelector(".main-container")
-          );
-          console.log(
-            "Main container height:",
-            document.querySelector(".main-container").offsetHeight
-          );
-          console.log(
-            "Main container display:",
-            window.getComputedStyle(document.querySelector(".main-container"))
-              .display
-          );
-
-          const panel = document.querySelector(".dashboard-panel");
-          console.log("Dashboard panel height:", panel.offsetHeight);
-          console.log(
-            "Dashboard panel display:",
-            window.getComputedStyle(panel).display
-          );
-          console.log(
-            "Dashboard panel flex-direction:",
-            window.getComputedStyle(panel).flexDirection
-          );
-
-          console.log("Dashboard content height:", dashContent.offsetHeight);
-          console.log(
-            "Dashboard content scrollHeight:",
-            dashContent.scrollHeight
-          );
-
-          // Show initial message...
-
-          // Show initial message instead of auto-loading
           const dashboardElement = document.getElementById("dashboardData");
           dashboardElement.innerHTML = `
       <div style="text-align: center; padding: 60px; color: #666;">
@@ -1366,6 +1347,9 @@
     `;
 
           updateLoadStatus();
+
+          // ADD THIS: Apply saved scroll preference
+          applySavedScrollMode();
         } catch (error) {
           console.error("Error initializing dashboard:", error);
         }
@@ -2499,7 +2483,7 @@
 <!-- COMPANY BREAKDOWN -->
 <div class="dashboard-card" style="grid-column: 1 / -1;">
   <h3>📈 ${periodDates.label} Company Performance</h3>
-  <div style="max-height: 500px; overflow-y: auto; padding-right: 10px;">
+  <div style="padding-right: 10px;">
     ${enhancedMetrics.map((company) => createCompanyCard(company)).join("")}
   </div>
 </div>
@@ -3749,6 +3733,54 @@
         <p>Please select companies using the filters above to view financial data.</p>
       </div>
     `;
+      }
+
+      // ====== SCROLL MODE TOGGLE ======
+      let isFullScrollMode = false;
+
+      function toggleScrollMode() {
+        isFullScrollMode = !isFullScrollMode;
+        const toggleBtn = document.getElementById("scrollModeToggle");
+        const companyPerformanceContainer = document.querySelector(
+          '.dashboard-card[style*="grid-column: 1 / -1"] > div[style*="max-height"]'
+        );
+
+        if (isFullScrollMode) {
+          // Enable full-page scrolling
+          if (companyPerformanceContainer) {
+            companyPerformanceContainer.style.maxHeight = "none";
+            companyPerformanceContainer.style.overflowY = "visible";
+          }
+          toggleBtn.innerHTML = "📜 Disable Full Scroll";
+          toggleBtn.style.background = "#27ae60";
+          toggleBtn.title = "Switch back to contained scrolling";
+
+          // Store preference
+          localStorage.setItem("racScrollMode", "full");
+        } else {
+          // Revert to contained scrolling
+          if (companyPerformanceContainer) {
+            companyPerformanceContainer.style.maxHeight = "500px";
+            companyPerformanceContainer.style.overflowY = "auto";
+          }
+          toggleBtn.innerHTML = "📜 Enable Full Scroll";
+          toggleBtn.style.background = "#3498db";
+          toggleBtn.title = "Toggle full-page scrolling";
+
+          // Store preference
+          localStorage.setItem("racScrollMode", "contained");
+        }
+      }
+
+      // Apply saved scroll preference on page load
+      function applySavedScrollMode() {
+        const savedMode = localStorage.getItem("racScrollMode");
+        if (savedMode === "full") {
+          // Wait for dashboard to render, then enable full scroll
+          setTimeout(() => {
+            toggleScrollMode();
+          }, 500);
+        }
       }
 
       // ====== PLACEHOLDER FUNCTIONS FOR OTHER VIEWS ======
