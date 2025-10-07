@@ -370,17 +370,19 @@
       }
 
       /* ====== DASHBOARD GRID & CARDS ====== */
+      /* NEW */
       .dashboard-grid {
         display: grid;
         grid-template-columns: repeat(5, minmax(200px, 1fr));
+        grid-auto-rows: minmax(320px, auto); /* ADD THIS LINE */
         gap: 10px;
         margin-bottom: 20px;
       }
-
       .dashboard-card {
         background: white;
         border-radius: 8px;
         padding: 20px;
+        padding-bottom: 60px; /* ADD THIS - extra space at bottom */
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         border: 1px solid #e0e0e0;
         min-width: 250px;
@@ -2311,7 +2313,7 @@
             totals.totalProfit < 0
           )}
 
-          <div style="margin-top: 15px; display: flex; gap: 5px; align-items: flex-end; height: 60px;">
+          <div style="margin-top: 50px; display: flex; gap: 5px; align-items: flex-end; height: 40px; padding-top: 10px;">
             ${createVerticalBar(
               "Revenue",
               totals.totalRevenue,
