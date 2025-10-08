@@ -2498,6 +2498,9 @@
         // RENDER VERTICAL BAR CHARTS
         renderVerticalBarCharts(totals, budgetData);
 
+        // APPLY SAVED SCROLL MODE
+        setTimeout(() => applySavedScrollMode(), 100);
+
         // ====== ADD updateBudgetCardValues() function (with fixes from earlier) ======
         function updateBudgetCardValues(budgetData, periodDates) {
           if (!budgetData || !budgetData.budget) return;
