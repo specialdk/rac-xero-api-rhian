@@ -5,11 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RAC XERO API - Integrated Finance Dashboard</title>
     <style>
-      /* ====== RHIAN VERSION ====== */
-      /*postgresql://postgres:VSsDJBcwSXdVjhBwvxAliujHNSgsRpEG@postgres.railway.internal:5432/railway*/
+      /* ====== MATT VERSION ====== */
       /* Organized and consolidated styles with redundancy removed */
       /* ====== GLOBAL RESET & BASE STYLES ====== */
-
       * {
         margin: 0;
         padding: 0;
@@ -2065,7 +2063,10 @@
         tenantId
       ) {
         const periodDates = getPeriodDates(selectedPeriod); // ADD THIS LINE
-
+        // ADD THIS DEBUG LINE
+        console.log(
+          `Loading P&L for ${orgName}: selectedPeriod=${selectedPeriod}, date=${periodDates.periodEnd}, months=${periodDates.months}`
+        );
         const [cashResponse, ratiosResponse, profitLossResponse] =
           await Promise.all([
             fetchWithErrorHandling("/api/cash-position", {
@@ -4409,10 +4410,21 @@
         if (!connectedCompany) return;
 
         const orgName = getOrganizationName(connectedCompany.tenantName);
+
+        // ✅ ADD THIS LINE
+        const periodDates = getPeriodDates(selectedPeriod);
+
+        // ✅ ADD THIS DEBUG LINE TOO
+        console.log(
+          `P&L Tab - Loading for ${orgName}: selectedPeriod=${selectedPeriod}, date=${periodDates.periodEnd}, months=${periodDates.months}`
+        );
+
         const response = await fetchWithErrorHandling(
           "/api/profit-loss-summary",
           {
             organizationName: orgName,
+            date: periodDates.periodEnd, // ✅ ADD THIS
+            periodMonths: periodDates.months, // ✅ ADD THIS
           }
         );
 
@@ -4719,6 +4731,9 @@
           accounts: { revenue: {}, expenses: {} },
         };
 
+        // ✅ ADD THIS LINE
+        const periodDates = getPeriodDates(selectedPeriod);
+
         // Load data from each selected company
         for (const tenantId of activeCompanyFilters) {
           const connectedCompany = connectedCompanies.find(
@@ -4731,6 +4746,8 @@
             "/api/profit-loss-summary",
             {
               organizationName: orgName,
+              date: periodDates.periodEnd, // ✅ ADD THIS
+              periodMonths: periodDates.months, // ✅ ADD THIS
             }
           );
 
